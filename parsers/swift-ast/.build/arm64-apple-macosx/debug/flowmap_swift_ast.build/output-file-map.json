@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/arm64-apple-macosx/debug/flowmap_swift_ast.build/master.swiftdeps"
+  },
+  "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/Sources/FlowMapSwiftAST/main.swift": {
+    "dependencies": "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/arm64-apple-macosx/debug/flowmap_swift_ast.build/main.d",
+    "object": "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/arm64-apple-macosx/debug/flowmap_swift_ast.build/main.swift.o",
+    "swiftmodule": "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/arm64-apple-macosx/debug/flowmap_swift_ast.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/arm64-apple-macosx/debug/flowmap_swift_ast.build/main.swiftdeps",
+    "diagnostics": "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/arm64-apple-macosx/debug/flowmap_swift_ast.build/main.dia"
+  }
+}
