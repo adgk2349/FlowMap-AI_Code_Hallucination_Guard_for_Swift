@@ -22,21 +22,21 @@ export interface FlowGraph {
 }
 
 export class FlowmapClient {
-  private readonly binaryPath: string;
+  private readonly configuredBinary: string;
 
-  constructor(context: vscode.ExtensionContext) {
+  constructor() {
     const config = vscode.workspace.getConfiguration('flowmap');
-    const configured = config.get<string>('binaryPath', '');
-    if (configured) {
-      this.binaryPath = configured;
-    } else {
-      // Derive from extension location: editor/vscode → workspace root
-      const root = path.resolve(context.extensionPath, '..', '..');
-      this.binaryPath = path.join(root, 'target', 'debug', 'flowmap');
-    }
+    // Empty string means "resolve from workspace root at call time"
+    this.configuredBinary = config.get<string>('binaryPath', '');
   }
 
   analyze(workspacePath: string): Promise<FlowGraph | undefined> {
+    // Prefer the explicit setting; fall back to the build artefact inside
+    // the open workspace so no absolute paths are ever hardcoded.
+    const binary =
+      this.configuredBinary ||
+      path.join(workspacePath, 'target', 'debug', 'flowmap');
+
     return new Promise((resolve) => {
       const request =
         JSON.stringify({
@@ -46,7 +46,7 @@ export class FlowmapClient {
           payload: { path: workspacePath },
         }) + '\n';
 
-      const proc = spawn(this.binaryPath, [], {
+      const proc = spawn(binary, [], {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
 

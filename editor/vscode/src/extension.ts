@@ -12,7 +12,7 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
-      const client = new FlowmapClient(context);
+      const client = new FlowmapClient();
       const graph = await client.analyze(folder);
       if (graph) {
         GraphView.show(context, graph);
