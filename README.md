@@ -13,7 +13,7 @@ flowmap/
 │   ├── engine/     # Command router: ping, shutdown, analyze
 │   └── cli/        # flowmap binary — reads JSON from stdin, writes JSON to stdout
 ├── editor/
-│   └── vscode/     # VS Code extension (future milestone)
+│   └── vscode/     # VS Code extension — cytoscape graph panel
 ├── .github/
 │   └── workflows/  # CI (cargo fmt, clippy, test, build)
 ├── Cargo.toml      # Rust workspace
@@ -99,3 +99,45 @@ cargo test
 ## Protocol
 
 See `SPEC_PROTOCOL.md` for the full request/response schema.
+
+---
+
+## VSCode Extension Usage
+
+The extension lives in `editor/vscode/` and communicates with the `flowmap`
+binary over stdin/stdout using the JSON protocol.
+
+### Prerequisites
+
+1. Build the Rust engine (produces `target/debug/flowmap`):
+   ```bash
+   cargo build
+   ```
+2. Install extension dependencies:
+   ```bash
+   cd editor/vscode && npm install
+   ```
+
+### Running in development
+
+1. Open the repository root in VS Code.
+2. Press **F5** — VS Code compiles the TypeScript and launches an Extension
+   Development Host window.
+3. In the new window open the Command Palette (`⇧⌘P`) and run:
+   **FlowMap: Analyze Workspace**
+4. The **FlowMap Graph** panel opens and renders the call graph.
+
+### Configuration
+
+| Setting | Default | Description |
+|---|---|---|
+| `flowmap.binaryPath` | _(empty)_ | Absolute path to the `flowmap` binary. Leave empty to auto-resolve as `target/debug/flowmap` relative to the workspace root. |
+
+### Manual test checklist
+
+- [ ] Extension loads without errors in the Extension Development Host
+- [ ] "FlowMap: Analyze Workspace" appears in the Command Palette
+- [ ] FlowMap Graph panel opens after the command runs
+- [ ] Nodes are rendered and draggable
+- [ ] Scroll / pinch zooms the graph
+- [ ] Clicking a node logs its id (`Help → Toggle Developer Tools`)
