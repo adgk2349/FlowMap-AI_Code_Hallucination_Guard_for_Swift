@@ -16,7 +16,15 @@
   const graph = analysis.graph ?? { nodes: [], edges: [] };
   const diff = analysis.diff ?? {};
   const impactIds = new Set(analysis.impact ?? []);
-  const viewMode = analysis.view ?? 'all'; // 'all' | 'diff' | 'impact'
+  const payloadViewMode = analysis.view ?? 'all'; // 'all' | 'diff' | 'impact'
+
+  // ── Explicit runtime view state ──────────────────────────────────────────
+  // Separate from the payload's analysis.view (which is diff/impact mode).
+  // Tracks which layout mode the user has actively selected.
+  const state = {
+    mode: 'grid',    // 'grid' | 'calls' — current layout mode
+    searchQuery: '', // active search text; '' means no search active
+  };
 
   // ── Build diff lookup sets ───────────────────────────────────────────────
   const addedNodeIds = new Set((diff.added_nodes ?? []).map((n) => n.id));
@@ -48,7 +56,6 @@
   });
 
   // ── Map protocol nodes → cytoscape elements ──────────────────────────────
-  // Current (working-tree) nodes
   const cyNodes = (graph.nodes ?? []).map(function (n) {
     const data = {
       id: n.id,
@@ -69,7 +76,7 @@
     return { data: data };
   });
 
-  // Phantom nodes for removed nodes (existed in HEAD but not in current)
+  // Phantom nodes for removed nodes (existed in HEAD but not in current tree)
   const phantomNodes = (diff.removed_nodes ?? [])
     .filter((n) => !graph.nodes.some((gn) => gn.id === n.id))
     .map(function (n) {
@@ -88,9 +95,7 @@
 
   // ── Map non-contains edges → cytoscape edges ─────────────────────────────
   const cyEdges = (graph.edges ?? [])
-    .filter(function (e) {
-      return !containsIds.has(e.id);
-    })
+    .filter(function (e) { return !containsIds.has(e.id); })
     .map(function (e) {
       const key = `${e.from}::${e.to}::${e.kind}`;
       return {
@@ -159,7 +164,7 @@
       // ── Hidden elements (files-only initial view) ───────────────────────
       { selector: 'node.hidden-node', style: { display: 'none' } },
       { selector: 'edge.hidden-edge', style: { display: 'none' } },
-      // ── Kind-based colours (PR8 UI polish) ─────────────────────────────
+      // ── Kind-based colours ──────────────────────────────────────────────
       {
         selector: 'node[kind = "file"]',
         style: {
@@ -272,7 +277,7 @@
           opacity: 0.6,
         },
       },
-      // ── Muted unchanged (when diff exists; overridden by dimmed/highlighted)
+      // ── Muted unchanged ─────────────────────────────────────────────────
       {
         selector: 'node.muted-bg',
         style: { opacity: 0.4, color: '#777777' },
@@ -287,7 +292,7 @@
           'border-opacity': 1,
         },
       },
-      // ── Highlight state (set programmatically on click) ─────────────────
+      // ── Highlight state (click) ─────────────────────────────────────────
       {
         selector: 'node.highlighted',
         style: {
@@ -320,37 +325,155 @@
         },
       },
     ],
-    // Use preset (manual) layout — we apply grid below after hiding nodes
+    // Preset layout places all nodes at (0,0). Real layouts are applied below.
     layout: { name: 'preset' },
     userZoomingEnabled: true,
     userPanningEnabled: true,
     boxSelectionEnabled: false,
   });
 
-  // ── Files-only initial view ──────────────────────────────────────────────
-  // Hide type/func nodes and calls edges; show only file nodes
-  cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
-  cy.edges('[kind = "calls"]').addClass('hidden-edge');
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Core layout helpers
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  // ── Grid layout helper (runs on visible nodes only, no animation) ────────
+  // ── deferredFit ──────────────────────────────────────────────────────────
+  // Fits the viewport to `eles` (filtered to :visible) after two animation
+  // frames so that Cytoscape has fully flushed display:none style changes.
+  //
+  // Root cause this fixes:
+  //   addClass('hidden-node') sets display:none but Cytoscape may not have
+  //   computed the new compound bounding boxes synchronously. If cy.fit() is
+  //   called in the same synchronous tick, compound parents that still have
+  //   visible children in their cached bbox (from a previous search-reveal
+  //   layout) produce an inflated bounding box → the fit zooms out so far
+  //   that visible file nodes appear invisible.
+  //
+  //   The double-rAF guarantees two render cycles have completed before fit,
+  //   so all display:none calculations are stable and bbox is correct.
+  function deferredFit(eles, padding) {
+    const pad = (typeof padding === 'number') ? padding : 80;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        // Re-evaluate :visible at rAF time (after style flush)
+        const target = eles ? eles.filter(':visible') : cy.nodes(':visible');
+
+        if (target.length === 0) {
+          // Defensive fallback: if nothing is visible, force files-only view
+          const files = cy.nodes('[kind = "file"]');
+          if (files.length > 0) {
+            cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
+            cy.nodes('[kind = "file"]').removeClass('hidden-node');
+            cy.fit(files, 120);
+          }
+          return;
+        }
+
+        cy.fit(target, pad);
+      });
+    });
+  }
+
+  // ── resetHiddenPositions ─────────────────────────────────────────────────
+  // After a grid layout repositions file nodes, move all hidden type/func
+  // children to their parent's new position. This prevents compound bounding
+  // boxes from including stale far-away child positions when cy.fit() runs,
+  // which would inflate the bbox and cause an incorrect viewport zoom.
+  function resetHiddenPositions() {
+    cy.nodes('[kind = "type"], [kind = "func"]').forEach(function (n) {
+      const par = n.parent();
+      if (par && par.length > 0) {
+        const pp = par.position();
+        if (pp && typeof pp.x === 'number' && typeof pp.y === 'number') {
+          n.position({ x: pp.x, y: pp.y });
+        }
+      }
+    });
+  }
+
+  // ── runGridLayout ────────────────────────────────────────────────────────
+  // Places file nodes in a non-overlapping grid.
+  // Uses [kind="file"] selector — never :visible — for determinism.
+  // Resets hidden children positions AFTER layout to minimise bbox inflation.
+  // Calls deferredFit so the fit runs after Cytoscape has flushed styles.
   function runGridLayout() {
-    const visible = cy.nodes(':visible');
-    if (visible.length === 0) { return; }
-    visible.layout({
+    const files = cy.nodes('[kind = "file"]');
+    const emptyEl = document.getElementById('empty-state');
+
+    if (files.length === 0) {
+      if (emptyEl) { emptyEl.style.display = 'flex'; }
+      return;
+    }
+    if (emptyEl) { emptyEl.style.display = 'none'; }
+
+    files.layout({
       name: 'grid',
-      padding: 100,
+      padding: 60,
       avoidOverlap: true,
       condense: false,
       animate: false,
+      fit: false,
     }).run();
-    cy.fit(undefined, 120);
+
+    // After file nodes have new grid positions, snap hidden children to those
+    // positions so they don't inflate the compound parent's bounding box.
+    resetHiddenPositions();
+
+    // Fit after two rAFs: ensures display:none is fully computed before fit.
+    deferredFit(files, 120);
   }
 
-  // Apply grid layout to visible (file) nodes on initial render
-  runGridLayout();
+  // ── layoutChildrenOf ─────────────────────────────────────────────────────
+  // Positions the visible children of a compound node in a small grid,
+  // centred on the parent's current position. Prevents revealed nodes from
+  // clumping at (0, 0) (their default preset position).
+  function layoutChildrenOf(parentNode) {
+    const visibleChildren = parentNode.children().not('.hidden-node');
+    if (visibleChildren.length === 0) { return; }
 
-  // ── Calls-edge visibility sync ───────────────────────────────────────────
-  // Show a calls edge only when both its endpoints are visible
+    const px = parentNode.position('x') || 0;
+    const py = parentNode.position('y') || 0;
+    const span = Math.max(220, visibleChildren.length * 70);
+
+    visibleChildren.layout({
+      name: 'grid',
+      animate: false,
+      fit: false,
+      condense: true,
+      avoidOverlap: true,
+      padding: 10,
+      boundingBox: {
+        x1: px - span / 2,
+        y1: py - span / 2,
+        x2: px + span / 2,
+        y2: py + span / 2,
+      },
+    }).run();
+
+    // Recurse: also layout func children of any newly revealed type nodes
+    visibleChildren.filter('[kind = "type"]').forEach(function (typeNode) {
+      const visibleFuncs = typeNode.children().not('.hidden-node');
+      if (visibleFuncs.length === 0) { return; }
+      const tx = typeNode.position('x') || px;
+      const ty = typeNode.position('y') || py;
+      const fspan = Math.max(160, visibleFuncs.length * 55);
+      visibleFuncs.layout({
+        name: 'grid',
+        animate: false,
+        fit: false,
+        condense: true,
+        avoidOverlap: true,
+        padding: 6,
+        boundingBox: {
+          x1: tx - fspan / 2,
+          y1: ty - fspan / 2,
+          x2: tx + fspan / 2,
+          y2: ty + fspan / 2,
+        },
+      }).run();
+    });
+  }
+
+  // ── syncCallsEdges ───────────────────────────────────────────────────────
   function syncCallsEdges() {
     cy.edges('[kind = "calls"]').forEach(function (e) {
       const srcHidden = e.source().hasClass('hidden-node');
@@ -363,8 +486,22 @@
     });
   }
 
-  // ── Node expansion toggle (Part 5) ──────────────────────────────────────
-  // FILE → toggle type children; TYPE → toggle func children
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Initial render: files-only grid
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // File nodes are NEVER added to hidden-node. Only type/func nodes.
+  cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
+  cy.edges('[kind = "calls"]').addClass('hidden-edge');
+
+  // Defer the initial layout one rAF so Cytoscape has processed the classes.
+  requestAnimationFrame(function () {
+    runGridLayout();
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Node expansion toggle (click FILE → toggle types; click TYPE → toggle funcs)
+  // ═══════════════════════════════════════════════════════════════════════════
   function toggleExpand(nodeId) {
     const node = cy.getElementById(nodeId);
     const kind = node.data('kind');
@@ -374,25 +511,15 @@
       const anyVisible = typeChildren.not('.hidden-node').length > 0;
 
       if (anyVisible) {
-        // Collapse: hide all type children and their func children
         typeChildren.forEach(function (t) {
           t.children('[kind = "func"]').addClass('hidden-node');
           t.addClass('hidden-node');
         });
         syncCallsEdges();
       } else {
-        // Expand: reveal type children
         typeChildren.removeClass('hidden-node');
-        // Layout only the newly revealed type children (no full graph relayout)
         if (typeChildren.length > 0) {
-          typeChildren.layout({
-            name: 'grid',
-            animate: false,
-            fit: false,
-            condense: true,
-            avoidOverlap: true,
-            padding: 8,
-          }).run();
+          layoutChildrenOf(node);
         }
         syncCallsEdges();
       }
@@ -401,41 +528,28 @@
       const anyVisible = funcChildren.not('.hidden-node').length > 0;
 
       if (anyVisible) {
-        // Collapse: hide func children
         funcChildren.addClass('hidden-node');
         syncCallsEdges();
       } else {
-        // Expand: reveal func children
         funcChildren.removeClass('hidden-node');
-        // Layout only the newly revealed func children (no full graph relayout)
         if (funcChildren.length > 0) {
-          funcChildren.layout({
-            name: 'grid',
-            animate: false,
-            fit: false,
-            condense: true,
-            avoidOverlap: true,
-            padding: 8,
-          }).run();
+          layoutChildrenOf(node);
         }
         syncCallsEdges();
       }
     }
   }
 
-  // ── Click-to-navigate & expand/highlight ────────────────────────────────
+  // ── Tap handler ──────────────────────────────────────────────────────────
   cy.on('tap', 'node', function (evt) {
     const node = evt.target;
     const kind = node.data('kind');
 
-    // Clear previous highlight state
     cy.elements().removeClass('highlighted dimmed');
 
     if (kind === 'file' || kind === 'type') {
-      // Toggle expand/collapse children
       toggleExpand(node.id());
     } else if (kind === 'func') {
-      // Highlight direct callees via outgoing 'calls' edges (one hop only)
       const callEdges = node.outgoers('edge').filter('[kind = "calls"]');
       const callTargets = callEdges.targets();
       if (callEdges.length > 0) {
@@ -446,7 +560,6 @@
       }
     }
 
-    // Navigate to source file on click (all node kinds)
     const uri = node.data('uri');
     const line = node.data('line');
     if (uri) {
@@ -454,38 +567,96 @@
     }
   });
 
-  // Clear all state when clicking the background
   cy.on('tap', function (evt) {
     if (evt.target === cy) {
       cy.elements().removeClass('highlighted dimmed search-highlight');
     }
   });
 
-  // ── Toolbar (Part 3 + 4) ─────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Toolbar
+  // ═══════════════════════════════════════════════════════════════════════════
   (function initToolbar() {
     const gridBtn = document.getElementById('btn-grid');
     const callsBtn = document.getElementById('btn-calls');
     const fitBtn = document.getElementById('btn-fit');
     const searchInput = document.getElementById('search-input');
 
-    // Grid: reset to files-only + grid layout
+    // ── Grid button ─────────────────────────────────────────────────────
+    // Resets to files-only grid view.
+    //
+    // Bug this fixes (PR8.2):
+    //   After a search reveals type/func nodes, clicking Grid caused the graph
+    //   to go blank. The root cause: addClass('hidden-node') on type/func nodes
+    //   was not yet reflected in Cytoscape's compound bounding-box cache when
+    //   cy.fit() ran synchronously, so the fit zoomed out to include the old
+    //   search-revealed positions → nodes appeared invisible.
+    //
+    //   Fix: runGridLayout() now calls resetHiddenPositions() (snaps hidden
+    //   children to parent position) then deferredFit() (double-rAF) so the
+    //   fit always runs after style flush with correct bounding boxes.
     if (gridBtn) {
       gridBtn.addEventListener('click', function () {
+        state.mode = 'grid';
+        state.searchQuery = '';
+
+        // 1. Hide type/func nodes and calls edges
         cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
         cy.edges('[kind = "calls"]').addClass('hidden-edge');
-        cy.elements().removeClass('highlighted dimmed search-highlight');
+
+        // 2. Explicitly ensure ALL file nodes are visible (defensive guard)
+        cy.nodes('[kind = "file"]').removeClass('hidden-node');
+
+        // 3. Clear all visual / search state
+        cy.elements().removeClass('highlighted dimmed search-highlight muted-bg');
         if (searchInput) { searchInput.value = ''; }
+
+        // 4. Defensive: bail early if there are genuinely no file nodes
+        const files = cy.nodes('[kind = "file"]');
+        if (files.length === 0) {
+          const emptyEl = document.getElementById('empty-state');
+          if (emptyEl) { emptyEl.style.display = 'flex'; }
+          return;
+        }
+
+        // 5. Reapply muted-bg if diff exists (was cleared in step 3)
+        if (!isClean) {
+          cy.nodes().forEach(function (n) {
+            if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
+              n.addClass('muted-bg');
+            }
+          });
+        }
+
+        // 6. Run grid layout + deferred fit (handles style-flush timing)
         runGridLayout();
       });
     }
 
-    // Calls: reveal all nodes + edges, run cose layout for full call graph
+    // ── Calls button ────────────────────────────────────────────────────
+    // Reveals ALL nodes and edges, runs force-directed (cose) layout.
+    //
+    // Bug this fixes (PR8.2):
+    //   cy.fit(undefined, 40) was called synchronously after cose layout.
+    //   After a search + mode switch sequence, cy.fit() could include stale
+    //   bounding boxes from nodes that were just revealed → wrong viewport.
+    //
+    //   Fix: deferredFit() with double-rAF ensures styles are flushed and
+    //   bounding boxes are recomputed before the fit runs.
     if (callsBtn) {
       callsBtn.addEventListener('click', function () {
+        state.mode = 'calls';
+        state.searchQuery = '';
+
+        // 1. Reveal all nodes and edges
         cy.nodes().removeClass('hidden-node');
         cy.edges().removeClass('hidden-edge');
+
+        // 2. Clear visual state
         cy.elements().removeClass('highlighted dimmed search-highlight');
         if (searchInput) { searchInput.value = ''; }
+
+        // 3. Run force-directed layout over all nodes
         cy.layout({
           name: 'cose',
           padding: 40,
@@ -495,21 +666,37 @@
           edgeElasticity: function () { return 100; },
           animate: false,
         }).run();
-        cy.fit(undefined, 40);
+
+        // 4. Fit after two rAFs so display:none removal is fully flushed
+        //    and Cytoscape reports correct bounding boxes for all nodes.
+        deferredFit(cy.nodes(), 40);
       });
     }
 
-    // Fit: fit all visible elements into the viewport
+    // ── Fit button ──────────────────────────────────────────────────────
+    // Fits the viewport to all currently visible nodes.
+    //
+    // Bug this fixes (PR8.2):
+    //   cy.fit() was called synchronously; if called during a search or
+    //   immediately after a mode switch, styles may not be flushed yet and
+    //   the computed bbox can be wrong → fit appears to do nothing or
+    //   actually zooms out to an empty region.
+    //
+    //   Fix: double-rAF guarantees style flush before fit.
     if (fitBtn) {
       fitBtn.addEventListener('click', function () {
-        cy.fit(cy.elements(':visible'), 80);
+        deferredFit(cy.nodes(), 80);
       });
     }
 
-    // Search: substring match on labels, reveal hidden parents, center+zoom
+    // ── Search ──────────────────────────────────────────────────────────
+    // Substring match on node labels (case-insensitive).
+    // Reveals hidden ancestors, then runs a local grid layout for each
+    // affected compound parent so nodes appear near their parent.
     if (searchInput) {
       searchInput.addEventListener('input', function () {
         const query = searchInput.value.trim().toLowerCase();
+        state.searchQuery = query;
         cy.nodes().removeClass('search-highlight');
 
         if (!query) { return; }
@@ -520,21 +707,34 @@
 
         if (matches.length === 0) { return; }
 
-        // Reveal hidden ancestors up to the root so matches become visible
+        // Track which compound parents had children revealed so we can
+        // run a local layout on them after revealing.
+        const affectedParents = new Set();
+
         matches.forEach(function (n) {
           n.removeClass('hidden-node');
-          // Walk up the parent chain (max 3 hops: func → type → file)
+
+          // Walk up the parent chain (func → type → file, max 3 hops)
           let curr = n;
           for (let depth = 0; depth < 3; depth++) {
             const par = curr.parent();
             if (!par || par.length === 0) { break; }
             par.removeClass('hidden-node');
+            affectedParents.add(par.id());
             curr = par;
           }
         });
 
+        // Position newly revealed children near their parent (avoids clump at origin)
+        affectedParents.forEach(function (parentId) {
+          layoutChildrenOf(cy.getElementById(parentId));
+        });
+
         matches.addClass('search-highlight');
-        cy.fit(matches, 80);
+
+        // Deferred fit: two rAFs ensure Cytoscape has processed the newly
+        // visible nodes' bounding boxes before the viewport is adjusted.
+        deferredFit(matches, 80);
       });
     }
   })();
@@ -573,18 +773,16 @@
 
       const swatch = document.createElement('span');
       swatch.style.display = 'inline-block';
-      swatch.style.width = '14px';
-      swatch.style.height = '14px';
-      swatch.style.marginRight = '7px';
+      swatch.style.width = '12px';
+      swatch.style.height = '12px';
+      swatch.style.marginRight = '6px';
       swatch.style.borderRadius = '3px';
       swatch.style.background = item.color;
-      if (item.border) {
-        swatch.style.border = '2px solid ' + item.border;
-      }
+      if (item.border) { swatch.style.border = '2px solid ' + item.border; }
 
       const text = document.createElement('span');
       text.textContent = item.label;
-      text.style.fontSize = '11px';
+      text.style.fontSize = '10px';
       text.style.color = '#ccc';
 
       div.appendChild(swatch);
@@ -592,7 +790,6 @@
       legend.appendChild(div);
     });
 
-    // Show edge legend if diff edges present
     if (addedEdgeKeys.size > 0 || removedEdgeKeys.size > 0) {
       [
         { color: '#33cc33', label: 'Added edge' },
@@ -605,15 +802,14 @@
 
         const line = document.createElement('span');
         line.style.display = 'inline-block';
-        line.style.width = '14px';
+        line.style.width = '12px';
         line.style.height = '2px';
-        line.style.marginRight = '7px';
-        line.style.background = item.color;
+        line.style.marginRight = '6px';
         line.style.borderTop = '2px dashed ' + item.color;
 
         const text = document.createElement('span');
         text.textContent = item.label;
-        text.style.fontSize = '11px';
+        text.style.fontSize = '10px';
         text.style.color = '#ccc';
 
         div.appendChild(line);
@@ -624,8 +820,6 @@
   })();
 
   // ── Mute unchanged nodes when diff exists ────────────────────────────────
-  // Applied before view-mode dimming so 'dimmed' (opacity 0.25) wins when both
-  // classes are present (Cytoscape evaluates styles in declaration order).
   if (!isClean) {
     cy.nodes().forEach(function (n) {
       if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
@@ -634,11 +828,10 @@
     });
   }
 
-  // ── Status badge (Part 7 — unchanged from PR6) ───────────────────────────
+  // ── Status badge (unchanged from PR6) ────────────────────────────────────
   (function buildStatusBadge() {
     const badge = document.getElementById('status-badge');
     if (!badge) { return; }
-    // Only show when the graph has data
     if ((graph.nodes ?? []).length === 0) { return; }
 
     badge.style.display = 'block';
@@ -668,19 +861,16 @@
     }
   })();
 
-  // ── Apply initial view-mode focus ────────────────────────────────────────
-  if (viewMode === 'diff') {
-    // Dim nodes that have no diff involvement
+  // ── Apply initial view-mode focus (diff / impact overlays) ───────────────
+  if (payloadViewMode === 'diff') {
     cy.nodes().forEach(function (n) {
-      var ds = n.data('diffState');
-      if (ds === 'unchanged' && !n.data('impacted')) {
+      if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
         n.addClass('dimmed');
       }
     });
-  } else if (viewMode === 'impact') {
-    // Dim nodes that are not impacted and not changed
+  } else if (payloadViewMode === 'impact') {
     cy.nodes().forEach(function (n) {
-      var isChanged =
+      const isChanged =
         n.data('diffState') === 'added' ||
         n.data('diffState') === 'changed' ||
         n.data('diffState') === 'removed';
@@ -703,10 +893,8 @@
     }
   }
 
-  // Initial render from embedded payload
   applyLicenseBadge(analysis.licenseStatus ?? 'free');
 
-  // Live updates pushed via postMessage when the user enters/clears a key
   window.addEventListener('message', function (event) {
     const msg = event.data;
     if (msg && msg.command === 'updateLicenseStatus') {

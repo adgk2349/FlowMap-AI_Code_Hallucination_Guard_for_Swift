@@ -22,30 +22,43 @@
         inset: 0;
         background: #0f1117;
       }
-      /* ── Toolbar (search + layout buttons) ────────────────────────────── */
+      /* ── Empty state overlay ────────────────────────────────────────────── */
+      #empty-state {
+        display: none; /* shown by JS when no file nodes exist */
+        position: absolute;
+        inset: 0;
+        align-items: center;
+        justify-content: center;
+        color: #555566;
+        font-size: 14px;
+        pointer-events: none;
+        z-index: 5;
+      }
+      /* ── Toolbar (search + layout buttons) ─────────────────────────────── */
+      /* Slightly compact (PR8.1): reduced padding and font-size vs PR8 */
       #toolbar {
         position: absolute;
-        top: 12px;
+        top: 10px;
         left: 50%;
         transform: translateX(-50%);
         display: flex;
-        gap: 6px;
+        gap: 5px;
         align-items: center;
         background: rgba(15, 17, 23, 0.92);
         border: 1px solid #3a3a4a;
-        border-radius: 6px;
-        padding: 5px 10px;
+        border-radius: 5px;
+        padding: 4px 8px;
         z-index: 10;
         pointer-events: auto;
       }
       #toolbar input[type='text'] {
         background: rgba(255, 255, 255, 0.07);
         border: 1px solid #3a3a4a;
-        border-radius: 4px;
+        border-radius: 3px;
         color: #c0c0d0;
-        font-size: 11px;
-        padding: 3px 8px;
-        width: 140px;
+        font-size: 10px;
+        padding: 2px 7px;
+        width: 130px;
         outline: none;
         font-family: inherit;
       }
@@ -58,10 +71,10 @@
       #toolbar button {
         background: rgba(255, 255, 255, 0.07);
         border: 1px solid #3a3a4a;
-        border-radius: 4px;
+        border-radius: 3px;
         color: #a0a0b0;
-        font-size: 11px;
-        padding: 3px 10px;
+        font-size: 10px;
+        padding: 2px 8px;
         cursor: pointer;
         font-family: inherit;
         transition: background 0.15s, color 0.15s, border-color 0.15s;
@@ -71,34 +84,35 @@
         color: #c8d8f0;
         border-color: #4da3ff;
       }
-      /* ── Legend ────────────────────────────────────────────────────────── */
+      /* ── Legend ─────────────────────────────────────────────────────────── */
+      /* top: 50px leaves enough gap below the toolbar (≈30px tall) */
       #legend {
         position: absolute;
-        top: 12px;
+        top: 50px;
         right: 12px;
         background: rgba(15, 17, 23, 0.88);
         border: 1px solid #3a3a4a;
         border-radius: 6px;
-        padding: 10px 12px;
-        min-width: 130px;
+        padding: 8px 10px;
+        min-width: 120px;
         pointer-events: none;
         z-index: 10;
       }
       #legend-title {
-        font-size: 11px;
+        font-size: 10px;
         font-weight: bold;
         color: #aaa;
-        margin-bottom: 7px;
+        margin-bottom: 6px;
         letter-spacing: 0.04em;
       }
       /* ── Status badge (top-left) ────────────────────────────────────────── */
       #status-badge {
         position: absolute;
-        top: 12px;
+        top: 10px;
         left: 12px;
-        padding: 6px 10px;
-        border-radius: 6px;
-        font-size: 12px;
+        padding: 5px 9px;
+        border-radius: 5px;
+        font-size: 11px;
         font-weight: bold;
         pointer-events: none;
         z-index: 10;
@@ -149,15 +163,18 @@
   </head>
   <body>
     <div id="cy"></div>
+    <!-- Empty state: shown when workspace has no file nodes -->
+    <div id="empty-state">No Swift files found in this workspace.</div>
     <div id="status-badge"></div>
     <div id="license-badge"></div>
-    <!-- Toolbar: search + layout switcher buttons -->
+    <!-- Toolbar: search + layout switcher buttons (top-centre) -->
     <div id="toolbar">
       <input type="text" id="search-input" placeholder="Search nodes…" />
       <button id="btn-grid">Grid</button>
       <button id="btn-calls">Calls</button>
       <button id="btn-fit">Fit</button>
     </div>
+    <!-- Legend: top-right, positioned below toolbar so they don't overlap -->
     <div id="legend">
       <div id="legend-title">LEGEND</div>
     </div>
