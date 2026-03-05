@@ -12,6 +12,8 @@ const VIEW_TITLES: Record<string, string> = {
 
 export class GraphView {
   private static panel: vscode.WebviewPanel | undefined;
+  /** Tracks the view mode so auto-analyze updates preserve the active mode. */
+  private static lastViewMode: 'all' | 'diff' | 'impact' = 'all';
 
   /**
    * Restore a webview panel that VS Code serialized from a previous session.
@@ -61,6 +63,7 @@ export class GraphView {
     analysis: FlowAnalysis,
     view: 'all' | 'diff' | 'impact' = 'all'
   ): void {
+    GraphView.lastViewMode = view;
     const title = VIEW_TITLES[view] ?? 'FlowMap Graph';
 
     if (GraphView.panel) {
@@ -96,6 +99,27 @@ export class GraphView {
       GraphView.panel.webview,
       analysis,
       view
+    );
+  }
+
+  /**
+   * Silently refresh the webview content without revealing the panel.
+   *
+   * Used by auto-analyze on save so the graph updates in the background
+   * without stealing editor focus.  No-op if no panel is currently open.
+   */
+  static update(
+    context: vscode.ExtensionContext,
+    analysis: FlowAnalysis
+  ): void {
+    if (!GraphView.panel) {
+      return;
+    }
+    GraphView.panel.webview.html = GraphView.buildHtml(
+      context,
+      GraphView.panel.webview,
+      analysis,
+      GraphView.lastViewMode
     );
   }
 
