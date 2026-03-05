@@ -2,6 +2,8 @@
 
 FlowMap is a code-graph engine that visualizes function, variable, and module bindings from Swift code. It surfaces call graphs and data-flow graphs as a diff-aware diagram inside VS Code, letting developers see how AI-generated changes ripple through a codebase.
 
+> **Open source:** The Swift MVP (AST parsing, graph engine, diff analysis, VS Code extension) is fully open source. A **Pro** tier is planned for advanced features; the licensing scaffolding ships in PR7 and is local-only with no server validation.
+
 ---
 
 ## Architecture
@@ -209,6 +211,50 @@ cp parsers/swift-ast/.build/release/flowmap-swift-ast target/debug/
 | Green dashed edge | Added edge |
 | Red dashed edge | Removed edge |
 
+### Licensing (PR7+)
+
+FlowMap ships with a local-only licensing scaffold.  All features in the
+current release are available for free.  A Pro tier will gate advanced
+capabilities in a future PR; the infrastructure is in place now.
+
+#### Free vs Pro
+
+| Indicator | Where |
+|---|---|
+| Status bar item (bottom-right of VS Code) | Always visible; shows **FlowMap Free** or **★ FlowMap Pro** |
+| Webview badge (bottom-right of graph panel) | Shows **Free** or **★ Pro** |
+
+#### Commands
+
+| Command | Description |
+|---|---|
+| `FlowMap: Enter License Key` | Prompt for a key (password-mode input); stored in VS Code SecretStorage |
+| `FlowMap: Deactivate License` | Clears the stored key; reverts to Free |
+| `FlowMap: Show License Status` | Toast: current tier + source |
+| `FlowMap: Copy License Debug Info` | Copies status, source, lastUpdated, devKeyConfigured to clipboard (never the key) |
+| `FlowMap: Pro Feature Preview` | Demo gate — Free users see an upgrade prompt; Pro users see confirmation |
+
+#### Enabling Pro in development
+
+Pro validation is intentionally **local-only and not cryptographically secure**.
+It exists to wire up the UI before a real backend is introduced.
+
+1. Choose a dev key string (e.g. `my-dev-key-2024`).
+2. Make it available to VS Code in one of two ways:
+   - **Environment variable (recommended):**  launch VS Code with
+     `FLOWMAP_DEV_LICENSE_KEY=my-dev-key-2024 code .`
+   - **VS Code setting:** set `flowmap.devLicenseKey` to the same string
+     (note: settings are visible in plain text — use the env var in shared
+     environments).
+3. Open the Command Palette and run **FlowMap: Enter License Key**.
+4. Enter the same key.  The status bar and graph badge switch to **★ Pro**.
+5. To revert, run **FlowMap: Deactivate License**.
+
+> ⚠️  This scheme is **not secure** and is not suitable for production
+> licensing.  Do not commit real license keys or secrets to the repository.
+> The `flowmap.devLicenseKey` setting should only ever hold a throwaway
+> dev key.
+
 ### Auto-analyze on save (PR6+)
 
 FlowMap automatically re-analyzes the workspace whenever a Swift file is saved,
@@ -285,3 +331,11 @@ only its **direct** callees (one hop), not the full transitive closure.
 - [ ] Saving a Swift file triggers auto-analyze (graph updates without focus steal)
 - [ ] Toggling auto-analyze off + saving a Swift file → no re-analyze
 - [ ] Toggling auto-analyze back on → next save re-analyzes
+- [ ] Status bar shows "FlowMap Free" by default
+- [ ] Entering a random key → stays Free; toast says "Key not recognized"
+- [ ] Setting FLOWMAP_DEV_LICENSE_KEY + entering the same key → "★ FlowMap Pro"
+- [ ] Graph panel badge switches to "★ Pro" immediately (postMessage path)
+- [ ] Deactivate License → status bar and badge revert to Free
+- [ ] Copy License Debug Info → clipboard contains status/source but NOT the key
+- [ ] Pro Feature Preview (Free) → shows upgrade prompt with "Enter License Key" button
+- [ ] Pro Feature Preview (Pro) → shows "Pro is enabled" toast
