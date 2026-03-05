@@ -1,0 +1,47 @@
+{
+  "name": "flowmap",
+  "displayName": "FlowMap",
+  "description": "Call-graph visualization for AI-generated Swift code",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onCommand:flowmap.analyzeWorkspace"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "flowmap.analyzeWorkspace",
+        "title": "FlowMap: Analyze Workspace"
+      }
+    ],
+    "configuration": {
+      "title": "FlowMap",
+      "properties": {
+        "flowmap.binaryPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the flowmap binary. Defaults to target/debug/flowmap in the workspace root."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.0"
+  }
+}
