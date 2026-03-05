@@ -141,7 +141,7 @@
         selector: 'node',
         style: {
           label: 'data(label)',
-          color: '#e8e8e8',
+          color: '#d0d0d0',
           'text-valign': 'center',
           'text-halign': 'center',
           'font-size': '11px',
@@ -149,47 +149,73 @@
           height: 'label',
           padding: '8px',
           shape: 'roundrectangle',
-          'background-color': '#4a2e1a',
-          'border-width': 0,
+          'background-color': 'rgb(220,150,70)',
+          'background-opacity': 0.4,
+          'border-width': 1,
+          'border-color': '#ffffff',
+          'border-opacity': 0.08,
         },
       },
-      // ── Kind-based base colours ─────────────────────────────────────────
+      // ── Hidden elements (files-only initial view) ───────────────────────
+      { selector: 'node.hidden-node', style: { display: 'none' } },
+      { selector: 'edge.hidden-edge', style: { display: 'none' } },
+      // ── Kind-based colours (PR8 UI polish) ─────────────────────────────
       {
         selector: 'node[kind = "file"]',
         style: {
-          'background-color': '#1c3a5e',
+          'background-color': 'rgb(70,90,110)',
+          'background-opacity': 0.25,
           'font-size': '13px',
           'font-weight': 'bold',
           'text-valign': 'top',
           'text-margin-y': '-8px',
+          'border-color': '#ffffff',
+          'border-opacity': 0.08,
+          'border-width': 1,
         },
       },
       {
         selector: 'node[kind = "type"]',
-        style: { 'background-color': '#1a4a2e', 'font-size': '12px' },
+        style: {
+          'background-color': 'rgb(50,140,100)',
+          'background-opacity': 0.35,
+          'font-size': '12px',
+          'border-color': '#ffffff',
+          'border-opacity': 0.08,
+          'border-width': 1,
+        },
       },
       {
         selector: 'node[kind = "func"]',
-        style: { 'background-color': '#4a2e1a', 'font-size': '11px' },
+        style: {
+          'background-color': 'rgb(220,150,70)',
+          'background-opacity': 0.4,
+          'font-size': '11px',
+          'border-color': '#ffffff',
+          'border-opacity': 0.08,
+          'border-width': 1,
+        },
       },
       // ── Diff-state overrides ────────────────────────────────────────────
       {
         selector: 'node[diffState = "added"]',
-        style: { 'background-color': '#1a4a1a' }, // dark green
+        style: { 'background-color': '#1a4a1a', 'background-opacity': 1 },
       },
       {
         selector: 'node[diffState = "removed"]',
         style: {
-          'background-color': '#4a1a1a', // dark red
+          'background-color': '#4a1a1a',
+          'background-opacity': 1,
           'border-style': 'dashed',
           'border-color': '#cc3333',
           'border-width': 2,
+          'border-opacity': 1,
           opacity: 0.75,
         },
       },
       {
         selector: 'node[diffState = "changed"]',
-        style: { 'background-color': '#4a4a1a' }, // dark yellow
+        style: { 'background-color': '#4a4a1a', 'background-opacity': 1 },
       },
       // ── Impacted node: orange outline ───────────────────────────────────
       {
@@ -198,15 +224,17 @@
           'border-color': '#e07b39',
           'border-width': 3,
           'border-style': 'solid',
+          'border-opacity': 1,
         },
       },
       // ── Compound (parent) nodes ─────────────────────────────────────────
       {
         selector: ':parent',
         style: {
-          'background-opacity': 0.15,
-          'border-width': 2,
-          'border-color': '#666666',
+          'background-opacity': 0.12,
+          'border-width': 1,
+          'border-color': '#ffffff',
+          'border-opacity': 0.1,
           'text-valign': 'top',
           'text-halign': 'center',
           'text-margin-y': '8px',
@@ -244,10 +272,20 @@
           opacity: 0.6,
         },
       },
-      // ── Muted unchanged (when diff exists; overridden by dimmed/highlighted) ─
+      // ── Muted unchanged (when diff exists; overridden by dimmed/highlighted)
       {
         selector: 'node.muted-bg',
         style: { opacity: 0.4, color: '#777777' },
+      },
+      // ── Search highlight ────────────────────────────────────────────────
+      {
+        selector: 'node.search-highlight',
+        style: {
+          'border-color': '#4da3ff',
+          'border-width': 2,
+          'border-style': 'solid',
+          'border-opacity': 1,
+        },
       },
       // ── Highlight state (set programmatically on click) ─────────────────
       {
@@ -256,6 +294,7 @@
           'border-color': '#ffdd00',
           'border-width': 4,
           'border-style': 'solid',
+          'border-opacity': 1,
         },
       },
       {
@@ -277,49 +316,137 @@
         style: {
           'border-width': 3,
           'border-color': '#e07b39',
+          'border-opacity': 1,
         },
       },
     ],
-    layout: {
-      name: 'cose',
-      padding: 40,
-      nodeRepulsion: function () {
-        return 8000;
-      },
-      nodeOverlap: 10,
-      idealEdgeLength: function () {
-        return 80;
-      },
-      edgeElasticity: function () {
-        return 100;
-      },
-      animate: false,
-    },
+    // Use preset (manual) layout — we apply grid below after hiding nodes
+    layout: { name: 'preset' },
     userZoomingEnabled: true,
     userPanningEnabled: true,
     boxSelectionEnabled: false,
   });
 
-  // ── Click-to-navigate & downstream highlight ─────────────────────────────
+  // ── Files-only initial view ──────────────────────────────────────────────
+  // Hide type/func nodes and calls edges; show only file nodes
+  cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
+  cy.edges('[kind = "calls"]').addClass('hidden-edge');
+
+  // ── Grid layout helper (runs on visible nodes only, no animation) ────────
+  function runGridLayout() {
+    const visible = cy.nodes(':visible');
+    if (visible.length === 0) { return; }
+    visible.layout({
+      name: 'grid',
+      padding: 100,
+      avoidOverlap: true,
+      condense: false,
+      animate: false,
+    }).run();
+    cy.fit(undefined, 120);
+  }
+
+  // Apply grid layout to visible (file) nodes on initial render
+  runGridLayout();
+
+  // ── Calls-edge visibility sync ───────────────────────────────────────────
+  // Show a calls edge only when both its endpoints are visible
+  function syncCallsEdges() {
+    cy.edges('[kind = "calls"]').forEach(function (e) {
+      const srcHidden = e.source().hasClass('hidden-node');
+      const tgtHidden = e.target().hasClass('hidden-node');
+      if (!srcHidden && !tgtHidden) {
+        e.removeClass('hidden-edge');
+      } else {
+        e.addClass('hidden-edge');
+      }
+    });
+  }
+
+  // ── Node expansion toggle (Part 5) ──────────────────────────────────────
+  // FILE → toggle type children; TYPE → toggle func children
+  function toggleExpand(nodeId) {
+    const node = cy.getElementById(nodeId);
+    const kind = node.data('kind');
+
+    if (kind === 'file') {
+      const typeChildren = node.children('[kind = "type"]');
+      const anyVisible = typeChildren.not('.hidden-node').length > 0;
+
+      if (anyVisible) {
+        // Collapse: hide all type children and their func children
+        typeChildren.forEach(function (t) {
+          t.children('[kind = "func"]').addClass('hidden-node');
+          t.addClass('hidden-node');
+        });
+        syncCallsEdges();
+      } else {
+        // Expand: reveal type children
+        typeChildren.removeClass('hidden-node');
+        // Layout only the newly revealed type children (no full graph relayout)
+        if (typeChildren.length > 0) {
+          typeChildren.layout({
+            name: 'grid',
+            animate: false,
+            fit: false,
+            condense: true,
+            avoidOverlap: true,
+            padding: 8,
+          }).run();
+        }
+        syncCallsEdges();
+      }
+    } else if (kind === 'type') {
+      const funcChildren = node.children('[kind = "func"]');
+      const anyVisible = funcChildren.not('.hidden-node').length > 0;
+
+      if (anyVisible) {
+        // Collapse: hide func children
+        funcChildren.addClass('hidden-node');
+        syncCallsEdges();
+      } else {
+        // Expand: reveal func children
+        funcChildren.removeClass('hidden-node');
+        // Layout only the newly revealed func children (no full graph relayout)
+        if (funcChildren.length > 0) {
+          funcChildren.layout({
+            name: 'grid',
+            animate: false,
+            fit: false,
+            condense: true,
+            avoidOverlap: true,
+            padding: 8,
+          }).run();
+        }
+        syncCallsEdges();
+      }
+    }
+  }
+
+  // ── Click-to-navigate & expand/highlight ────────────────────────────────
   cy.on('tap', 'node', function (evt) {
     const node = evt.target;
+    const kind = node.data('kind');
 
-    // Clear previous highlight
+    // Clear previous highlight state
     cy.elements().removeClass('highlighted dimmed');
 
-    // Collect direct callees via outgoing 'calls' edges (one hop only)
-    const callEdges = node.outgoers('edge').filter('[kind = "calls"]');
-    const callTargets = callEdges.targets();
-
-    if (callEdges.length > 0) {
-      // Dim everything else, highlight the clicked node + direct callees
-      cy.elements().addClass('dimmed');
-      node.removeClass('dimmed').addClass('highlighted');
-      callTargets.removeClass('dimmed').addClass('highlighted');
-      callEdges.removeClass('dimmed').addClass('highlighted');
+    if (kind === 'file' || kind === 'type') {
+      // Toggle expand/collapse children
+      toggleExpand(node.id());
+    } else if (kind === 'func') {
+      // Highlight direct callees via outgoing 'calls' edges (one hop only)
+      const callEdges = node.outgoers('edge').filter('[kind = "calls"]');
+      const callTargets = callEdges.targets();
+      if (callEdges.length > 0) {
+        cy.elements().addClass('dimmed');
+        node.removeClass('dimmed').addClass('highlighted');
+        callTargets.removeClass('dimmed').addClass('highlighted');
+        callEdges.removeClass('dimmed').addClass('highlighted');
+      }
     }
 
-    // Navigate to source file on click
+    // Navigate to source file on click (all node kinds)
     const uri = node.data('uri');
     const line = node.data('line');
     if (uri) {
@@ -327,19 +454,95 @@
     }
   });
 
-  // Clear highlight when clicking the background
+  // Clear all state when clicking the background
   cy.on('tap', function (evt) {
     if (evt.target === cy) {
-      cy.elements().removeClass('highlighted dimmed');
+      cy.elements().removeClass('highlighted dimmed search-highlight');
     }
   });
+
+  // ── Toolbar (Part 3 + 4) ─────────────────────────────────────────────────
+  (function initToolbar() {
+    const gridBtn = document.getElementById('btn-grid');
+    const callsBtn = document.getElementById('btn-calls');
+    const fitBtn = document.getElementById('btn-fit');
+    const searchInput = document.getElementById('search-input');
+
+    // Grid: reset to files-only + grid layout
+    if (gridBtn) {
+      gridBtn.addEventListener('click', function () {
+        cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
+        cy.edges('[kind = "calls"]').addClass('hidden-edge');
+        cy.elements().removeClass('highlighted dimmed search-highlight');
+        if (searchInput) { searchInput.value = ''; }
+        runGridLayout();
+      });
+    }
+
+    // Calls: reveal all nodes + edges, run cose layout for full call graph
+    if (callsBtn) {
+      callsBtn.addEventListener('click', function () {
+        cy.nodes().removeClass('hidden-node');
+        cy.edges().removeClass('hidden-edge');
+        cy.elements().removeClass('highlighted dimmed search-highlight');
+        if (searchInput) { searchInput.value = ''; }
+        cy.layout({
+          name: 'cose',
+          padding: 40,
+          nodeRepulsion: function () { return 8000; },
+          nodeOverlap: 10,
+          idealEdgeLength: function () { return 80; },
+          edgeElasticity: function () { return 100; },
+          animate: false,
+        }).run();
+        cy.fit(undefined, 40);
+      });
+    }
+
+    // Fit: fit all visible elements into the viewport
+    if (fitBtn) {
+      fitBtn.addEventListener('click', function () {
+        cy.fit(cy.elements(':visible'), 80);
+      });
+    }
+
+    // Search: substring match on labels, reveal hidden parents, center+zoom
+    if (searchInput) {
+      searchInput.addEventListener('input', function () {
+        const query = searchInput.value.trim().toLowerCase();
+        cy.nodes().removeClass('search-highlight');
+
+        if (!query) { return; }
+
+        const matches = cy.nodes().filter(function (n) {
+          return n.data('label').toLowerCase().includes(query);
+        });
+
+        if (matches.length === 0) { return; }
+
+        // Reveal hidden ancestors up to the root so matches become visible
+        matches.forEach(function (n) {
+          n.removeClass('hidden-node');
+          // Walk up the parent chain (max 3 hops: func → type → file)
+          let curr = n;
+          for (let depth = 0; depth < 3; depth++) {
+            const par = curr.parent();
+            if (!par || par.length === 0) { break; }
+            par.removeClass('hidden-node');
+            curr = par;
+          }
+        });
+
+        matches.addClass('search-highlight');
+        cy.fit(matches, 80);
+      });
+    }
+  })();
 
   // ── Legend ───────────────────────────────────────────────────────────────
   (function buildLegend() {
     const legend = document.getElementById('legend');
-    if (!legend) {
-      return;
-    }
+    if (!legend) { return; }
 
     const hasDiff =
       addedNodeIds.size > 0 ||
@@ -348,9 +551,9 @@
       impactIds.size > 0;
 
     let items = [
-      { color: '#1c3a5e', label: 'File node' },
-      { color: '#1a4a2e', label: 'Type node' },
-      { color: '#4a2e1a', label: 'Func node' },
+      { color: 'rgb(70,90,110)', label: 'File node' },
+      { color: 'rgb(50,140,100)', label: 'Type node' },
+      { color: 'rgb(220,150,70)', label: 'Func node' },
     ];
 
     if (hasDiff) {
@@ -420,7 +623,7 @@
     }
   })();
 
-  // ── Mute unchanged nodes when diff exists ───────────────────────────────
+  // ── Mute unchanged nodes when diff exists ────────────────────────────────
   // Applied before view-mode dimming so 'dimmed' (opacity 0.25) wins when both
   // classes are present (Cytoscape evaluates styles in declaration order).
   if (!isClean) {
@@ -431,16 +634,12 @@
     });
   }
 
-  // ── Status badge ─────────────────────────────────────────────────────────
+  // ── Status badge (Part 7 — unchanged from PR6) ───────────────────────────
   (function buildStatusBadge() {
     const badge = document.getElementById('status-badge');
-    if (!badge) {
-      return;
-    }
+    if (!badge) { return; }
     // Only show when the graph has data
-    if ((graph.nodes ?? []).length === 0) {
-      return;
-    }
+    if ((graph.nodes ?? []).length === 0) { return; }
 
     badge.style.display = 'block';
 
@@ -469,7 +668,7 @@
     }
   })();
 
-  // Apply initial view-mode focus
+  // ── Apply initial view-mode focus ────────────────────────────────────────
   if (viewMode === 'diff') {
     // Dim nodes that have no diff involvement
     cy.nodes().forEach(function (n) {

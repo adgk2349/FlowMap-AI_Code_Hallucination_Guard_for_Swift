@@ -14,19 +14,70 @@
         height: 100%;
         margin: 0;
         padding: 0;
-        background: #1e1e1e;
+        background: #0f1117;
         overflow: hidden;
       }
       #cy {
         position: absolute;
         inset: 0;
+        background: #0f1117;
       }
+      /* ── Toolbar (search + layout buttons) ────────────────────────────── */
+      #toolbar {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        background: rgba(15, 17, 23, 0.92);
+        border: 1px solid #3a3a4a;
+        border-radius: 6px;
+        padding: 5px 10px;
+        z-index: 10;
+        pointer-events: auto;
+      }
+      #toolbar input[type='text'] {
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid #3a3a4a;
+        border-radius: 4px;
+        color: #c0c0d0;
+        font-size: 11px;
+        padding: 3px 8px;
+        width: 140px;
+        outline: none;
+        font-family: inherit;
+      }
+      #toolbar input[type='text']:focus {
+        border-color: #4da3ff;
+      }
+      #toolbar input[type='text']::placeholder {
+        color: #555566;
+      }
+      #toolbar button {
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid #3a3a4a;
+        border-radius: 4px;
+        color: #a0a0b0;
+        font-size: 11px;
+        padding: 3px 10px;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+      }
+      #toolbar button:hover {
+        background: rgba(77, 163, 255, 0.15);
+        color: #c8d8f0;
+        border-color: #4da3ff;
+      }
+      /* ── Legend ────────────────────────────────────────────────────────── */
       #legend {
         position: absolute;
         top: 12px;
         right: 12px;
-        background: rgba(30, 30, 30, 0.88);
-        border: 1px solid #444;
+        background: rgba(15, 17, 23, 0.88);
+        border: 1px solid #3a3a4a;
         border-radius: 6px;
         padding: 10px 12px;
         min-width: 130px;
@@ -40,6 +91,7 @@
         margin-bottom: 7px;
         letter-spacing: 0.04em;
       }
+      /* ── Status badge (top-left) ────────────────────────────────────────── */
       #status-badge {
         position: absolute;
         top: 12px;
@@ -70,6 +122,7 @@
         display: block;
         margin-top: 2px;
       }
+      /* ── License badge (bottom-right) ───────────────────────────────────── */
       #license-badge {
         position: absolute;
         bottom: 12px;
@@ -98,6 +151,13 @@
     <div id="cy"></div>
     <div id="status-badge"></div>
     <div id="license-badge"></div>
+    <!-- Toolbar: search + layout switcher buttons -->
+    <div id="toolbar">
+      <input type="text" id="search-input" placeholder="Search nodes…" />
+      <button id="btn-grid">Grid</button>
+      <button id="btn-calls">Calls</button>
+      <button id="btn-fit">Fit</button>
+    </div>
     <div id="legend">
       <div id="legend-title">LEGEND</div>
     </div>

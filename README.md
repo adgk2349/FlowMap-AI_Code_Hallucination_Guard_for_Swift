@@ -288,6 +288,52 @@ workspace is clean relative to HEAD:
 When the status is **Changed**, unchanged nodes are rendered at reduced opacity
 so that added, removed, changed, and impacted nodes stand out visually.
 
+### Large graph UX (PR8+)
+
+#### Files-only initial view
+
+On first render the graph shows **only file nodes** laid out in a non-overlapping grid.
+Type nodes, function nodes, and call edges are hidden until explicitly revealed.
+
+Click a **file node** to expand it and see its contained type nodes.
+Click a **type node** to expand it and see its contained function nodes.
+Clicking an already-expanded node collapses it again.
+Click a **function node** to highlight its direct callees (one hop).
+
+#### Layout switcher toolbar
+
+A toolbar is displayed at the top-centre of the graph panel:
+
+| Button | Action |
+|---|---|
+| **Grid** | Reset to files-only view and re-apply the grid layout |
+| **Calls** | Reveal all nodes and call edges, run the force-directed layout |
+| **Fit** | Fit all visible nodes into the viewport |
+
+#### Node search
+
+The search input in the toolbar performs a real-time substring match against node labels (case-insensitive).
+
+- Matching nodes are highlighted with a blue border (`#4da3ff`).
+- Hidden ancestors (type → file, func → type → file) are automatically revealed so the match is visible.
+- The viewport centres and zooms to fit the matching nodes.
+- Clearing the search box removes the highlights.
+
+#### Colour scheme (PR8+)
+
+| Node kind | Background |
+|---|---|
+| File | `rgb(70, 90, 110)` @ 25 % opacity |
+| Type | `rgb(50, 140, 100)` @ 35 % opacity |
+| Func | `rgb(220, 150, 70)` @ 40 % opacity |
+
+#### Performance
+
+- Initial grid layout runs with `animate: false` — no FLIP animation on first render.
+- Expanding a node layouts only its newly revealed children; the rest of the graph is not re-laid-out.
+
+---
+
 ### Same-file `calls` edges (PR5+)
 
 The Swift AST parser resolves function call sites within the same file using a
@@ -339,3 +385,17 @@ only its **direct** callees (one hop), not the full transitive closure.
 - [ ] Copy License Debug Info → clipboard contains status/source but NOT the key
 - [ ] Pro Feature Preview (Free) → shows upgrade prompt with "Enter License Key" button
 - [ ] Pro Feature Preview (Pro) → shows "Pro is enabled" toast
+- [ ] Initial graph render shows only file nodes in a non-overlapping grid (PR8+)
+- [ ] Type nodes and func nodes are hidden on load; calls edges are hidden on load
+- [ ] Clicking a file node reveals its type children; clicking again collapses them
+- [ ] Clicking a type node reveals its func children; clicking again collapses them
+- [ ] Clicking a func node highlights its direct callees (unchanged behaviour)
+- [ ] Toolbar appears at top-centre with Search input, Grid, Calls, and Fit buttons
+- [ ] Grid button resets to files-only view and re-runs grid layout
+- [ ] Calls button reveals all nodes + call edges and runs force-directed layout
+- [ ] Fit button fits all visible nodes into the viewport
+- [ ] Typing in search box highlights matching nodes with blue border and centres viewport
+- [ ] Hidden ancestors of matching nodes are automatically revealed
+- [ ] Clearing search box removes search highlights
+- [ ] Status badge (✓ Clean / ⚑ Changed) still appears top-left after PR8 changes
+- [ ] Background is dark (#0f1117); file nodes are steel-blue, types are teal, funcs are amber
