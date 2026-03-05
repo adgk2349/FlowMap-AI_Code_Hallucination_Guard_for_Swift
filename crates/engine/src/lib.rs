@@ -61,9 +61,10 @@ fn handle_analyze(req: &RequestEnvelope) -> ResponseEnvelope {
         .and_then(|v| v.as_str())
         .unwrap_or(".");
 
-    // ── 1. Build the full workspace graph from the current working tree ───
-    let full_graph = build_swift_graph(workspace_path);
     let binary = resolve_swift_ast_binary();
+
+    // ── 1. Build the full workspace graph from the current working tree ───
+    let full_graph = build_swift_graph(workspace_path, &binary);
     let root = Path::new(workspace_path);
 
     // ── 2. Detect changed Swift files via git diff ────────────────────────
@@ -120,7 +121,7 @@ fn handle_analyze(req: &RequestEnvelope) -> ResponseEnvelope {
 
 /// Scan `workspace_path` for Swift files, parse each with `flowmap-swift-ast`,
 /// and merge the per-file graphs into a single workspace graph.
-fn build_swift_graph(workspace_path: &str) -> BuiltGraph {
+fn build_swift_graph(workspace_path: &str, binary: &str) -> BuiltGraph {
     let root = Path::new(workspace_path);
     let swift_files = scanner::find_swift_files(root);
 
@@ -128,9 +129,7 @@ fn build_swift_graph(workspace_path: &str) -> BuiltGraph {
         return BuiltGraph::default();
     }
 
-    let binary = resolve_swift_ast_binary();
-
-    if !Path::new(&binary).exists() && which_in_path(&binary).is_none() {
+    if !Path::new(binary).exists() && which_in_path(binary).is_none() {
         eprintln!(
             "[flowmap-engine] swift-ast binary not found: {binary}. \
              Returning empty graph."
@@ -140,7 +139,7 @@ fn build_swift_graph(workspace_path: &str) -> BuiltGraph {
 
     let mut global = BuiltGraph::default();
     for file in &swift_files {
-        if let Some(file_graph) = swift_bridge::parse_swift_file(&binary, file) {
+        if let Some(file_graph) = swift_bridge::parse_swift_file(binary, file) {
             global.merge(file_graph);
         }
     }
