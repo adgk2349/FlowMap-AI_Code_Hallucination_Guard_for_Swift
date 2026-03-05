@@ -14,6 +14,11 @@
     "onCommand:flowmap.showGraphDiff",
     "onCommand:flowmap.showImpactAnalysis",
     "onCommand:flowmap.toggleAutoAnalyzeOnSave",
+    "onCommand:flowmap.enterLicenseKey",
+    "onCommand:flowmap.deactivateLicense",
+    "onCommand:flowmap.showLicenseStatus",
+    "onCommand:flowmap.copyLicenseDebugInfo",
+    "onCommand:flowmap.proFeaturePreview",
     "onWebviewPanel:flowmapGraph",
     "onLanguage:swift"
   ],
@@ -35,6 +40,26 @@
       {
         "command": "flowmap.toggleAutoAnalyzeOnSave",
         "title": "FlowMap: Toggle Auto Analyze On Save"
+      },
+      {
+        "command": "flowmap.enterLicenseKey",
+        "title": "FlowMap: Enter License Key"
+      },
+      {
+        "command": "flowmap.deactivateLicense",
+        "title": "FlowMap: Deactivate License"
+      },
+      {
+        "command": "flowmap.showLicenseStatus",
+        "title": "FlowMap: Show License Status"
+      },
+      {
+        "command": "flowmap.copyLicenseDebugInfo",
+        "title": "FlowMap: Copy License Debug Info"
+      },
+      {
+        "command": "flowmap.proFeaturePreview",
+        "title": "FlowMap: Pro Feature Preview"
       }
     ],
     "configuration": {
@@ -55,6 +80,11 @@
           "default": 500,
           "minimum": 0,
           "description": "Milliseconds to wait after the last Swift save before triggering an automatic analysis."
+        },
+        "flowmap.devLicenseKey": {
+          "type": "string",
+          "default": "",
+          "description": "Dev-only license key for testing Pro features locally. Overridden by the FLOWMAP_DEV_LICENSE_KEY environment variable. Leave empty to keep Pro permanently disabled."
         }
       }
     }
