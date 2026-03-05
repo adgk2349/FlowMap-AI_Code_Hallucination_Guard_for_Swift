@@ -1,3 +1,0 @@
-module SwiftParser {
-    header "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/arm64-apple-macosx/debug/SwiftParser.build/include/SwiftParser-Swift.h"
-}

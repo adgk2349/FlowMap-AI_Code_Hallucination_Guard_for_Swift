@@ -6,6 +6,32 @@ import { FlowGraph } from './flowmapClient';
 export class GraphView {
   private static panel: vscode.WebviewPanel | undefined;
 
+  /**
+   * Restore a webview panel that VS Code serialized from a previous session.
+   */
+  static restore(
+    context: vscode.ExtensionContext,
+    panel: vscode.WebviewPanel
+  ): void {
+    GraphView.panel = panel;
+    panel.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [
+        vscode.Uri.file(path.join(context.extensionPath, 'webview')),
+      ],
+    };
+    panel.onDidDispose(
+      () => {
+        GraphView.panel = undefined;
+      },
+      null,
+      context.subscriptions
+    );
+    // Show an empty graph until the user runs analyze again
+    const emptyGraph: FlowGraph = { nodes: [], edges: [] };
+    panel.webview.html = GraphView.buildHtml(context, panel.webview, emptyGraph);
+  }
+
   static show(context: vscode.ExtensionContext, graph: FlowGraph): void {
     if (GraphView.panel) {
       GraphView.panel.reveal();
@@ -31,11 +57,8 @@ export class GraphView {
       );
     }
 
-    GraphView.panel.webview.html = GraphView.buildHtml(
-      context,
-      GraphView.panel.webview,
-      graph
-    );
+    const html = GraphView.buildHtml(context, GraphView.panel.webview, graph);
+    GraphView.panel.webview.html = html;
   }
 
   private static buildHtml(
@@ -48,10 +71,15 @@ export class GraphView {
       vscode.Uri.file(path.join(context.extensionPath, 'webview', 'graph.js'))
     );
 
+    // Sanitize graph data to prevent XSS via </script> injection
+    const safeJson = JSON.stringify(graph)
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e');
+
     return fs
       .readFileSync(htmlPath, 'utf8')
       .replace('{{CSP_SOURCE}}', webview.cspSource)
       .replace('{{GRAPH_JS_URI}}', jsUri.toString())
-      .replace('{{GRAPH_DATA}}', JSON.stringify(graph));
+      .replace('{{GRAPH_DATA}}', safeJson);
   }
 }

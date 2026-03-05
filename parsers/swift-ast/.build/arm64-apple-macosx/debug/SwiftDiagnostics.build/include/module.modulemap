@@ -1,3 +1,0 @@
-module SwiftDiagnostics {
-    header "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/arm64-apple-macosx/debug/SwiftDiagnostics.build/include/SwiftDiagnostics-Swift.h"
-}

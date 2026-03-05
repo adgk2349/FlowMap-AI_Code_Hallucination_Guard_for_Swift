@@ -3,9 +3,15 @@
   "displayName": "FlowMap",
   "description": "Call-graph visualization for AI-generated Swift code",
   "version": "0.1.0",
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Visualization"],
-  "activationEvents": ["onCommand:flowmap.analyzeWorkspace"],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onCommand:flowmap.analyzeWorkspace"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -31,11 +37,11 @@
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.3.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
     "eslint": "^8.56.0",
-    "@typescript-eslint/parser": "^6.19.0",
-    "@typescript-eslint/eslint-plugin": "^6.19.0"
+    "typescript": "^5.3.0"
   }
 }

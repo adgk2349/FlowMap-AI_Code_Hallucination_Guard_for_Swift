@@ -1,3 +1,0 @@
-module SwiftSyntaxMacrosGenericTestSupport {
-    header "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/arm64-apple-macosx/debug/SwiftSyntaxMacrosGenericTestSupport.build/include/SwiftSyntaxMacrosGenericTestSupport-Swift.h"
-}
