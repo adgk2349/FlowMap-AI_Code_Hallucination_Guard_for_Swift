@@ -7,6 +7,8 @@ export interface FlowNode {
   id: string;
   kind?: string;
   name?: string;
+  uri?: string;
+  line?: number;
 }
 
 export interface FlowEdge {

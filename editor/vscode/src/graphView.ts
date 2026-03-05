@@ -27,6 +27,7 @@ export class GraphView {
       null,
       context.subscriptions
     );
+    GraphView.registerMessageHandler(context, panel);
     // Show an empty graph until the user runs analyze again
     const emptyGraph: FlowGraph = { nodes: [], edges: [] };
     panel.webview.html = GraphView.buildHtml(context, panel.webview, emptyGraph);
@@ -55,10 +56,46 @@ export class GraphView {
         null,
         context.subscriptions
       );
+
+      GraphView.registerMessageHandler(context, GraphView.panel);
     }
 
     const html = GraphView.buildHtml(context, GraphView.panel.webview, graph);
     GraphView.panel.webview.html = html;
+  }
+
+  /**
+   * Register the webview → extension message handler.
+   * Handles { command: 'openFile', uri: string, line: number }.
+   */
+  private static registerMessageHandler(
+    context: vscode.ExtensionContext,
+    panel: vscode.WebviewPanel
+  ): void {
+    panel.webview.onDidReceiveMessage(
+      async (message: { command: string; uri: string; line: number }) => {
+        if (message.command === 'openFile' && message.uri) {
+          try {
+            const doc = await vscode.workspace.openTextDocument(
+              vscode.Uri.parse(message.uri)
+            );
+            // Convert 1-based line from AST to 0-based VS Code range
+            const line = Math.max(0, (message.line ?? 1) - 1);
+            const range = new vscode.Range(line, 0, line, 0);
+            await vscode.window.showTextDocument(doc, {
+              viewColumn: vscode.ViewColumn.Beside,
+              selection: range,
+            });
+          } catch (err) {
+            vscode.window.showErrorMessage(
+              `FlowMap: Cannot open file — ${(err as Error).message}`
+            );
+          }
+        }
+      },
+      null,
+      context.subscriptions
+    );
   }
 
   private static buildHtml(
