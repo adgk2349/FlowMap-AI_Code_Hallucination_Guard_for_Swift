@@ -209,6 +209,39 @@ cp parsers/swift-ast/.build/release/flowmap-swift-ast target/debug/
 | Green dashed edge | Added edge |
 | Red dashed edge | Removed edge |
 
+### Auto-analyze on save (PR6+)
+
+FlowMap automatically re-analyzes the workspace whenever a Swift file is saved,
+keeping the graph panel in sync without manual intervention.
+
+| Setting | Default | Description |
+|---|---|---|
+| `flowmap.autoAnalyzeOnSave` | `true` | Enable/disable auto-analyze on save |
+| `flowmap.autoAnalyzeDebounceMs` | `500` | Wait this many ms after the last save before triggering analysis |
+
+**Behaviour:**
+- The panel refreshes silently in the background — editor focus is never stolen.
+- If an analysis is already running when a save arrives, exactly one extra
+  analysis is queued and runs immediately after the current one completes
+  (no spam — the queue depth is capped at one).
+- If analysis fails, the last successful graph remains visible.
+
+**Toggle command:** open the Command Palette and run
+`FlowMap: Toggle Auto Analyze On Save` — a toast confirms the new state.
+
+### Status badge (PR6+)
+
+A status badge in the top-left corner of the graph panel shows whether the
+workspace is clean relative to HEAD:
+
+| Badge | Meaning |
+|---|---|
+| **✓ Clean** (green) | No node or edge changes detected vs HEAD |
+| **⚑ Changed** (amber) | Diff detected; counts shown: `+N nodes  -N nodes  ~N nodes  +N edges  -N edges` |
+
+When the status is **Changed**, unchanged nodes are rendered at reduced opacity
+so that added, removed, changed, and impacted nodes stand out visually.
+
 ### Same-file `calls` edges (PR5+)
 
 The Swift AST parser resolves function call sites within the same file using a
@@ -232,7 +265,7 @@ only its **direct** callees (one hop), not the full transitive closure.
 ### Manual test checklist
 
 - [ ] Extension loads without errors in the Extension Development Host
-- [ ] All three FlowMap commands appear in the Command Palette
+- [ ] All four FlowMap commands appear in the Command Palette (including Toggle Auto Analyze)
 - [ ] FlowMap Graph panel opens after any command runs
 - [ ] Nodes are colour-coded: file=dark blue, type=dark green, func=dark orange
 - [ ] Type and file nodes contain their child nodes as compound (parent) boxes
@@ -246,3 +279,9 @@ only its **direct** callees (one hop), not the full transitive closure.
   callee nodes with orange outlines
 - [ ] Removed nodes appear as faded dark-red phantom nodes
 - [ ] Legend in the top-right corner shows only relevant swatches
+- [ ] Status badge (top-left) shows "✓ Clean" on an unmodified workspace
+- [ ] After saving a Swift file with changes, badge updates to "⚑ Changed" with counts
+- [ ] Unchanged nodes are visually muted (lower opacity) when status is Changed
+- [ ] Saving a Swift file triggers auto-analyze (graph updates without focus steal)
+- [ ] Toggling auto-analyze off + saving a Swift file → no re-analyze
+- [ ] Toggling auto-analyze back on → next save re-analyzes
