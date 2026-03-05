@@ -70,11 +70,34 @@
         display: block;
         margin-top: 2px;
       }
+      #license-badge {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: bold;
+        pointer-events: none;
+        z-index: 10;
+        opacity: 0.75;
+      }
+      #license-badge.license-free {
+        background: rgba(30, 30, 30, 0.80);
+        color: #888888;
+        border: 1px solid #444444;
+      }
+      #license-badge.license-pro {
+        background: rgba(20, 40, 80, 0.90);
+        color: #66aaff;
+        border: 1px solid #3366cc;
+      }
     </style>
   </head>
   <body>
     <div id="cy"></div>
     <div id="status-badge"></div>
+    <div id="license-badge"></div>
     <div id="legend">
       <div id="legend-title">LEGEND</div>
     </div>
