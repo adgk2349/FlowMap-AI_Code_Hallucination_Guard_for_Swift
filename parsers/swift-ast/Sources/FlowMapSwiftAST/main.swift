@@ -30,7 +30,7 @@ final class FlowMapVisitor: SyntaxVisitor {
 
     // Accumulated output
     private(set) var nodes: [ASTNode] = []
-    private(set) var edges: [ASTEdge] = []
+    private(set) var edges: [ASTEdge] = []  // "contains" edges only during walk
 
     // Fixed context
     private let fileNodeId: String
@@ -41,6 +41,19 @@ final class FlowMapVisitor: SyntaxVisitor {
     private var typeStack: [String] = []
     private var funcStack: [String] = []
     private var edgeSeq = 0
+
+    // Two-phase call resolution.
+    // funcsByScope[parentScope][funcName] = [nodeId, ...]  — populated as funcs are declared.
+    // pendingCalls                                         — collected during walk, resolved post-walk.
+    private var funcsByScope: [String: [String: [String]]] = [:]
+
+    private struct PendingCall {
+        let edgeId: String
+        let callerId: String
+        let calleeName: String
+        let preferredScope: String  // typeStack.last ?? fileNodeId at the call site
+    }
+    private var pendingCalls: [PendingCall] = []
 
     init(sourceFile: SourceFileSyntax, fileNodeId: String, filePath: String) {
         self.fileNodeId = fileNodeId
@@ -73,6 +86,15 @@ final class FlowMapVisitor: SyntaxVisitor {
         typeStack.append(id)
     }
 
+    /// Create a func/init node, register it in `funcsByScope`, push onto `funcStack`.
+    private func addFunc(name: String, id: String, line: Int) {
+        let scope = currentParent
+        nodes.append(ASTNode(id: id, kind: "func", name: name, uri: filePath, line: line))
+        edges.append(ASTEdge(id: nextEdgeId(), source: scope, target: id, kind: "contains"))
+        funcsByScope[scope, default: [:]][name, default: []].append(id)
+        funcStack.append(id)
+    }
+
     // MARK: Class
 
     override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
@@ -101,13 +123,13 @@ final class FlowMapVisitor: SyntaxVisitor {
 
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
         let name = node.name.text
-        let id = "\(currentParent).\(name)"
+        let params = node.signature.parameterClause.parameters
+            .map { $0.firstName.text }
+            .joined(separator: ":")
+        let sig = params.isEmpty ? "()" : "(\(params):)"
+        let id = "\(currentParent).\(name)\(sig)"
         let line = node.name.startLocation(converter: converter).line
-        nodes.append(ASTNode(id: id, kind: "func", name: name,
-                             uri: filePath, line: line))
-        edges.append(ASTEdge(id: nextEdgeId(), source: currentParent,
-                             target: id, kind: "contains"))
-        funcStack.append(id)
+        addFunc(name: name, id: id, line: line)
         return .visitChildren
     }
     override func visitPost(_ node: FunctionDeclSyntax) { funcStack.removeLast() }
@@ -117,11 +139,7 @@ final class FlowMapVisitor: SyntaxVisitor {
     override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
         let id = "\(currentParent).init"
         let line = node.initKeyword.startLocation(converter: converter).line
-        nodes.append(ASTNode(id: id, kind: "func", name: "init",
-                             uri: filePath, line: line))
-        edges.append(ASTEdge(id: nextEdgeId(), source: currentParent,
-                             target: id, kind: "contains"))
-        funcStack.append(id)
+        addFunc(name: "init", id: id, line: line)
         return .visitChildren
     }
     override func visitPost(_ node: InitializerDeclSyntax) { funcStack.removeLast() }
@@ -145,16 +163,43 @@ final class FlowMapVisitor: SyntaxVisitor {
         }
 
         if let callee = calleeName {
-            // Best-effort resolution: prefer a sibling in the same type scope,
-            // then fall back to file scope. Dangling edges are removed after
-            // the walk is complete.
-            let targetId = typeStack.isEmpty
-                ? "\(fileNodeId).\(callee)"
-                : "\(typeStack.last!).\(callee)"
-            edges.append(ASTEdge(id: nextEdgeId(), source: callerId,
-                                 target: targetId, kind: "calls"))
+            pendingCalls.append(PendingCall(
+                edgeId: nextEdgeId(),
+                callerId: callerId,
+                calleeName: callee,
+                preferredScope: typeStack.last ?? fileNodeId
+            ))
         }
         return .visitChildren
+    }
+
+    // MARK: Post-walk call resolution
+
+    /// Resolve all pending calls collected during the walk.
+    ///
+    /// Resolution strategy (best-effort, same-file only):
+    /// 1. Look for a function with the callee name in the preferred scope (same type).
+    /// 2. Fall back to file scope.
+    ///
+    /// Because `funcsByScope` is fully populated before this method is called,
+    /// forward references (calls to functions declared later in the file) are
+    /// resolved correctly. Unresolvable calls (e.g. stdlib or cross-file) are
+    /// silently dropped.
+    func resolveCalls() -> [ASTEdge] {
+        var result: [ASTEdge] = []
+        for call in pendingCalls {
+            // Prefer same-type scope, then fall back to file scope
+            let candidates = funcsByScope[call.preferredScope]?[call.calleeName]
+                ?? funcsByScope[fileNodeId]?[call.calleeName]
+            guard let targetId = candidates?.first else { continue }
+            result.append(ASTEdge(
+                id: call.edgeId,
+                source: call.callerId,
+                target: targetId,
+                kind: "calls"
+            ))
+        }
+        return result
     }
 }
 
@@ -173,16 +218,11 @@ func parseFile(at path: String) throws -> ASTGraph {
     )
     visitor.walk(sourceFile)
 
-    var graph = ASTGraph(nodes: visitor.nodes, edges: visitor.edges)
-
-    // Drop "calls" edges whose target was never declared in this file —
-    // they are forward references we cannot resolve at single-file scope.
-    let knownIds = Set(graph.nodes.map(\.id))
-    graph.edges = graph.edges.filter { edge in
-        edge.kind == "contains" || knownIds.contains(edge.target)
-    }
-
-    return graph
+    // Post-walk: resolve call edges using the fully-populated funcsByScope map.
+    // All resolved targets are guaranteed to reference declared node IDs, so
+    // no further filtering is needed.
+    let callEdges = visitor.resolveCalls()
+    return ASTGraph(nodes: visitor.nodes, edges: visitor.edges + callEdges)
 }
 
 // MARK: - Entry point
