@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { FlowAnalysis, FlowGraph } from './flowmapClient';
+import { FlowAnalysis } from './flowmapClient';
+import { LicenseStatus } from './license';
 
 /** Panel titles per view mode. */
 const VIEW_TITLES: Record<string, string> = {
@@ -61,7 +62,8 @@ export class GraphView {
   static show(
     context: vscode.ExtensionContext,
     analysis: FlowAnalysis,
-    view: 'all' | 'diff' | 'impact' = 'all'
+    view: 'all' | 'diff' | 'impact' = 'all',
+    licenseStatus: LicenseStatus = 'free'
   ): void {
     GraphView.lastViewMode = view;
     const title = VIEW_TITLES[view] ?? 'FlowMap Graph';
@@ -98,7 +100,8 @@ export class GraphView {
       context,
       GraphView.panel.webview,
       analysis,
-      view
+      view,
+      licenseStatus
     );
   }
 
@@ -110,7 +113,8 @@ export class GraphView {
    */
   static update(
     context: vscode.ExtensionContext,
-    analysis: FlowAnalysis
+    analysis: FlowAnalysis,
+    licenseStatus: LicenseStatus = 'free'
   ): void {
     if (!GraphView.panel) {
       return;
@@ -119,8 +123,26 @@ export class GraphView {
       context,
       GraphView.panel.webview,
       analysis,
-      GraphView.lastViewMode
+      GraphView.lastViewMode,
+      licenseStatus
     );
+  }
+
+  /**
+   * Push a license status update to the open panel via postMessage.
+   *
+   * Called after a license command (enter/deactivate) so the webview badge
+   * reflects the new state without requiring a full re-analyze.
+   * No-op if no panel is open.
+   */
+  static sendLicenseStatus(status: LicenseStatus): void {
+    if (!GraphView.panel) {
+      return;
+    }
+    void GraphView.panel.webview.postMessage({
+      command: 'updateLicenseStatus',
+      status,
+    });
   }
 
   /**
@@ -161,7 +183,8 @@ export class GraphView {
     context: vscode.ExtensionContext,
     webview: vscode.Webview,
     analysis: FlowAnalysis,
-    view: string
+    view: string,
+    licenseStatus: LicenseStatus = 'free'
   ): string {
     const htmlPath = path.join(context.extensionPath, 'webview', 'graph.html');
     const jsUri = webview.asWebviewUri(
@@ -173,7 +196,7 @@ export class GraphView {
     );
 
     // Sanitize to prevent XSS via </script> injection
-    const safeJson = JSON.stringify({ ...analysis, view })
+    const safeJson = JSON.stringify({ ...analysis, view, licenseStatus })
       .replace(/</g, '\\u003c')
       .replace(/>/g, '\\u003e');
 

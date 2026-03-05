@@ -490,4 +490,28 @@
       }
     });
   }
+
+  // ── License badge ─────────────────────────────────────────────────────────
+  function applyLicenseBadge(status) {
+    const badge = document.getElementById('license-badge');
+    if (!badge) { return; }
+    if (status === 'pro') {
+      badge.textContent = '★ Pro';
+      badge.className = 'license-pro';
+    } else {
+      badge.textContent = 'Free';
+      badge.className = 'license-free';
+    }
+  }
+
+  // Initial render from embedded payload
+  applyLicenseBadge(analysis.licenseStatus ?? 'free');
+
+  // Live updates pushed via postMessage when the user enters/clears a key
+  window.addEventListener('message', function (event) {
+    const msg = event.data;
+    if (msg && msg.command === 'updateLicenseStatus') {
+      applyLicenseBadge(msg.status ?? 'free');
+    }
+  });
 })();
