@@ -25,6 +25,7 @@ export class GraphView {
       enableScripts: true,
       localResourceRoots: [
         vscode.Uri.file(path.join(context.extensionPath, 'webview')),
+        vscode.Uri.file(path.join(context.extensionPath, 'node_modules')),
       ],
     };
     panel.onDidDispose(
@@ -74,6 +75,7 @@ export class GraphView {
           enableScripts: true,
           localResourceRoots: [
             vscode.Uri.file(path.join(context.extensionPath, 'webview')),
+            vscode.Uri.file(path.join(context.extensionPath, 'node_modules')),
           ],
         }
       );
@@ -142,6 +144,10 @@ export class GraphView {
       vscode.Uri.file(path.join(context.extensionPath, 'webview', 'graph.js'))
     );
 
+    const cyUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(context.extensionPath, 'node_modules', 'cytoscape', 'dist', 'cytoscape.min.js'))
+    );
+
     // Sanitize to prevent XSS via </script> injection
     const safeJson = JSON.stringify({ ...analysis, view })
       .replace(/</g, '\\u003c')
@@ -151,9 +157,7 @@ export class GraphView {
       .readFileSync(htmlPath, 'utf8')
       .replace('{{CSP_SOURCE}}', webview.cspSource)
       .replace('{{GRAPH_JS_URI}}', jsUri.toString())
+      .replace('{{CY_JS_URI}}', cyUri.toString())
       .replace('{{GRAPH_DATA}}', safeJson);
   }
 }
-
-// Keep FlowGraph importable from graphView for restore compatibility
-export type { FlowGraph };

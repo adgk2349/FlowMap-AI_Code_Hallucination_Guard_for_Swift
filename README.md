@@ -23,6 +23,7 @@ flowmap/
 │   └── vscode/     # VS Code extension — cytoscape graph panel with diff colours
 ├── parsers/
 │   └── swift-ast/  # Swift package: flowmap-swift-ast CLI (SwiftSyntax AST walker)
+│                   #   two-phase call resolution — declaration pass + post-walk resolve
 ├── .github/
 │   └── workflows/  # CI (cargo fmt, clippy, test, build)
 ├── Cargo.toml      # Rust workspace
@@ -208,6 +209,26 @@ cp parsers/swift-ast/.build/release/flowmap-swift-ast target/debug/
 | Green dashed edge | Added edge |
 | Red dashed edge | Removed edge |
 
+### Same-file `calls` edges (PR5+)
+
+The Swift AST parser resolves function call sites within the same file using a
+two-phase strategy:
+
+1. **Declaration pass** — as the AST is walked, every function/initializer node
+   is registered in an internal `funcsByScope` map, keyed by its enclosing type
+   or file scope.
+
+2. **Resolution pass** — after the walk is complete, each collected call site is
+   matched against `funcsByScope`.  The resolver prefers a function with the
+   same name declared in the caller's enclosing type; if not found it falls back
+   to file scope.  Because the map is fully populated before resolution begins,
+   **forward references** (calling a function declared later in the file) resolve
+   correctly.  Unresolvable calls (e.g. stdlib or cross-file) are silently
+   dropped.
+
+`calls` edges appear as orange arrows in the graph.  Clicking a node highlights
+only its **direct** callees (one hop), not the full transitive closure.
+
 ### Manual test checklist
 
 - [ ] Extension loads without errors in the Extension Development Host
@@ -218,7 +239,7 @@ cp parsers/swift-ast/.build/release/flowmap-swift-ast target/debug/
 - [ ] `calls` edges render as orange arrows between function nodes
 - [ ] Scroll / pinch zooms the graph; nodes are draggable
 - [ ] Clicking a node opens the corresponding file in a side panel at the correct line
-- [ ] Clicking a node highlights its downstream callee nodes (yellow border)
+- [ ] Clicking a node highlights its **direct** callee nodes only (yellow border, one hop)
 - [ ] Clicking on the background clears the highlight
 - [ ] After modifying a Swift file (without staging/committing), re-running
   "Show Graph Diff" shows the changed node in dark yellow and its downstream
