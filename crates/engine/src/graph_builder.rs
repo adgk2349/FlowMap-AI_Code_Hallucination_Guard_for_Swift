@@ -142,4 +142,41 @@ mod tests {
         assert_eq!(g.edges[0].from, "A");
         assert_eq!(g.edges[0].to, "B");
     }
+
+    #[test]
+    fn test_calls_edges_are_merged() {
+        // Verify that "calls" edges produced by the Swift parser flow through
+        // merge() unchanged and that source/target are renamed to from/to.
+        let mut g = BuiltGraph::new();
+        g.merge(make_graph(
+            vec![
+                SwiftNode {
+                    id: "Foo.swift.MyClass.callerFunc()".into(),
+                    kind: "func".into(),
+                    name: "callerFunc".into(),
+                    uri: Some("/src/Foo.swift".into()),
+                    line: Some(5),
+                },
+                SwiftNode {
+                    id: "Foo.swift.MyClass.calleeFunc()".into(),
+                    kind: "func".into(),
+                    name: "calleeFunc".into(),
+                    uri: Some("/src/Foo.swift".into()),
+                    line: Some(10),
+                },
+            ],
+            vec![SwiftEdge {
+                id: "Foo.swift_e3".into(),
+                source: "Foo.swift.MyClass.callerFunc()".into(),
+                target: "Foo.swift.MyClass.calleeFunc()".into(),
+                kind: "calls".into(),
+            }],
+        ));
+
+        // Exactly one edge present; must carry kind="calls" and correct from/to
+        assert_eq!(g.edges.len(), 1);
+        assert_eq!(g.edges[0].kind, "calls");
+        assert_eq!(g.edges[0].from, "Foo.swift.MyClass.callerFunc()");
+        assert_eq!(g.edges[0].to, "Foo.swift.MyClass.calleeFunc()");
+    }
 }
