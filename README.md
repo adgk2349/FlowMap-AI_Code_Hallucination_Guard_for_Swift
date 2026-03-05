@@ -11,12 +11,16 @@ flowmap/
 ├── crates/
 │   ├── protocol/   # JSON protocol types (request/response envelopes, graph model)
 │   ├── engine/     # Command router: ping, shutdown, analyze
-│   │               #   scanner.rs      — finds *.swift files with WalkDir
-│   │               #   swift_bridge.rs — spawns flowmap-swift-ast, parses JSON
-│   │               #   graph_builder.rs — merges SwiftGraph → BuiltGraph
+│   │               #   scanner.rs          — finds *.swift files with WalkDir
+│   │               #   swift_bridge.rs     — spawns flowmap-swift-ast, parses JSON
+│   │               #   graph_builder.rs    — merges SwiftGraph → BuiltGraph
+│   │               #   git_diff.rs         — detects changed Swift files via git
+│   │               #   incremental_graph.rs — builds HEAD/current graph fragments
+│   │               #   graph_diff.rs       — diffs two BuiltGraphs (add/remove/change)
+│   │               #   impact_analysis.rs  — BFS over calls edges to find impacted nodes
 │   └── cli/        # flowmap binary — reads JSON from stdin, writes JSON to stdout
 ├── editor/
-│   └── vscode/     # VS Code extension — cytoscape graph panel
+│   └── vscode/     # VS Code extension — cytoscape graph panel with diff colours
 ├── parsers/
 │   └── swift-ast/  # Swift package: flowmap-swift-ast CLI (SwiftSyntax AST walker)
 ├── .github/
@@ -185,14 +189,39 @@ cd parsers/swift-ast && swift build -c release && cd ../..
 cp parsers/swift-ast/.build/release/flowmap-swift-ast target/debug/
 ```
 
+### Commands (PR4+)
+
+| Command | Description |
+|---|---|
+| `FlowMap: Analyze Workspace` | Full workspace graph with all diff colours baked in |
+| `FlowMap: Show Graph Diff` | Same graph with unchanged nodes dimmed, diff nodes highlighted |
+| `FlowMap: Show Impact Analysis` | Same graph with only changed + impacted nodes visible |
+
+### Diff colour scheme
+
+| Colour | Meaning |
+|---|---|
+| Dark green background | Added node / edge (in current tree, absent in HEAD) |
+| Dark red background + dashed border | Removed node (in HEAD, absent in current tree) |
+| Dark yellow background | Changed node (metadata differs from HEAD) |
+| Orange border (3 px solid) | Impacted node — downstream of a changed/added/removed node |
+| Green dashed edge | Added edge |
+| Red dashed edge | Removed edge |
+
 ### Manual test checklist
 
 - [ ] Extension loads without errors in the Extension Development Host
-- [ ] "FlowMap: Analyze Workspace" appears in the Command Palette
-- [ ] FlowMap Graph panel opens after the command runs
+- [ ] All three FlowMap commands appear in the Command Palette
+- [ ] FlowMap Graph panel opens after any command runs
 - [ ] Nodes are colour-coded: file=dark blue, type=dark green, func=dark orange
 - [ ] Type and file nodes contain their child nodes as compound (parent) boxes
 - [ ] `calls` edges render as orange arrows between function nodes
 - [ ] Scroll / pinch zooms the graph; nodes are draggable
-- [ ] Clicking a node with a `uri` opens the corresponding file in a side panel
-  at the correct line number
+- [ ] Clicking a node opens the corresponding file in a side panel at the correct line
+- [ ] Clicking a node highlights its downstream callee nodes (yellow border)
+- [ ] Clicking on the background clears the highlight
+- [ ] After modifying a Swift file (without staging/committing), re-running
+  "Show Graph Diff" shows the changed node in dark yellow and its downstream
+  callee nodes with orange outlines
+- [ ] Removed nodes appear as faded dark-red phantom nodes
+- [ ] Legend in the top-right corner shows only relevant swatches

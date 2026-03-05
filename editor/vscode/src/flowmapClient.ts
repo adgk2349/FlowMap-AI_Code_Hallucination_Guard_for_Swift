@@ -23,6 +23,36 @@ export interface FlowGraph {
   edges: FlowEdge[];
 }
 
+/** Graph diff returned by the engine's analyze command. */
+export interface FlowDiff {
+  /** Nodes present in current tree but absent in HEAD. */
+  added_nodes: FlowNode[];
+  /** Nodes present in HEAD but absent in current tree. */
+  removed_nodes: FlowNode[];
+  /** Nodes present in both whose metadata (name/kind/uri/line) changed. */
+  changed_nodes: FlowNode[];
+  /** Edges present in current tree but absent in HEAD. */
+  added_edges: FlowEdge[];
+  /** Edges present in HEAD but absent in current tree. */
+  removed_edges: FlowEdge[];
+}
+
+/** Full analysis result returned by FlowmapClient.analyze(). */
+export interface FlowAnalysis {
+  graph: FlowGraph;
+  diff: FlowDiff;
+  /** Node IDs downstream of any changed/added/removed node. */
+  impact: string[];
+}
+
+const EMPTY_DIFF: FlowDiff = {
+  added_nodes: [],
+  removed_nodes: [],
+  changed_nodes: [],
+  added_edges: [],
+  removed_edges: [],
+};
+
 /** Timeout in milliseconds for engine responses. */
 const ENGINE_TIMEOUT_MS = 15_000;
 
@@ -39,13 +69,13 @@ export class FlowmapClient {
   analyze(
     workspacePath: string,
     extensionPath: string
-  ): Promise<FlowGraph | undefined> {
+  ): Promise<FlowAnalysis | undefined> {
     // Priority: explicit setting > extension-relative path (works in any project)
     const binary =
       this.configuredBinary ||
       path.join(extensionPath, '..', '..', 'target', 'debug', 'flowmap');
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const request =
         JSON.stringify({
           protocolVersion: '0.1',
@@ -137,11 +167,19 @@ export class FlowmapClient {
           }
           const resp = JSON.parse(lines[lines.length - 1]) as {
             ok: boolean;
-            payload?: { graph?: FlowGraph };
+            payload?: {
+              graph?: FlowGraph;
+              diff?: FlowDiff;
+              impact?: string[];
+            };
             error?: { message?: string };
           };
           if (resp.ok && resp.payload?.graph) {
-            resolve(resp.payload.graph);
+            resolve({
+              graph: resp.payload.graph,
+              diff: resp.payload.diff ?? EMPTY_DIFF,
+              impact: resp.payload.impact ?? [],
+            });
           } else {
             vscode.window.showErrorMessage(
               `FlowMap: Engine error — ${resp.error?.message ?? 'unknown'}`

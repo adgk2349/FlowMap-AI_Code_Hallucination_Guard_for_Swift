@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 /// A node in the merged dependency graph.
 /// `kind` is one of: "file" | "type" | "func"
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct BuiltNode {
     pub id: String,
     pub kind: String,
@@ -18,7 +18,7 @@ pub struct BuiltNode {
 /// An edge in the merged dependency graph.
 /// `kind` is one of: "contains" | "calls"
 /// Uses `from`/`to` to match the FlowMap protocol.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct BuiltEdge {
     pub id: String,
     pub kind: String,
@@ -47,10 +47,11 @@ impl BuiltGraph {
     ///   `source`/`target` (swift-ast convention).
     pub fn merge(&mut self, swift: SwiftGraph) {
         // Snapshot existing IDs to avoid O(n²) membership checks inside the loop
-        let existing_ids: HashSet<String> = self.nodes.iter().map(|n| n.id.clone()).collect();
+        let existing_node_ids: HashSet<String> = self.nodes.iter().map(|n| n.id.clone()).collect();
+        let existing_edge_ids: HashSet<String> = self.edges.iter().map(|e| e.id.clone()).collect();
 
         for n in swift.nodes {
-            if !existing_ids.contains(&n.id) {
+            if !existing_node_ids.contains(&n.id) {
                 self.nodes.push(BuiltNode {
                     id: n.id,
                     kind: n.kind,
@@ -62,12 +63,14 @@ impl BuiltGraph {
         }
 
         for e in swift.edges {
-            self.edges.push(BuiltEdge {
-                id: e.id,
-                kind: e.kind,
-                from: e.source,
-                to: e.target,
-            });
+            if !existing_edge_ids.contains(&e.id) {
+                self.edges.push(BuiltEdge {
+                    id: e.id,
+                    kind: e.kind,
+                    from: e.source,
+                    to: e.target,
+                });
+            }
         }
     }
 }
