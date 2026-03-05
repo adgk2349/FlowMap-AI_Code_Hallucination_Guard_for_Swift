@@ -42,7 +42,6 @@
   // ── Map protocol nodes → cytoscape elements ──────────────────────────────
   // Current (working-tree) nodes
   const cyNodes = (graph.nodes ?? []).map(function (n) {
-    const edgeKey = `${n.from}::${n.to}::${n.kind}`;
     const data = {
       id: n.id,
       label: n.name ?? n.id,
@@ -122,7 +121,7 @@
     });
 
   // ── Cytoscape instance ───────────────────────────────────────────────────
-  var cy = cytoscape({
+  const cy = cytoscape({
     container: document.getElementById('cy'),
     elements: {
       nodes: [...cyNodes, ...phantomNodes],
@@ -290,26 +289,26 @@
 
   // ── Click-to-navigate & downstream highlight ─────────────────────────────
   cy.on('tap', 'node', function (evt) {
-    var node = evt.target;
+    const node = evt.target;
 
     // Clear previous highlight
     cy.elements().removeClass('highlighted dimmed');
 
-    // Collect downstream reachable nodes via 'calls' edges (BFS)
-    var downstream = node.successors('node');
-    var downstreamEdges = node.successors('edge');
+    // Collect direct callees via outgoing 'calls' edges (one hop only)
+    const callEdges = node.outgoers('edge').filter('[kind = "calls"]');
+    const callTargets = callEdges.targets();
 
-    if (downstream.length > 0) {
-      // Dim everything else, highlight the clicked node + downstream
+    if (callEdges.length > 0) {
+      // Dim everything else, highlight the clicked node + direct callees
       cy.elements().addClass('dimmed');
       node.removeClass('dimmed').addClass('highlighted');
-      downstream.removeClass('dimmed').addClass('highlighted');
-      downstreamEdges.removeClass('dimmed').addClass('highlighted');
+      callTargets.removeClass('dimmed').addClass('highlighted');
+      callEdges.removeClass('dimmed').addClass('highlighted');
     }
 
     // Navigate to source file on click
-    var uri = node.data('uri');
-    var line = node.data('line');
+    const uri = node.data('uri');
+    const line = node.data('line');
     if (uri) {
       vscodeApi.postMessage({ command: 'openFile', uri: uri, line: line });
     }
@@ -324,18 +323,18 @@
 
   // ── Legend ───────────────────────────────────────────────────────────────
   (function buildLegend() {
-    var legend = document.getElementById('legend');
+    const legend = document.getElementById('legend');
     if (!legend) {
       return;
     }
 
-    var hasDiff =
+    const hasDiff =
       addedNodeIds.size > 0 ||
       removedNodeIds.size > 0 ||
       changedNodeIds.size > 0 ||
       impactIds.size > 0;
 
-    var items = [
+    let items = [
       { color: '#1c3a5e', label: 'File node' },
       { color: '#1a4a2e', label: 'Type node' },
       { color: '#4a2e1a', label: 'Func node' },
@@ -351,12 +350,12 @@
     }
 
     items.forEach(function (item) {
-      var div = document.createElement('div');
+      const div = document.createElement('div');
       div.style.display = 'flex';
       div.style.alignItems = 'center';
       div.style.marginBottom = '4px';
 
-      var swatch = document.createElement('span');
+      const swatch = document.createElement('span');
       swatch.style.display = 'inline-block';
       swatch.style.width = '14px';
       swatch.style.height = '14px';
@@ -367,7 +366,7 @@
         swatch.style.border = '2px solid ' + item.border;
       }
 
-      var text = document.createElement('span');
+      const text = document.createElement('span');
       text.textContent = item.label;
       text.style.fontSize = '11px';
       text.style.color = '#ccc';
@@ -383,12 +382,12 @@
         { color: '#33cc33', label: 'Added edge' },
         { color: '#cc3333', label: 'Removed edge' },
       ].forEach(function (item) {
-        var div = document.createElement('div');
+        const div = document.createElement('div');
         div.style.display = 'flex';
         div.style.alignItems = 'center';
         div.style.marginBottom = '4px';
 
-        var line = document.createElement('span');
+        const line = document.createElement('span');
         line.style.display = 'inline-block';
         line.style.width = '14px';
         line.style.height = '2px';
@@ -396,7 +395,7 @@
         line.style.background = item.color;
         line.style.borderTop = '2px dashed ' + item.color;
 
-        var text = document.createElement('span');
+        const text = document.createElement('span');
         text.textContent = item.label;
         text.style.fontSize = '11px';
         text.style.color = '#ccc';
