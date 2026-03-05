@@ -13,7 +13,9 @@
     "onCommand:flowmap.analyzeWorkspace",
     "onCommand:flowmap.showGraphDiff",
     "onCommand:flowmap.showImpactAnalysis",
-    "onWebviewPanel:flowmapGraph"
+    "onCommand:flowmap.toggleAutoAnalyzeOnSave",
+    "onWebviewPanel:flowmapGraph",
+    "onLanguage:swift"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -29,6 +31,10 @@
       {
         "command": "flowmap.showImpactAnalysis",
         "title": "FlowMap: Show Impact Analysis"
+      },
+      {
+        "command": "flowmap.toggleAutoAnalyzeOnSave",
+        "title": "FlowMap: Toggle Auto Analyze On Save"
       }
     ],
     "configuration": {
@@ -38,6 +44,17 @@
           "type": "string",
           "default": "",
           "description": "Path to the flowmap binary. Defaults to target/debug/flowmap in the workspace root."
+        },
+        "flowmap.autoAnalyzeOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically re-analyze the workspace whenever a Swift file is saved."
+        },
+        "flowmap.autoAnalyzeDebounceMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 0,
+          "description": "Milliseconds to wait after the last Swift save before triggering an automatic analysis."
         }
       }
     }
@@ -54,5 +71,8 @@
     "@typescript-eslint/parser": "^8.56.1",
     "eslint": "^8.56.0",
     "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "cytoscape": "^3.33.1"
   }
 }
