@@ -29,6 +29,14 @@
     (diff.removed_edges ?? []).map((e) => `${e.from}::${e.to}::${e.kind}`)
   );
 
+  // ── Derive clean/changed status ─────────────────────────────────────────
+  const isClean =
+    (diff.added_nodes ?? []).length === 0 &&
+    (diff.removed_nodes ?? []).length === 0 &&
+    (diff.changed_nodes ?? []).length === 0 &&
+    (diff.added_edges ?? []).length === 0 &&
+    (diff.removed_edges ?? []).length === 0;
+
   // ── Build parent map from "contains" edges ───────────────────────────────
   const parentMap = {};
   const containsIds = new Set();
@@ -236,6 +244,11 @@
           opacity: 0.6,
         },
       },
+      // ── Muted unchanged (when diff exists; overridden by dimmed/highlighted) ─
+      {
+        selector: 'node.muted-bg',
+        style: { opacity: 0.4, color: '#777777' },
+      },
       // ── Highlight state (set programmatically on click) ─────────────────
       {
         selector: 'node.highlighted',
@@ -404,6 +417,55 @@
         div.appendChild(text);
         legend.appendChild(div);
       });
+    }
+  })();
+
+  // ── Mute unchanged nodes when diff exists ───────────────────────────────
+  // Applied before view-mode dimming so 'dimmed' (opacity 0.25) wins when both
+  // classes are present (Cytoscape evaluates styles in declaration order).
+  if (!isClean) {
+    cy.nodes().forEach(function (n) {
+      if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
+        n.addClass('muted-bg');
+      }
+    });
+  }
+
+  // ── Status badge ─────────────────────────────────────────────────────────
+  (function buildStatusBadge() {
+    const badge = document.getElementById('status-badge');
+    if (!badge) {
+      return;
+    }
+    // Only show when the graph has data
+    if ((graph.nodes ?? []).length === 0) {
+      return;
+    }
+
+    badge.style.display = 'block';
+
+    if (isClean) {
+      badge.textContent = '✓ Clean';
+      badge.className = 'status-clean';
+    } else {
+      const an = (diff.added_nodes ?? []).length;
+      const rn = (diff.removed_nodes ?? []).length;
+      const cn = (diff.changed_nodes ?? []).length;
+      const ae = (diff.added_edges ?? []).length;
+      const re = (diff.removed_edges ?? []).length;
+
+      const parts = [];
+      if (an > 0) { parts.push('+' + an + ' nodes'); }
+      if (rn > 0) { parts.push('-' + rn + ' nodes'); }
+      if (cn > 0) { parts.push('~' + cn + ' nodes'); }
+      if (ae > 0) { parts.push('+' + ae + ' edges'); }
+      if (re > 0) { parts.push('-' + re + ' edges'); }
+
+      const countsHtml = parts.length > 0
+        ? '<span class="badge-counts">' + parts.join('  ') + '</span>'
+        : '';
+      badge.innerHTML = '⚑ Changed' + countsHtml;
+      badge.className = 'status-changed';
     }
   })();
 
