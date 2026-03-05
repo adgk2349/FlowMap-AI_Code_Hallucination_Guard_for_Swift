@@ -1,7 +1,14 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { FlowGraph } from './flowmapClient';
+import { FlowAnalysis, FlowGraph } from './flowmapClient';
+
+/** Panel titles per view mode. */
+const VIEW_TITLES: Record<string, string> = {
+  all: 'FlowMap Graph',
+  diff: 'FlowMap: Graph Diff',
+  impact: 'FlowMap: Impact Analysis',
+};
 
 export class GraphView {
   private static panel: vscode.WebviewPanel | undefined;
@@ -29,17 +36,39 @@ export class GraphView {
     );
     GraphView.registerMessageHandler(context, panel);
     // Show an empty graph until the user runs analyze again
-    const emptyGraph: FlowGraph = { nodes: [], edges: [] };
-    panel.webview.html = GraphView.buildHtml(context, panel.webview, emptyGraph);
+    const emptyAnalysis: FlowAnalysis = {
+      graph: { nodes: [], edges: [] },
+      diff: {
+        added_nodes: [],
+        removed_nodes: [],
+        changed_nodes: [],
+        added_edges: [],
+        removed_edges: [],
+      },
+      impact: [],
+    };
+    panel.webview.html = GraphView.buildHtml(
+      context,
+      panel.webview,
+      emptyAnalysis,
+      'all'
+    );
   }
 
-  static show(context: vscode.ExtensionContext, graph: FlowGraph): void {
+  static show(
+    context: vscode.ExtensionContext,
+    analysis: FlowAnalysis,
+    view: 'all' | 'diff' | 'impact' = 'all'
+  ): void {
+    const title = VIEW_TITLES[view] ?? 'FlowMap Graph';
+
     if (GraphView.panel) {
+      GraphView.panel.title = title;
       GraphView.panel.reveal();
     } else {
       GraphView.panel = vscode.window.createWebviewPanel(
         'flowmapGraph',
-        'FlowMap Graph',
+        title,
         vscode.ViewColumn.One,
         {
           enableScripts: true,
@@ -60,8 +89,12 @@ export class GraphView {
       GraphView.registerMessageHandler(context, GraphView.panel);
     }
 
-    const html = GraphView.buildHtml(context, GraphView.panel.webview, graph);
-    GraphView.panel.webview.html = html;
+    GraphView.panel.webview.html = GraphView.buildHtml(
+      context,
+      GraphView.panel.webview,
+      analysis,
+      view
+    );
   }
 
   /**
@@ -101,15 +134,16 @@ export class GraphView {
   private static buildHtml(
     context: vscode.ExtensionContext,
     webview: vscode.Webview,
-    graph: FlowGraph
+    analysis: FlowAnalysis,
+    view: string
   ): string {
     const htmlPath = path.join(context.extensionPath, 'webview', 'graph.html');
     const jsUri = webview.asWebviewUri(
       vscode.Uri.file(path.join(context.extensionPath, 'webview', 'graph.js'))
     );
 
-    // Sanitize graph data to prevent XSS via </script> injection
-    const safeJson = JSON.stringify(graph)
+    // Sanitize to prevent XSS via </script> injection
+    const safeJson = JSON.stringify({ ...analysis, view })
       .replace(/</g, '\\u003c')
       .replace(/>/g, '\\u003e');
 
@@ -120,3 +154,6 @@ export class GraphView {
       .replace('{{GRAPH_DATA}}', safeJson);
   }
 }
+
+// Keep FlowGraph importable from graphView for restore compatibility
+export type { FlowGraph };
