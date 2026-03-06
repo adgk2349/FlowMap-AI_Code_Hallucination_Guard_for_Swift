@@ -407,6 +407,8 @@
   const CARD_GAP_Y     =  28; // vertical gap between card rows
   const COMPONENT_GAP  = 180; // gap between component bounding boxes (calls mode)
   const DETAIL_PADDING =  40; // outer viewport padding after detail/calls layout
+  const PANEL_MIN_W    = 280; // minimum panel slot width  per component (calls mode)
+  const PANEL_MIN_H    = 180; // minimum panel slot height per component (calls mode)
 
   // ── Parse embedded payload ───────────────────────────────────────────────
   const raw = document.getElementById('graph-data').textContent ?? '{}';
@@ -1093,10 +1095,6 @@
   }
 
   // ── layoutChildrenOf ─────────────────────────────────────────────────────
-  // Positions the visible children of a compound node in a small grid,
-  // centred on the parent's current position. Prevents revealed nodes from
-  // clumping at (0, 0) (their default preset position).
-  // ── layoutChildrenOf ─────────────────────────────────────────────────────
   // Positions the visible children of a compound node in a 1–2 column grid
   // directly below the parent, using the hard-minimum CARD_GAP constants.
   // No two children overlap; every row is neatly aligned.
@@ -1539,46 +1537,114 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // Calls Layout
   // ═══════════════════════════════════════════════════════════════════════════
-  // ── runSpacedCallsLayout ─────────────────────────────────────────────────
-  // Spacious force-directed layout for Calls mode.
+  // ── layoutComponentBFS ───────────────────────────────────────────────────
+  // Positions func nodes within a component using a BFS depth-layered layout.
   //
   // Algorithm:
-  //   1. Detect file-level connected components via union-find over calls
-  //      edges.  Two file nodes are in the same component when any function
-  //      in one file calls any function in the other (transitively).
-  //   2a. Single component (or ≤1 file): run cose with generous spacing
-  //       parameters and a large componentSpacing value.
-  //   2b. Multiple components: lay out each component independently with its
-  //       own cose run, then translate each component's nodes so the bounding
-  //       boxes sit in a tidy grid separated by GAP pixels.
-  //   3. Fit the viewport to all nodes with generous padding.
+  //   1. Build callee adjacency from internal calls edges; compute in-degree.
+  //   2. BFS from roots (in-degree 0 nodes); assign depth = BFS level.
+  //      If every node is in a cycle (no roots), seed all at depth 0.
+  //   3. Group func nodes by depth level; arrange each level as a centered
+  //      horizontal row using CARD_GAP_X between siblings, ROW_GAP between rows.
   //
-  // All existing interactions (click highlight, search, fit, back/overview)
-  // are unaffected — this function only changes node positions.
+  // Positions are centred at x=0, starting at y=0.  The caller translates
+  // the resulting bounding box into its panel slot.
+  function layoutComponentBFS(compNodes) {
+    var funcNodes = compNodes.filter('[kind = "func"]');
+    if (funcNodes.length === 0) { return; }
+
+    // Build callee adjacency and in-degree within this component only.
+    var callees = {};
+    var inDeg   = {};
+    funcNodes.forEach(function (n) { callees[n.id()] = []; inDeg[n.id()] = 0; });
+
+    cy.edges('[kind = "calls"]:visible').forEach(function (e) {
+      if (funcNodes.has(e.source()) && funcNodes.has(e.target())) {
+        callees[e.source().id()].push(e.target().id());
+        inDeg[e.target().id()]++;
+      }
+    });
+
+    // BFS from roots (in-degree 0 nodes within component).
+    var depth = {};
+    var queue = [];
+    funcNodes.forEach(function (n) {
+      if (inDeg[n.id()] === 0) { depth[n.id()] = 0; queue.push(n.id()); }
+    });
+    // If all nodes have callers (cycle graph), seed every node at depth 0.
+    if (queue.length === 0) {
+      funcNodes.forEach(function (n) { depth[n.id()] = 0; queue.push(n.id()); });
+    }
+
+    var qi = 0;
+    while (qi < queue.length) {
+      var nid = queue[qi++];
+      callees[nid].forEach(function (tid) {
+        if (depth[tid] === undefined) {
+          depth[tid] = depth[nid] + 1;
+          queue.push(tid);
+        }
+      });
+    }
+    // Unreachable nodes (disconnected within component): assign depth 0.
+    funcNodes.forEach(function (n) {
+      if (depth[n.id()] === undefined) { depth[n.id()] = 0; }
+    });
+
+    // Group func nodes by depth level.
+    var levels = {};
+    funcNodes.forEach(function (n) {
+      var d = depth[n.id()];
+      if (!levels[d]) { levels[d] = []; }
+      levels[d].push(n.id());
+    });
+
+    var depthKeys = Object.keys(levels).map(Number).sort(function (a, b) { return a - b; });
+    var ROW_GAP = CARD_GAP_Y * 3; // generous vertical separation between depth rows
+    var curY = 0;
+
+    depthKeys.forEach(function (d) {
+      var ids = levels[d];
+      // Measure max card dimensions across this depth level.
+      var nodeW = 80, nodeH = 28;
+      ids.forEach(function (id) {
+        var n = cy.getElementById(id);
+        nodeW = Math.max(nodeW, n.width()  || 80);
+        nodeH = Math.max(nodeH, n.height() || 28);
+      });
+      // Centre the row at x = 0.
+      var rowW   = ids.length * nodeW + (ids.length - 1) * CARD_GAP_X;
+      var startX = -rowW / 2 + nodeW / 2;
+      ids.forEach(function (id, i) {
+        cy.getElementById(id).position({
+          x: startX + i * (nodeW + CARD_GAP_X),
+          y: curY + nodeH / 2,
+        });
+      });
+      curY += nodeH + ROW_GAP;
+    });
+  }
+
+  // ── runSpacedCallsLayout ─────────────────────────────────────────────────
+  // Redesigned Calls-mode layout: normalized component panels in a grid.
+  //
+  // Algorithm:
+  //   1. Detect file-level connected components via union-find over calls edges.
+  //   2. Run layoutComponentBFS() on each component (deterministic BFS rows).
+  //   3. Arrange components in a 1/2/3-column panel grid; each slot is clamped
+  //      to at least PANEL_MIN_W × PANEL_MIN_H; component bounding box is
+  //      centred inside its slot.
+  //   4. Fit viewport to all nodes with DETAIL_PADDING.
+  //
+  // Column count: 1 comp → 1 col | 2–4 comps → 2 cols | 5+ comps → 3 cols.
   function runSpacedCallsLayout() {
     var visibleNodes = cy.nodes(':visible');
     if (visibleNodes.length === 0) { deferredFit(cy.nodes(), DETAIL_PADDING); return; }
 
     var fileNodes = cy.nodes('[kind = "file"]:visible');
+    if (fileNodes.length === 0) { deferredFit(cy.nodes(), DETAIL_PADDING); return; }
 
-    // No compound file nodes (unusual) — single enhanced cose run.
-    if (fileNodes.length === 0) {
-      cy.layout({
-        name: 'cose',
-        padding: DETAIL_PADDING,
-        nodeRepulsion: function () { return 30000; },
-        nodeOverlap: 40,
-        idealEdgeLength: function () { return 150; },
-        edgeElasticity: function () { return 100; },
-        gravity: 0.5,
-        componentSpacing: COMPONENT_GAP,
-        animate: false,
-      }).run();
-      deferredFit(cy.nodes(), DETAIL_PADDING);
-      return;
-    }
-
-    // ── Step 1: Union-Find over file nodes keyed by calls edges ──────────
+    // ── Step 1: Union-Find component detection ─────────────────────────────
     var uf = {};
     fileNodes.forEach(function (n) { uf[n.id()] = n.id(); });
 
@@ -1620,30 +1686,10 @@
     });
 
     var groupArr = Object.values(compGroups);
-    // Largest component (most files) → top-left.
+    // Largest component (most files) → first panel (top-left).
     groupArr.sort(function (a, b) { return b.length - a.length; });
 
-    // ── Step 2a: Single component ─────────────────────────────────────────
-    if (groupArr.length <= 1) {
-      cy.layout({
-        name: 'cose',
-        padding: DETAIL_PADDING,
-        nodeRepulsion: function () { return 30000; },
-        nodeOverlap: 40,
-        idealEdgeLength: function () { return 150; },
-        edgeElasticity: function () { return 100; },
-        gravity: 0.5,
-        componentSpacing: COMPONENT_GAP,
-        animate: false,
-      }).run();
-      deferredFit(cy.nodes(), DETAIL_PADDING);
-      return;
-    }
-
-    // ── Step 2b: Independent cose run per component ───────────────────────
-    var GAP = COMPONENT_GAP; // px gap between component bounding boxes in the grid
-
-    // Helper: collect all cy nodes belonging to a list of file IDs.
+    // Helper: collect all cy nodes for a list of file IDs.
     function nodesForFiles(fileIds) {
       var col = cy.collection();
       fileIds.forEach(function (fid) {
@@ -1653,53 +1699,46 @@
       return col;
     }
 
+    // ── Step 2: BFS layout per component ──────────────────────────────────
     groupArr.forEach(function (fileIds) {
-      var compNodes = nodesForFiles(fileIds);
-      var compEdges = cy.edges('[kind = "calls"]:visible').filter(function (e) {
-        return compNodes.has(e.source()) && compNodes.has(e.target());
-      });
-      compNodes.union(compEdges).layout({
-        name: 'cose',
-        padding: DETAIL_PADDING,
-        nodeRepulsion: function () { return 30000; },
-        nodeOverlap: 40,
-        idealEdgeLength: function () { return 150; },
-        edgeElasticity: function () { return 100; },
-        gravity: 0.5,
-        animate: false,
-      }).run();
+      layoutComponentBFS(nodesForFiles(fileIds));
     });
 
-    // ── Step 3: Arrange component bounding boxes in a grid ────────────────
-    var nCols = Math.max(1, Math.ceil(Math.sqrt(groupArr.length)));
-    var cursorX = 0;
-    var cursorY = 0;
-    var col = 0;
-    var rowMaxH = 0;
+    // ── Step 3: Normalized panel grid ─────────────────────────────────────
+    var nComps = groupArr.length;
+    var nCols  = nComps <= 1 ? 1 : nComps <= 4 ? 2 : 3;
+    var PGX = COMPONENT_GAP; // panel gap X (= COMPONENT_GAP = 180)
+    var PGY = GROUP_GAP;     // panel gap Y (= GROUP_GAP     = 140)
+
+    var cursorX = 0, cursorY = 0, col = 0, rowMaxH = 0;
 
     groupArr.forEach(function (fileIds) {
       var compNodes = nodesForFiles(fileIds);
       var bb = compNodes.boundingBox({ includeLabels: false });
       if (!bb || bb.w === 0) { return; }
 
-      var dx = cursorX - bb.x1;
-      var dy = cursorY - bb.y1;
+      // Slot dimensions are at least PANEL_MIN_W × PANEL_MIN_H.
+      var slotW = Math.max(PANEL_MIN_W, bb.w);
+      var slotH = Math.max(PANEL_MIN_H, bb.h);
 
-      // Translate all nodes in this component by (dx, dy).
+      // Centre the component's bounding box within its slot.
+      var slotCX = cursorX + slotW / 2;
+      var slotCY = cursorY + slotH / 2;
+      var compCX = (bb.x1 + bb.x2) / 2;
+      var compCY = (bb.y1 + bb.y2) / 2;
+      var dx = slotCX - compCX;
+      var dy = slotCY - compCY;
+
       compNodes.positions(function (node) {
-        return {
-          x: node.position('x') + dx,
-          y: node.position('y') + dy,
-        };
+        return { x: node.position('x') + dx, y: node.position('y') + dy };
       });
 
-      rowMaxH = Math.max(rowMaxH, bb.h);
-      cursorX += bb.w + GAP;
+      rowMaxH  = Math.max(rowMaxH, slotH);
+      cursorX += slotW + PGX;
       col++;
       if (col >= nCols) {
-        col = 0;
-        cursorX = 0;
-        cursorY += rowMaxH + GAP;
+        col = 0; cursorX = 0;
+        cursorY += rowMaxH + PGY;
         rowMaxH = 0;
       }
     });
