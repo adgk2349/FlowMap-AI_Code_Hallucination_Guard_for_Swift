@@ -221,6 +221,52 @@
     };
   }
 
+  // ── PR8.2.3-debug: plain file-node fallback render ───────────────────────
+  // Purpose: bypass all compound-node / hidden-child machinery to isolate the
+  // root cause of the blank initial graph.
+  //
+  // When true: initial view renders ONLY flat (non-compound) file nodes —
+  //   no parent field, no type/func children, no edges.
+  // If these plain nodes appear while compound nodes do not, the root cause is
+  // confirmed to be compound-node sizing / display:none interaction.
+  //
+  // Set to false to restore normal compound rendering.
+  const DEBUG_PLAIN_FILE_RENDER = true;
+
+  /**
+   * Debug-only: build flat (non-compound) Cytoscape node elements for file
+   * nodes only.  No parent field is set — every node is top-level.
+   * No type/func nodes, no edges are included.
+   * Relies on the same module-level data vars as buildCyElements().
+   */
+  function buildDebugFlatFileElements() {
+    const fileNodes = (graph.nodes ?? []).filter(function (n) {
+      return (n.kind ?? 'func') === 'file';
+    });
+    const elements = fileNodes.map(function (n) {
+      return {
+        data: {
+          id: n.id,
+          label: n.name ?? n.id,
+          kind: 'file',
+          uri: n.uri ?? '',
+          line: typeof n.line === 'number' ? n.line : 0,
+          diffState: addedNodeIds.has(n.id)
+            ? 'added'
+            : changedNodeIds.has(n.id)
+              ? 'changed'
+              : 'unchanged',
+          impacted: impactIds.has(n.id),
+          // parent intentionally omitted → plain non-compound node
+        },
+      };
+    });
+    console.log(
+      '[FlowMapDebug] buildDebugFlatFileElements: flat file count=' + elements.length
+    );
+    return elements;
+  }
+
   // ── Explicit runtime view state ──────────────────────────────────────────
   // Separate from the payload's analysis.view (which is diff/impact mode).
   // Tracks which layout mode the user has actively selected.
@@ -538,6 +584,56 @@
     deferredFit(files, 120);
   }
 
+  // ── runDebugFlatRender ───────────────────────────────────────────────────
+  // Debug render path: replaces the cy canvas contents with ONLY flat (non-
+  // compound) file nodes.  No parent links, no type/func, no edges.
+  //
+  // Diagnostic intent:
+  //   If these plain file nodes are visible, the root cause of the blank
+  //   graph is confirmed to be compound-node sizing / display:none collapse,
+  //   NOT a problem with data loading, payload shape, or the layout engine.
+  //
+  //   If these nodes are ALSO invisible, the issue is elsewhere (CSS, container
+  //   sizing, Cytoscape initialisation) and a different fix is needed.
+  function runDebugFlatRender() {
+    console.log('[FlowMapDebug] DEBUG_PLAIN_FILE_RENDER=true — entering flat file render');
+
+    const flatElements = buildDebugFlatFileElements();
+    console.log('[FlowMapDebug] flat file count=' + flatElements.length);
+
+    const emptyEl = document.getElementById('empty-state');
+
+    if (flatElements.length === 0) {
+      console.warn('[FlowMapDebug] flat render: 0 file nodes — showing empty state');
+      if (emptyEl) { emptyEl.style.display = 'flex'; }
+      return;
+    }
+
+    if (emptyEl) { emptyEl.style.display = 'none'; }
+
+    // Replace all cy contents with flat file nodes only.
+    cy.elements().remove();
+    cy.add(flatElements);
+
+    console.log(
+      '[FlowMapDebug] after cy.add (flat): total=' + cy.nodes().length +
+      ' visible=' + cy.nodes(':visible').length
+    );
+
+    // Simple grid layout — no compound bbox issues.
+    cy.nodes().layout({
+      name: 'grid',
+      padding: 60,
+      avoidOverlap: true,
+      condense: false,
+      animate: false,
+      fit: false,
+    }).run();
+
+    console.log('[FlowMapDebug] flat render: grid layout run, calling deferredFit');
+    deferredFit(cy.nodes(), 80);
+  }
+
   // ── layoutChildrenOf ─────────────────────────────────────────────────────
   // Positions the visible children of a compound node in a small grid,
   // centred on the parent's current position. Prevents revealed nodes from
@@ -778,6 +874,29 @@
     // 1. Update all module-level data vars (shape-normalised inside applyAnalysisData)
     applyAnalysisData(newAnalysis);
 
+    // Reset layout state (both paths need this)
+    state.mode = 'grid';
+    state.searchQuery = '';
+    const searchInputEl = document.getElementById('search-input');
+    if (searchInputEl) { searchInputEl.value = ''; }
+
+    // Rebuild UI badges (both paths need this)
+    buildLegend();
+    buildStatusBadge();
+    applyLicenseBadge(payloadLicenseStatus);
+
+    if (DEBUG_PLAIN_FILE_RENDER) {
+      // ── Debug path: flat file nodes only ─────────────────────────────────
+      // Bypass all compound/hidden-child machinery.
+      console.log('[FlowMapDebug] renderGraphFromAnalysis: DEBUG_PLAIN_FILE_RENDER active');
+      requestAnimationFrame(function () {
+        runDebugFlatRender();
+      });
+      return;
+    }
+
+    // ── Normal compound render path ───────────────────────────────────────
+
     // 2. Rebuild cy elements from new data
     const elements = buildCyElements();
     cy.elements().remove();
@@ -803,12 +922,6 @@
     if (filesAfterAdd > 0) {
       cy.nodes('[kind = "file"]').removeClass('hidden-node');
     }
-
-    // Reset layout state
-    state.mode = 'grid';
-    state.searchQuery = '';
-    const searchInputEl = document.getElementById('search-input');
-    if (searchInputEl) { searchInputEl.value = ''; }
 
     // 4. Apply diff/impact overlays
     if (!isClean) {
@@ -836,11 +949,6 @@
         }
       });
     }
-
-    // 5. Rebuild legend + status badge + license badge with new data
-    buildLegend();
-    buildStatusBadge();
-    applyLicenseBadge(payloadLicenseStatus);
 
     // 6. Run grid layout — this also hides/shows the empty-state overlay.
     //    Three nested rAFs after the layout rAF ensure the robustness check
@@ -906,50 +1014,62 @@
     showAnalyzePrompt();
   } else {
     // Has embedded data: render immediately (normal show() / update() path).
-    // File nodes are NEVER added to hidden-node. Only type/func nodes.
     console.log('[FlowMapDebug] embedded nodes=' + graph.nodes.length + ' — rendering from embedded data');
-    cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
-    cy.edges('[kind = "calls"]').addClass('hidden-edge');
-    // Defensive: ensure file nodes have no hidden-node class
-    cy.nodes('[kind = "file"]').removeClass('hidden-node');
 
-    // Mute unchanged nodes when a diff exists
-    if (!isClean) {
-      cy.nodes().forEach(function (n) {
-        if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
-          n.addClass('muted-bg');
-        }
-      });
-    }
-
-    // Apply initial view-mode focus (diff / impact overlays)
-    if (payloadViewMode === 'diff') {
-      cy.nodes().forEach(function (n) {
-        if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
-          n.addClass('dimmed');
-        }
-      });
-    } else if (payloadViewMode === 'impact') {
-      cy.nodes().forEach(function (n) {
-        const isChanged =
-          n.data('diffState') === 'added' ||
-          n.data('diffState') === 'changed' ||
-          n.data('diffState') === 'removed';
-        if (!n.data('impacted') && !isChanged) {
-          n.addClass('dimmed');
-        }
-      });
-    }
-
-    // Build legend and status badge
+    // Always build legend/badge regardless of render path.
     buildLegend();
     buildStatusBadge();
     applyLicenseBadge(payloadLicenseStatus);
 
-    // Defer the initial layout one rAF so Cytoscape has processed the classes.
-    requestAnimationFrame(function () {
-      runGridLayout();
-    });
+    if (DEBUG_PLAIN_FILE_RENDER) {
+      // ── Debug path: flat file nodes only ─────────────────────────────────
+      // Bypass all compound/hidden-child machinery.  Confirms root cause if
+      // plain nodes appear where compound nodes did not.
+      console.log('[FlowMapDebug] embedded: DEBUG_PLAIN_FILE_RENDER active — skipping compound setup');
+      requestAnimationFrame(function () {
+        runDebugFlatRender();
+      });
+    } else {
+      // ── Normal compound render path ───────────────────────────────────────
+      // File nodes are NEVER added to hidden-node. Only type/func nodes.
+      cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
+      cy.edges('[kind = "calls"]').addClass('hidden-edge');
+      // Defensive: ensure file nodes have no hidden-node class
+      cy.nodes('[kind = "file"]').removeClass('hidden-node');
+
+      // Mute unchanged nodes when a diff exists
+      if (!isClean) {
+        cy.nodes().forEach(function (n) {
+          if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
+            n.addClass('muted-bg');
+          }
+        });
+      }
+
+      // Apply initial view-mode focus (diff / impact overlays)
+      if (payloadViewMode === 'diff') {
+        cy.nodes().forEach(function (n) {
+          if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
+            n.addClass('dimmed');
+          }
+        });
+      } else if (payloadViewMode === 'impact') {
+        cy.nodes().forEach(function (n) {
+          const isChanged =
+            n.data('diffState') === 'added' ||
+            n.data('diffState') === 'changed' ||
+            n.data('diffState') === 'removed';
+          if (!n.data('impacted') && !isChanged) {
+            n.addClass('dimmed');
+          }
+        });
+      }
+
+      // Defer the initial layout one rAF so Cytoscape has processed the classes.
+      requestAnimationFrame(function () {
+        runGridLayout();
+      });
+    }
   }
 
   // Part 3: cy is now ready — mark it and consume any analysis that arrived
