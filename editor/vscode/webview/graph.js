@@ -257,38 +257,136 @@
     return TINTS[h % TINTS.length];
   }
 
-  // ── buildFlatFileElements ─────────────────────────────────────────────────
-  // Returns flat (non-compound) Cytoscape node elements for file nodes only.
-  // No parent field is set — every element is a top-level node.
-  // No type/func nodes or edges are included.
-  //
-  // Labels are truncated to 22 chars; full label stored in `fullLabel` for
-  // the tooltip.  Folder tints are applied imperatively in renderFileCardView.
-  function buildFlatFileElements() {
-    const fileNodes = (graph.nodes ?? []).filter(function (n) {
+  // ── getFolderKey ─────────────────────────────────────────────────────────
+  // Returns the immediate parent directory name from a file URI.
+  // Used to group files under virtual folder nodes in the overview.
+  // Strategy: last path segment before the filename (immediate parent dir).
+  //   file:///project/Sources/Networking/File.swift  → "Networking"
+  //   file:///project/Sources/File.swift             → "Sources"
+  //   file:///File.swift                             → "__root__" (no folder)
+  function getFolderKey(uri) {
+    if (!uri) { return '__root__'; }
+    var path = uri.replace(/^file:\/\//, '');
+    var parts = path.split('/').filter(function (p) { return p.length > 0; });
+    if (parts.length < 2) { return '__root__'; }
+    return parts[parts.length - 2]; // immediate parent directory
+  }
+
+  // ── deriveProjectName ────────────────────────────────────────────────────
+  // Heuristically extracts a project name from the first file URI.
+  // Looks for a path segment just before a known source-root directory
+  // (Sources, Source, src).  Falls back to the 3rd-to-last segment.
+  function deriveProjectName() {
+    var files = (graph.nodes ?? []).filter(function (n) {
       return (n.kind ?? 'func') === 'file';
     });
-    const elements = fileNodes.map(function (n) {
-      const full = n.name ?? n.id;
-      return {
-        data: {
-          id: n.id,
-          label: truncateLabel(full, 22),
-          fullLabel: full,
-          kind: 'file',
-          uri: n.uri ?? '',
-          line: typeof n.line === 'number' ? n.line : 0,
-          diffState: addedNodeIds.has(n.id)
-            ? 'added'
-            : changedNodeIds.has(n.id)
-              ? 'changed'
-              : 'unchanged',
-          impacted: impactIds.has(n.id),
-          // parent intentionally omitted — flat non-compound node
-        },
-      };
+    if (files.length === 0) { return 'Project'; }
+    var uri = (files[0].uri ?? '').replace(/^file:\/\//, '');
+    var parts = uri.split('/').filter(function (p) { return p.length > 0; });
+    var SOURCE_ROOTS = ['Sources', 'Source', 'src', 'Src'];
+    for (var i = 1; i < parts.length; i++) {
+      if (SOURCE_ROOTS.indexOf(parts[i]) !== -1) { return parts[i - 1]; }
+    }
+    if (parts.length >= 3) { return parts[parts.length - 3]; }
+    if (parts.length >= 2) { return parts[parts.length - 2]; }
+    return 'Project';
+  }
+
+  // ── buildOverviewElements ─────────────────────────────────────────────────
+  // Builds the virtual mindmap hierarchy for the overview mode:
+  //   project-root → folder nodes → file nodes
+  // plus branch edges connecting each level.
+  //
+  // Folder and root nodes are display-only — they do NOT exist in the engine
+  // graph and carry no analysis semantics.
+  //
+  // File labels are truncated to 22 chars; fullLabel stored for tooltip.
+  // Folder tints (from getFolderTint) are applied imperatively by renderOverview.
+  function buildOverviewElements() {
+    var elements = [];
+    var fileNodes = (graph.nodes ?? []).filter(function (n) {
+      return (n.kind ?? 'func') === 'file';
     });
-    console.log('[FlowMap] buildFlatFileElements: file count=' + elements.length);
+    if (fileNodes.length === 0) { return []; }
+
+    // Virtual project root
+    var projectName = deriveProjectName();
+    elements.push({
+      data: {
+        id: '__root__',
+        label: truncateLabel(projectName, 14),
+        fullLabel: projectName,
+        kind: 'root',
+      },
+    });
+
+    // Group files by immediate parent folder
+    var folderMap = {};
+    fileNodes.forEach(function (n) {
+      var key = getFolderKey(n.uri ?? '');
+      if (!folderMap[key]) { folderMap[key] = []; }
+      folderMap[key].push(n);
+    });
+
+    Object.keys(folderMap).sort().forEach(function (folderKey) {
+      var folderId = '__folder__' + folderKey;
+      var displayName = folderKey === '__root__' ? '(root)' : folderKey;
+
+      // Virtual folder node
+      elements.push({
+        data: {
+          id: folderId,
+          label: truncateLabel(displayName, 18),
+          fullLabel: displayName,
+          kind: 'folder',
+          folderKey: folderKey,
+          fileCount: folderMap[folderKey].length,
+        },
+      });
+      // Branch edge: root → folder
+      elements.push({
+        data: {
+          id: '__br__root_' + folderId,
+          source: '__root__',
+          target: folderId,
+          kind: 'branch',
+        },
+      });
+
+      // File nodes + folder→file branch edges
+      folderMap[folderKey].forEach(function (n) {
+        var full = n.name ?? n.id;
+        elements.push({
+          data: {
+            id: n.id,
+            label: truncateLabel(full, 22),
+            fullLabel: full,
+            kind: 'file',
+            uri: n.uri ?? '',
+            line: typeof n.line === 'number' ? n.line : 0,
+            diffState: addedNodeIds.has(n.id)
+              ? 'added'
+              : changedNodeIds.has(n.id)
+                ? 'changed'
+                : 'unchanged',
+            impacted: impactIds.has(n.id),
+          },
+        });
+        elements.push({
+          data: {
+            id: '__br__' + folderId + '_' + n.id,
+            source: folderId,
+            target: n.id,
+            kind: 'branch',
+          },
+        });
+      });
+    });
+
+    console.log(
+      '[FlowMap] buildOverviewElements: folders=' + Object.keys(folderMap).length +
+      ' files=' + fileNodes.length
+    );
     return elements;
   }
 
@@ -629,37 +727,83 @@
     deferredFit(files, 120);
   }
 
-  // ── renderFileCardView ────────────────────────────────────────────────────
-  // Default initial view: replaces cy contents with flat (non-compound) file
-  // nodes only, then runs a grid layout.
+  // ── runOverviewLayout ─────────────────────────────────────────────────────
+  // Positions nodes in a radial mindmap layout:
+  //   - root at the origin (0, 0)
+  //   - folder nodes evenly spaced in a ring around root
+  //   - file nodes fanned outward from their folder, away from root
+  // Positions are set directly (no Cytoscape layout engine), giving precise
+  // control over spacing and fan angles.  Then deferred-fit to viewport.
+  function runOverviewLayout() {
+    var root = cy.getElementById('__root__');
+    if (!root || root.length === 0) { deferredFit(cy.nodes(), 60); return; }
+
+    root.position({ x: 0, y: 0 });
+
+    var folderNodes = cy.nodes('[kind = "folder"]');
+    var nFolders = folderNodes.length;
+    if (nFolders === 0) { deferredFit(cy.nodes(), 60); return; }
+
+    // Folder ring: radius grows with folder count
+    var FOLDER_R = Math.max(260, nFolders * 95);
+
+    folderNodes.forEach(function (folder, i) {
+      // Evenly spaced angles, starting at top (−π/2)
+      var angle = (2 * Math.PI * i / nFolders) - Math.PI / 2;
+      var fx = Math.round(FOLDER_R * Math.cos(angle));
+      var fy = Math.round(FOLDER_R * Math.sin(angle));
+      folder.position({ x: fx, y: fy });
+
+      // Files attached to this folder via branch edges
+      var files = cy.edges('[kind = "branch"]').filter(function (e) {
+        return e.source().id() === folder.id();
+      }).targets();
+
+      var nFiles = files.length;
+      if (nFiles === 0) { return; }
+
+      // File ring: radius scales with file count (min 160, per-file 50)
+      var FILE_R = Math.max(160, nFiles * 50);
+      // Fan spread: up to 75% of a half-circle, 38° per file
+      var spread = nFiles === 1 ? 0 : Math.min(Math.PI * 0.75, (nFiles - 1) * 0.38);
+
+      files.forEach(function (file, j) {
+        var fa = angle + (nFiles > 1 ? (j / (nFiles - 1) - 0.5) * 2 * spread : 0);
+        file.position({
+          x: Math.round(fx + FILE_R * Math.cos(fa)),
+          y: Math.round(fy + FILE_R * Math.sin(fa)),
+        });
+      });
+    });
+
+    deferredFit(cy.nodes(), 60);
+  }
+
+  // ── renderOverview ────────────────────────────────────────────────────────
+  // Default initial view: project → folder → file mindmap.
+  // Virtual root and folder nodes are created in the webview only — they are
+  // not part of the engine graph and do not affect analysis.
+  // File nodes keep the polished pill style from PR8.3; folder tints apply.
   //
-  // Flat file cards are always visible regardless of child count because they
-  // carry no compound children — compound-sizing bbox collapse cannot occur.
-  //
-  // Called on: initial render, panel restore, Grid button, and any path that
-  // needs to return to the top-level file overview.
-  function renderFileCardView() {
-    console.log('[FlowMap] renderFileCardView: entering flat file-card view');
+  // Called on: initial render, panel restore, Overview button, Back button.
+  function renderOverview() {
+    console.log('[FlowMap] renderOverview: building mindmap overview');
 
-    const flatElements = buildFlatFileElements();
-    console.log('[FlowMap] renderFileCardView: file count=' + flatElements.length);
+    var elements = buildOverviewElements();
+    var emptyEl = document.getElementById('empty-state');
 
-    const emptyEl = document.getElementById('empty-state');
-
-    if (flatElements.length === 0) {
-      console.warn('[FlowMap] renderFileCardView: 0 file nodes — showing empty state');
+    if (elements.length === 0) {
+      console.warn('[FlowMap] renderOverview: no file nodes — showing empty state');
       if (emptyEl) { emptyEl.style.display = 'flex'; }
       return;
     }
 
     if (emptyEl) { emptyEl.style.display = 'none'; }
 
-    // Replace cy contents with flat file nodes only.
     cy.elements().remove();
-    cy.add(flatElements);
+    cy.add(elements);
 
-    // Apply per-node folder tint colors (imperative style override).
-    // Files in the same directory bucket share a tint for visual grouping.
+    // Apply per-node folder tint colors to file nodes (visual grouping by dir)
     cy.nodes('[kind = "file"]').forEach(function (n) {
       var tint = getFolderTint(n.data('uri'));
       if (tint) { n.style('background-color', tint); }
@@ -670,14 +814,12 @@
     updateToolbarForMode('overview');
 
     console.log(
-      '[FlowMapDebug] renderFileCardView after cy.add: total=' + cy.nodes().length +
-      ' visible=' + cy.nodes(':visible').length
+      '[FlowMapDebug] renderOverview after cy.add: nodes=' + cy.nodes().length +
+      ' folders=' + cy.nodes('[kind="folder"]').length +
+      ' files=' + cy.nodes('[kind="file"]').length
     );
 
-    // Grid layout + deferred fit.
-    // runGridLayout targets cy.nodes('[kind="file"]') which matches every node
-    // in the flat view — no compound children to cause bbox issues.
-    runGridLayout();
+    runOverviewLayout();
   }
 
   // ── buildDetailElements ───────────────────────────────────────────────────
@@ -1066,7 +1208,7 @@
 
     // Always start with the flat file-card view
     requestAnimationFrame(function () {
-      renderFileCardView();
+      renderOverview();
     });
   }
 
@@ -1091,7 +1233,7 @@
 
     // Flat file-card view: always visible, no compound-bbox collapse possible.
     requestAnimationFrame(function () {
-      renderFileCardView();
+      renderOverview();
     });
   }
 
@@ -1276,7 +1418,7 @@
         state.searchQuery = '';
         if (searchInput) { searchInput.value = ''; }
         cy.elements().removeClass('highlighted dimmed search-highlight');
-        renderFileCardView();
+        renderOverview();
       });
     }
 
@@ -1288,7 +1430,7 @@
         state.searchQuery = '';
         if (searchInput) { searchInput.value = ''; }
         cy.elements().removeClass('highlighted dimmed search-highlight');
-        renderFileCardView();
+        renderOverview();
       });
     }
 
@@ -1366,35 +1508,45 @@
         if (!query) { return; }
 
         if (state.mode === 'overview') {
-          // ── Overview mode: match file cards, plus indirect type/func hits ──
-          const fileMatchIds = new Set();
+          // ── Overview mode: file label, folder name, type/func → file ────
+          var matchIds = new Set();
 
-          // Direct matches on file card labels
-          cy.nodes().forEach(function (n) {
-            if (n.data('label').toLowerCase().includes(query)) {
-              fileMatchIds.add(n.id());
+          // File node matches (check fullLabel for truncated display labels)
+          cy.nodes('[kind = "file"]').forEach(function (n) {
+            var lbl = (n.data('fullLabel') || n.data('label') || '').toLowerCase();
+            if (lbl.includes(query)) { matchIds.add(n.id()); }
+          });
+
+          // Folder name matches → highlight folder + all its child file nodes
+          cy.nodes('[kind = "folder"]').forEach(function (n) {
+            var key = (n.data('folderKey') || '').toLowerCase();
+            var lbl = (n.data('fullLabel') || n.data('label') || '').toLowerCase();
+            if (key.includes(query) || lbl.includes(query)) {
+              matchIds.add(n.id());
+              cy.edges('[kind = "branch"]').filter(function (e) {
+                return e.source().id() === n.id();
+              }).targets().forEach(function (f) { matchIds.add(f.id()); });
             }
           });
 
-          // Indirect: type/func label matches in raw data → find parent file card
+          // Indirect: type/func label matches in raw data → highlight parent file
           (graph.nodes ?? []).forEach(function (rawNode) {
             if (rawNode.kind !== 'type' && rawNode.kind !== 'func') { return; }
             if (!(rawNode.name ?? rawNode.id).toLowerCase().includes(query)) { return; }
-            // Walk parentMap up to a file node
             var curr = rawNode.id;
             for (var hop = 0; hop < 4; hop++) {
               var par = parentMap[curr];
               if (!par) { break; }
               var parRaw = (graph.nodes ?? []).find(function (pn) { return pn.id === par; });
-              if (parRaw && parRaw.kind === 'file') { fileMatchIds.add(par); break; }
+              if (parRaw && parRaw.kind === 'file') { matchIds.add(par); break; }
               curr = par;
             }
           });
 
-          if (fileMatchIds.size === 0) { return; }
+          if (matchIds.size === 0) { return; }
 
           var fileMatches = cy.nodes().filter(function (n) {
-            return fileMatchIds.has(n.id());
+            return matchIds.has(n.id());
           });
           fileMatches.addClass('search-highlight');
           deferredFit(fileMatches, 80);
