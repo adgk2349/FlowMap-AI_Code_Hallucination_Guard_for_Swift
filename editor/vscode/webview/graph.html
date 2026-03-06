@@ -55,75 +55,82 @@
         color: #c8d8ff;
       }
       /* ── Toolbar (search + layout buttons) ─────────────────────────────── */
-      /* Slightly compact (PR8.1): reduced padding and font-size vs PR8 */
       #toolbar {
         position: absolute;
         top: 10px;
         left: 50%;
         transform: translateX(-50%);
         display: flex;
-        gap: 5px;
+        gap: 4px;
         align-items: center;
-        background: rgba(15, 17, 23, 0.92);
-        border: 1px solid #3a3a4a;
-        border-radius: 5px;
-        padding: 4px 8px;
+        background: rgba(12, 14, 20, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        padding: 3px 7px;
         z-index: 10;
         pointer-events: auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.40);
       }
       #toolbar input[type='text'] {
-        background: rgba(255, 255, 255, 0.07);
-        border: 1px solid #3a3a4a;
-        border-radius: 3px;
-        color: #c0c0d0;
-        font-size: 10px;
-        padding: 2px 7px;
-        width: 130px;
-        outline: none;
-        font-family: inherit;
-      }
-      #toolbar input[type='text']:focus {
-        border-color: #4da3ff;
-      }
-      #toolbar input[type='text']::placeholder {
-        color: #555566;
-      }
-      #toolbar button {
-        background: rgba(255, 255, 255, 0.07);
-        border: 1px solid #3a3a4a;
-        border-radius: 3px;
-        color: #a0a0b0;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 4px;
+        color: #b8c8e0;
         font-size: 10px;
         padding: 2px 8px;
+        width: 128px;
+        outline: none;
+        font-family: inherit;
+        transition: border-color 0.15s;
+      }
+      #toolbar input[type='text']:focus {
+        border-color: rgba(77, 163, 255, 0.55);
+        background: rgba(77, 163, 255, 0.06);
+      }
+      #toolbar input[type='text']::placeholder {
+        color: #444458;
+      }
+      #toolbar button {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 4px;
+        color: #8898aa;
+        font-size: 10px;
+        padding: 2px 9px;
         cursor: pointer;
         font-family: inherit;
-        transition: background 0.15s, color 0.15s, border-color 0.15s;
+        transition: background 0.12s, color 0.12s, border-color 0.12s;
+        letter-spacing: 0.01em;
       }
       #toolbar button:hover {
-        background: rgba(77, 163, 255, 0.15);
-        color: #c8d8f0;
-        border-color: #4da3ff;
+        background: rgba(77, 163, 255, 0.14);
+        color: #c0d4f0;
+        border-color: rgba(77, 163, 255, 0.38);
+      }
+      #toolbar button:active {
+        background: rgba(77, 163, 255, 0.22);
       }
       /* ── Legend ─────────────────────────────────────────────────────────── */
-      /* top: 50px leaves enough gap below the toolbar (≈30px tall) */
+      /* top: 48px leaves enough gap below the toolbar (≈30px tall) */
       #legend {
         position: absolute;
-        top: 50px;
+        top: 48px;
         right: 12px;
-        background: rgba(15, 17, 23, 0.88);
-        border: 1px solid #3a3a4a;
+        background: rgba(12, 14, 20, 0.90);
+        border: 1px solid rgba(255, 255, 255, 0.06);
         border-radius: 6px;
-        padding: 8px 10px;
-        min-width: 120px;
+        padding: 6px 9px;
+        min-width: 108px;
         pointer-events: none;
         z-index: 10;
       }
       #legend-title {
-        font-size: 10px;
-        font-weight: bold;
-        color: #aaa;
-        margin-bottom: 6px;
-        letter-spacing: 0.04em;
+        font-size: 9px;
+        font-weight: 600;
+        color: #445;
+        margin-bottom: 5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
       }
       /* ── Detail mode header (file name context, shown below toolbar) ────── */
       #detail-header {
@@ -163,29 +170,29 @@
         position: absolute;
         top: 10px;
         left: 12px;
-        padding: 5px 9px;
+        padding: 4px 9px;
         border-radius: 5px;
-        font-size: 11px;
-        font-weight: bold;
+        font-size: 10px;
+        font-weight: 600;
         pointer-events: none;
         z-index: 10;
         line-height: 1.5;
         display: none;
       }
       #status-badge.status-clean {
-        background: rgba(26, 60, 26, 0.90);
-        color: #66cc66;
-        border: 1px solid #2a7a2a;
+        background: rgba(20, 45, 20, 0.90);
+        color: #55aa55;
+        border: 1px solid rgba(50, 120, 50, 0.50);
       }
       #status-badge.status-changed {
-        background: rgba(60, 40, 10, 0.90);
-        color: #e0a050;
-        border: 1px solid #7a5a1a;
+        background: rgba(50, 32, 8, 0.90);
+        color: #c89040;
+        border: 1px solid rgba(120, 80, 20, 0.50);
       }
       #status-badge .badge-counts {
-        font-size: 10px;
+        font-size: 9px;
         font-weight: normal;
-        color: #c8a070;
+        color: #a07838;
         display: block;
         margin-top: 2px;
       }
@@ -194,23 +201,23 @@
         position: absolute;
         bottom: 12px;
         right: 12px;
-        padding: 3px 8px;
+        padding: 2px 7px;
         border-radius: 4px;
-        font-size: 10px;
-        font-weight: bold;
+        font-size: 9px;
+        font-weight: 500;
         pointer-events: none;
         z-index: 10;
-        opacity: 0.75;
+        opacity: 0.50;
       }
       #license-badge.license-free {
-        background: rgba(30, 30, 30, 0.80);
-        color: #888888;
-        border: 1px solid #444444;
+        background: rgba(20, 20, 20, 0.70);
+        color: #66667a;
+        border: 1px solid rgba(70, 70, 80, 0.35);
       }
       #license-badge.license-pro {
-        background: rgba(20, 40, 80, 0.90);
-        color: #66aaff;
-        border: 1px solid #3366cc;
+        background: rgba(15, 28, 60, 0.80);
+        color: #5088e0;
+        border: 1px solid rgba(50, 100, 200, 0.40);
       }
     </style>
   </head>

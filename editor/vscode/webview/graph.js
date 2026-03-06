@@ -221,23 +221,60 @@
     };
   }
 
+  // ── truncateLabel ─────────────────────────────────────────────────────────
+  // Truncates a string to maxLen characters, appending '…' if truncated.
+  // Used to keep node labels short enough to not dominate the card visually.
+  function truncateLabel(str, maxLen) {
+    if (!str || str.length <= maxLen) { return str; }
+    return str.slice(0, maxLen - 1) + '\u2026'; // U+2026 HORIZONTAL ELLIPSIS
+  }
+
+  // ── getFolderTint ─────────────────────────────────────────────────────────
+  // Returns a CSS rgba() color based on the file's parent directory path.
+  // Hashes the last two directory segments to one of 6 preset tint colors
+  // so sibling files share the same tint, giving an implicit grouping feel.
+  function getFolderTint(uri) {
+    if (!uri) { return null; }
+    var path = uri.replace(/^file:\/\//, '');
+    var slash = path.lastIndexOf('/');
+    if (slash < 0) { return null; }
+    var dir = path.slice(0, slash);
+    var parts = dir.split('/').filter(function (p) { return p.length > 0; });
+    var bucket = parts.slice(-2).join('/');
+    if (!bucket) { return null; }
+    var h = 0;
+    for (var i = 0; i < bucket.length; i++) {
+      h = (h * 31 + bucket.charCodeAt(i)) & 0x7fffffff;
+    }
+    var TINTS = [
+      'rgba(52, 80, 130, 0.52)',   // indigo-blue
+      'rgba(38, 112, 78, 0.52)',   // teal-green
+      'rgba(110, 58, 82, 0.52)',   // rose
+      'rgba(100, 78, 38, 0.52)',   // amber-brown
+      'rgba(62, 62, 118, 0.52)',   // indigo-violet
+      'rgba(38, 98, 105, 0.52)',   // cyan-teal
+    ];
+    return TINTS[h % TINTS.length];
+  }
+
   // ── buildFlatFileElements ─────────────────────────────────────────────────
   // Returns flat (non-compound) Cytoscape node elements for file nodes only.
   // No parent field is set — every element is a top-level node.
   // No type/func nodes or edges are included.
   //
-  // This is the permanent default initial view: file cards in a readable grid.
-  // Flat file nodes are always visible regardless of child count because they
-  // carry no compound children — compound-sizing bbox collapse cannot occur.
+  // Labels are truncated to 22 chars; full label stored in `fullLabel` for
+  // the tooltip.  Folder tints are applied imperatively in renderFileCardView.
   function buildFlatFileElements() {
     const fileNodes = (graph.nodes ?? []).filter(function (n) {
       return (n.kind ?? 'func') === 'file';
     });
     const elements = fileNodes.map(function (n) {
+      const full = n.name ?? n.id;
       return {
         data: {
           id: n.id,
-          label: n.name ?? n.id,
+          label: truncateLabel(full, 22),
+          fullLabel: full,
           kind: 'file',
           uri: n.uri ?? '',
           line: typeof n.line === 'number' ? n.line : 0,
@@ -289,7 +326,7 @@
         selector: 'node',
         style: {
           label: 'data(label)',
-          color: '#d0d0d0',
+          color: '#c0c8d8',
           'text-valign': 'center',
           'text-halign': 'center',
           'font-size': '11px',
@@ -297,80 +334,98 @@
           height: 'label',
           padding: '8px',
           shape: 'roundrectangle',
-          'background-color': 'rgb(220,150,70)',
-          'background-opacity': 0.4,
+          'background-color': 'rgba(180, 120, 55, 0.42)',
+          'background-opacity': 1,
           'border-width': 1,
-          'border-color': '#ffffff',
-          'border-opacity': 0.08,
+          'border-color': 'rgba(255, 255, 255, 0.09)',
+          'border-opacity': 1,
         },
       },
-      // ── Hidden elements (files-only initial view) ───────────────────────
+      // ── Hidden elements (overview initial view) ─────────────────────────
       { selector: 'node.hidden-node', style: { display: 'none' } },
       { selector: 'edge.hidden-edge', style: { display: 'none' } },
       // ── Kind-based colours ──────────────────────────────────────────────
+      // File cards: polished pill — centered label, generous horizontal padding,
+      // soft border, neutral blue-gray base (folder tint overrides bg in JS).
       {
         selector: 'node[kind = "file"]',
         style: {
-          'background-color': 'rgb(70,90,110)',
-          'background-opacity': 0.25,
-          'font-size': '13px',
-          'font-weight': 'bold',
-          'text-valign': 'top',
-          'text-margin-y': '-8px',
-          'border-color': '#ffffff',
-          'border-opacity': 0.08,
+          'background-color': 'rgba(52, 72, 105, 0.52)',
+          'background-opacity': 1,
+          'font-size': '12px',
+          'font-weight': '600',
+          color: '#bccce0',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'text-margin-y': '0px',
+          'border-color': 'rgba(255, 255, 255, 0.11)',
+          'border-opacity': 1,
           'border-width': 1,
+          padding: '10px',
+          'min-width': 100,
+          'min-height': 28,
+        },
+      },
+      // Hover glow: added via mouseover event, removed on mouseout
+      {
+        selector: 'node[kind = "file"].file-hover',
+        style: {
+          'border-color': 'rgba(77, 163, 255, 0.45)',
+          'border-width': 1.5,
+          color: '#d0e0ff',
         },
       },
       {
         selector: 'node[kind = "type"]',
         style: {
-          'background-color': 'rgb(50,140,100)',
-          'background-opacity': 0.35,
-          'font-size': '12px',
-          'border-color': '#ffffff',
-          'border-opacity': 0.08,
+          'background-color': 'rgba(38, 108, 76, 0.44)',
+          'background-opacity': 1,
+          'font-size': '11px',
+          color: '#a8d0b8',
+          'border-color': 'rgba(255, 255, 255, 0.09)',
+          'border-opacity': 1,
           'border-width': 1,
         },
       },
       {
         selector: 'node[kind = "func"]',
         style: {
-          'background-color': 'rgb(220,150,70)',
-          'background-opacity': 0.4,
-          'font-size': '11px',
-          'border-color': '#ffffff',
-          'border-opacity': 0.08,
+          'background-color': 'rgba(175, 110, 45, 0.44)',
+          'background-opacity': 1,
+          'font-size': '10px',
+          color: '#d0b890',
+          'border-color': 'rgba(255, 255, 255, 0.09)',
+          'border-opacity': 1,
           'border-width': 1,
         },
       },
       // ── Diff-state overrides ────────────────────────────────────────────
       {
         selector: 'node[diffState = "added"]',
-        style: { 'background-color': '#1a4a1a', 'background-opacity': 1 },
+        style: { 'background-color': 'rgba(22, 62, 22, 0.90)', 'background-opacity': 1 },
       },
       {
         selector: 'node[diffState = "removed"]',
         style: {
-          'background-color': '#4a1a1a',
+          'background-color': 'rgba(62, 20, 20, 0.90)',
           'background-opacity': 1,
           'border-style': 'dashed',
-          'border-color': '#cc3333',
-          'border-width': 2,
+          'border-color': 'rgba(190, 50, 50, 0.80)',
+          'border-width': 1.5,
           'border-opacity': 1,
-          opacity: 0.75,
+          opacity: 0.70,
         },
       },
       {
         selector: 'node[diffState = "changed"]',
-        style: { 'background-color': '#4a4a1a', 'background-opacity': 1 },
+        style: { 'background-color': 'rgba(62, 58, 18, 0.90)', 'background-opacity': 1 },
       },
-      // ── Impacted node: orange outline ───────────────────────────────────
+      // ── Impacted node: warm orange outline ──────────────────────────────
       {
         selector: 'node[?impacted]',
         style: {
-          'border-color': '#e07b39',
-          'border-width': 3,
+          'border-color': 'rgba(215, 115, 50, 0.90)',
+          'border-width': 2.5,
           'border-style': 'solid',
           'border-opacity': 1,
         },
@@ -429,10 +484,11 @@
       {
         selector: 'node.search-highlight',
         style: {
-          'border-color': '#4da3ff',
+          'border-color': 'rgba(77, 163, 255, 0.90)',
           'border-width': 2,
           'border-style': 'solid',
           'border-opacity': 1,
+          color: '#d8ecff',
         },
       },
       // ── Highlight state (click) ─────────────────────────────────────────
@@ -602,6 +658,13 @@
     cy.elements().remove();
     cy.add(flatElements);
 
+    // Apply per-node folder tint colors (imperative style override).
+    // Files in the same directory bucket share a tint for visual grouping.
+    cy.nodes('[kind = "file"]').forEach(function (n) {
+      var tint = getFolderTint(n.data('uri'));
+      if (tint) { n.style('background-color', tint); }
+    });
+
     state.mode = 'overview';
     state.detailFileId = null;
     updateToolbarForMode('overview');
@@ -636,10 +699,12 @@
     });
 
     typeNodes.forEach(function (t) {
+      const tFull = t.name ?? t.id;
       detailElements.push({
         data: {
           id: t.id,
-          label: t.name ?? t.id,
+          label: truncateLabel(tFull, 20),
+          fullLabel: tFull,
           kind: 'type',
           uri: t.uri ?? '',
           line: typeof t.line === 'number' ? t.line : 0,
@@ -659,10 +724,12 @@
         return funcIds.indexOf(n.id) !== -1 && n.kind === 'func';
       });
       funcNodes.forEach(function (f) {
+        const fFull = f.name ?? f.id;
         detailElements.push({
           data: {
             id: f.id,
-            label: f.name ?? f.id,
+            label: truncateLabel(fFull, 18),
+            fullLabel: fFull,
             kind: 'func',
             uri: f.uri ?? '',
             line: typeof f.line === 'number' ? f.line : 0,
@@ -1139,6 +1206,43 @@
       cy.elements().removeClass('highlighted dimmed search-highlight');
     }
   });
+
+  // ── Hover glow for file cards ────────────────────────────────────────────
+  cy.on('mouseover', 'node[kind = "file"]', function (evt) {
+    evt.target.addClass('file-hover');
+  });
+  cy.on('mouseout', 'node[kind = "file"]', function (evt) {
+    evt.target.removeClass('file-hover');
+  });
+
+  // ── Tooltip: show full label when the display label was truncated ────────
+  (function initTooltip() {
+    var tooltipEl = document.getElementById('cy-tooltip');
+    if (!tooltipEl) { return; }
+
+    cy.on('mouseover', 'node', function (evt) {
+      var node = evt.target;
+      var full = node.data('fullLabel');
+      var shown = node.data('label');
+      // Only show tooltip when the label was truncated
+      if (full && shown && full !== shown) {
+        tooltipEl.textContent = full;
+        tooltipEl.style.display = 'block';
+      }
+    });
+
+    cy.on('mouseout', 'node', function () {
+      tooltipEl.style.display = 'none';
+    });
+
+    // Track the mouse position so the tooltip follows the cursor
+    document.getElementById('cy').addEventListener('mousemove', function (e) {
+      if (tooltipEl.style.display === 'block') {
+        tooltipEl.style.left = (e.clientX + 14) + 'px';
+        tooltipEl.style.top = (e.clientY - 30) + 'px';
+      }
+    });
+  })();
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Toolbar
