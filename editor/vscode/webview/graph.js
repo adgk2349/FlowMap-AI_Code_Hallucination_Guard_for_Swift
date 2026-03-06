@@ -616,6 +616,133 @@
     runGridLayout();
   }
 
+  // ── buildDetailElements ───────────────────────────────────────────────────
+  // Builds the Cytoscape elements for a single file's type/func subtree.
+  // Type nodes are flat (top-level); func nodes are compound children of their
+  // type.  The file-level compound layer is intentionally absent — only the
+  // type→func hierarchy is preserved, which avoids compound-bbox collapse.
+  function buildDetailElements(fileNodeId) {
+    const detailElements = [];
+
+    // Collect type IDs whose parent is this file
+    const typeIds = [];
+    Object.keys(parentMap).forEach(function (childId) {
+      if (parentMap[childId] === fileNodeId) { typeIds.push(childId); }
+    });
+
+    const typeNodes = (graph.nodes ?? []).filter(function (n) {
+      return typeIds.indexOf(n.id) !== -1 && n.kind === 'type';
+    });
+
+    typeNodes.forEach(function (t) {
+      detailElements.push({
+        data: {
+          id: t.id,
+          label: t.name ?? t.id,
+          kind: 'type',
+          uri: t.uri ?? '',
+          line: typeof t.line === 'number' ? t.line : 0,
+          diffState: addedNodeIds.has(t.id)
+            ? 'added' : changedNodeIds.has(t.id) ? 'changed' : 'unchanged',
+          impacted: impactIds.has(t.id),
+          // no parent — type is top-level in the detail view
+        },
+      });
+
+      // Func children of this type (compound children of the type node)
+      const funcIds = [];
+      Object.keys(parentMap).forEach(function (fId) {
+        if (parentMap[fId] === t.id) { funcIds.push(fId); }
+      });
+      const funcNodes = (graph.nodes ?? []).filter(function (n) {
+        return funcIds.indexOf(n.id) !== -1 && n.kind === 'func';
+      });
+      funcNodes.forEach(function (f) {
+        detailElements.push({
+          data: {
+            id: f.id,
+            label: f.name ?? f.id,
+            kind: 'func',
+            uri: f.uri ?? '',
+            line: typeof f.line === 'number' ? f.line : 0,
+            parent: t.id, // func is a compound child of its type
+            diffState: addedNodeIds.has(f.id)
+              ? 'added' : changedNodeIds.has(f.id) ? 'changed' : 'unchanged',
+            impacted: impactIds.has(f.id),
+          },
+        });
+      });
+    });
+
+    console.log(
+      '[FlowMapDebug] buildDetailElements: file=' + fileNodeId +
+      ' types=' + typeNodes.length +
+      ' total-elements=' + detailElements.length
+    );
+    return detailElements;
+  }
+
+  // ── showFileDetail ────────────────────────────────────────────────────────
+  // Drills into a single file: shows its type nodes as top-level flat cards.
+  // Func nodes start hidden; clicking a type expands/collapses its funcs.
+  // Press Grid to return to the all-files overview.
+  function showFileDetail(fileNodeId) {
+    const fileData = (graph.nodes ?? []).find(function (n) { return n.id === fileNodeId; });
+    if (!fileData) { return; }
+
+    // Navigate to the file source in the editor
+    if (fileData.uri) {
+      vscodeApi.postMessage({ command: 'openFile', uri: fileData.uri, line: fileData.line ?? 0 });
+    }
+
+    const detailElements = buildDetailElements(fileNodeId);
+    const typeCount = detailElements.filter(function (e) {
+      return e.data.kind === 'type' && !e.data.parent;
+    }).length;
+
+    if (typeCount === 0) {
+      // File has no type children — stay on file-card view (navigation still happened)
+      console.log('[FlowMap] showFileDetail: no types in ' + fileNodeId + ' — staying in files view');
+      return;
+    }
+
+    state.mode = 'file-detail';
+    state.detailFileId = fileNodeId;
+    state.searchQuery = '';
+    const searchInputEl = document.getElementById('search-input');
+    if (searchInputEl) { searchInputEl.value = ''; }
+
+    const emptyEl = document.getElementById('empty-state');
+    if (emptyEl) { emptyEl.style.display = 'none'; }
+
+    cy.elements().remove();
+    cy.add(detailElements);
+
+    // Func nodes start hidden — expand on click
+    cy.nodes('[kind = "func"]').addClass('hidden-node');
+
+    // Snap hidden funcs to their type parent's position to prevent bbox inflation
+    cy.nodes('[kind = "func"]').forEach(function (n) {
+      const par = n.parent();
+      if (par && par.length > 0) {
+        const pp = par.position();
+        if (pp && typeof pp.x === 'number') { n.position({ x: pp.x, y: pp.y }); }
+      }
+    });
+
+    // Grid layout on the flat type cards
+    cy.nodes('[kind = "type"]').layout({
+      name: 'grid',
+      padding: 60,
+      avoidOverlap: true,
+      animate: false,
+      fit: false,
+    }).run();
+
+    deferredFit(cy.nodes('[kind = "type"]'), 80);
+    console.log('[FlowMap] showFileDetail: showing ' + typeCount + ' types for ' + fileNodeId);
+  }
+
   // ── layoutChildrenOf ─────────────────────────────────────────────────────
   // Positions the visible children of a compound node in a small grid,
   // centred on the parent's current position. Prevents revealed nodes from
@@ -950,19 +1077,47 @@
 
     cy.elements().removeClass('highlighted dimmed');
 
-    if (kind === 'file' || kind === 'type') {
-      toggleExpand(node.id());
-    } else if (kind === 'func') {
-      const callEdges = node.outgoers('edge').filter('[kind = "calls"]');
-      const callTargets = callEdges.targets();
-      if (callEdges.length > 0) {
-        cy.elements().addClass('dimmed');
-        node.removeClass('dimmed').addClass('highlighted');
-        callTargets.removeClass('dimmed').addClass('highlighted');
-        callEdges.removeClass('dimmed').addClass('highlighted');
+    if (state.mode === 'files') {
+      // Flat file-card view: clicking a file card drills into its type/func detail.
+      // showFileDetail() also handles the openFile postMessage internally.
+      if (kind === 'file') {
+        showFileDetail(node.id());
+        return; // navigation is handled inside showFileDetail
+      }
+
+    } else if (state.mode === 'file-detail') {
+      // Detail view: type expands/collapses its func children.
+      // Func highlights its outgoing call edges (if any).
+      if (kind === 'type') {
+        toggleExpand(node.id());
+      } else if (kind === 'func') {
+        const callEdges = node.outgoers('edge').filter('[kind = "calls"]');
+        const callTargets = callEdges.targets();
+        if (callEdges.length > 0) {
+          cy.elements().addClass('dimmed');
+          node.removeClass('dimmed').addClass('highlighted');
+          callTargets.removeClass('dimmed').addClass('highlighted');
+          callEdges.removeClass('dimmed').addClass('highlighted');
+        }
+      }
+
+    } else {
+      // Calls mode: full compound graph — file/type toggle; func highlights calls.
+      if (kind === 'file' || kind === 'type') {
+        toggleExpand(node.id());
+      } else if (kind === 'func') {
+        const callEdges = node.outgoers('edge').filter('[kind = "calls"]');
+        const callTargets = callEdges.targets();
+        if (callEdges.length > 0) {
+          cy.elements().addClass('dimmed');
+          node.removeClass('dimmed').addClass('highlighted');
+          callTargets.removeClass('dimmed').addClass('highlighted');
+          callEdges.removeClass('dimmed').addClass('highlighted');
+        }
       }
     }
 
+    // Navigate to source for all modes (except files mode which returns early)
     const uri = node.data('uri');
     const line = node.data('line');
     if (uri) {
@@ -998,29 +1153,30 @@
     }
 
     // ── Calls button ────────────────────────────────────────────────────
-    // Reveals ALL nodes and edges, runs force-directed (cose) layout.
-    //
-    // Bug this fixes (PR8.2):
-    //   cy.fit(undefined, 40) was called synchronously after cose layout.
-    //   After a search + mode switch sequence, cy.fit() could include stale
-    //   bounding boxes from nodes that were just revealed → wrong viewport.
-    //
-    //   Fix: deferredFit() with double-rAF ensures styles are flushed and
-    //   bounding boxes are recomputed before the fit runs.
+    // Shows the full compound graph (file→type→func) with call edges.
+    // Rebuilds cy from the raw analysis data so the compound structure is
+    // always present, regardless of which mode was active before.
+    // All children are visible in calls mode — compound bbox cannot collapse.
     if (callsBtn) {
       callsBtn.addEventListener('click', function () {
         state.mode = 'calls';
         state.searchQuery = '';
-
-        // 1. Reveal all nodes and edges
-        cy.nodes().removeClass('hidden-node');
-        cy.edges().removeClass('hidden-edge');
-
-        // 2. Clear visual state
-        cy.elements().removeClass('highlighted dimmed search-highlight');
         if (searchInput) { searchInput.value = ''; }
 
-        // 3. Run force-directed layout over all nodes
+        // Rebuild the full compound structure (type/func as compound children).
+        const elements = buildCyElements();
+        cy.elements().remove();
+        cy.add({
+          nodes: [...elements.cyNodes, ...elements.phantomNodes],
+          edges: [...elements.cyEdges, ...elements.phantomEdges],
+        });
+
+        // Show everything — no hidden nodes in calls mode.
+        cy.nodes().removeClass('hidden-node');
+        cy.edges().removeClass('hidden-edge');
+        cy.elements().removeClass('highlighted dimmed search-highlight');
+
+        // Force-directed layout over the full graph.
         cy.layout({
           name: 'cose',
           padding: 40,
@@ -1031,8 +1187,7 @@
           animate: false,
         }).run();
 
-        // 4. Fit after two rAFs so display:none removal is fully flushed
-        //    and Cytoscape reports correct bounding boxes for all nodes.
+        // Deferred fit ensures bounding boxes are computed after layout flush.
         deferredFit(cy.nodes(), 40);
       });
     }
@@ -1055,8 +1210,12 @@
 
     // ── Search ──────────────────────────────────────────────────────────
     // Substring match on node labels (case-insensitive).
-    // Reveals hidden ancestors, then runs a local grid layout for each
-    // affected compound parent so nodes appear near their parent.
+    // Behaviour is mode-aware:
+    //   files mode:       highlight matching file cards; also scan raw graph
+    //                     data so type/func name matches highlight their
+    //                     parent file card.
+    //   file-detail mode: reveal hidden func children if they match.
+    //   calls mode:       reveal hidden ancestors (existing compound logic).
     if (searchInput) {
       searchInput.addEventListener('input', function () {
         const query = searchInput.value.trim().toLowerCase();
@@ -1065,40 +1224,73 @@
 
         if (!query) { return; }
 
-        const matches = cy.nodes().filter(function (n) {
-          return n.data('label').toLowerCase().includes(query);
-        });
+        if (state.mode === 'files') {
+          // ── Files mode: match file cards, plus indirect type/func hits ──
+          const fileMatchIds = new Set();
 
-        if (matches.length === 0) { return; }
+          // Direct matches on file card labels
+          cy.nodes().forEach(function (n) {
+            if (n.data('label').toLowerCase().includes(query)) {
+              fileMatchIds.add(n.id());
+            }
+          });
 
-        // Track which compound parents had children revealed so we can
-        // run a local layout on them after revealing.
-        const affectedParents = new Set();
+          // Indirect: type/func label matches in raw data → find parent file card
+          (graph.nodes ?? []).forEach(function (rawNode) {
+            if (rawNode.kind !== 'type' && rawNode.kind !== 'func') { return; }
+            if (!(rawNode.name ?? rawNode.id).toLowerCase().includes(query)) { return; }
+            // Walk parentMap up to a file node
+            var curr = rawNode.id;
+            for (var hop = 0; hop < 4; hop++) {
+              var par = parentMap[curr];
+              if (!par) { break; }
+              var parRaw = (graph.nodes ?? []).find(function (pn) { return pn.id === par; });
+              if (parRaw && parRaw.kind === 'file') { fileMatchIds.add(par); break; }
+              curr = par;
+            }
+          });
 
-        matches.forEach(function (n) {
-          n.removeClass('hidden-node');
+          if (fileMatchIds.size === 0) { return; }
 
-          // Walk up the parent chain (func → type → file, max 3 hops)
-          let curr = n;
-          for (let depth = 0; depth < 3; depth++) {
-            const par = curr.parent();
-            if (!par || par.length === 0) { break; }
-            par.removeClass('hidden-node');
-            affectedParents.add(par.id());
-            curr = par;
-          }
-        });
+          var fileMatches = cy.nodes().filter(function (n) {
+            return fileMatchIds.has(n.id());
+          });
+          fileMatches.addClass('search-highlight');
+          deferredFit(fileMatches, 80);
 
-        // Position newly revealed children near their parent (avoids clump at origin)
-        affectedParents.forEach(function (parentId) {
-          layoutChildrenOf(cy.getElementById(parentId));
-        });
+        } else {
+          // ── File-detail / Calls mode: reveal hidden ancestors ────────────
+          const matches = cy.nodes().filter(function (n) {
+            return n.data('label').toLowerCase().includes(query);
+          });
 
-        matches.addClass('search-highlight');
+          if (matches.length === 0) { return; }
 
-        // Deferred fit: two rAFs ensure Cytoscape has processed the newly
-        // visible nodes' bounding boxes before the viewport is adjusted.
-        deferredFit(matches, 80);
+          // Track which compound parents had children revealed
+          const affectedParents = new Set();
+
+          matches.forEach(function (n) {
+            n.removeClass('hidden-node');
+
+            // Walk up the parent chain (func → type, max 3 hops)
+            let curr = n;
+            for (let depth = 0; depth < 3; depth++) {
+              const par = curr.parent();
+              if (!par || par.length === 0) { break; }
+              par.removeClass('hidden-node');
+              affectedParents.add(par.id());
+              curr = par;
+            }
+          });
+
+          // Position newly revealed children near their parent
+          affectedParents.forEach(function (parentId) {
+            layoutChildrenOf(cy.getElementById(parentId));
+          });
+
+          matches.addClass('search-highlight');
+          deferredFit(matches, 80);
+        }
       });
     }
 
