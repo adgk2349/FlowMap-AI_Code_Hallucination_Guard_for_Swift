@@ -399,6 +399,15 @@
     searchQuery: '',     // active search text; '' means no search active
   };
 
+  // ── Spacing constants (PR8.6) ─────────────────────────────────────────────
+  // Hard minimum gaps used by all detail and calls layout code.
+  // No layout may place nodes closer than these values.
+  const GROUP_GAP      = 140; // vertical gap between type-group blocks (file-detail)
+  const CARD_GAP_X     =  56; // horizontal gap between func/type cards in a row
+  const CARD_GAP_Y     =  28; // vertical gap between card rows
+  const COMPONENT_GAP  = 180; // gap between component bounding boxes (calls mode)
+  const DETAIL_PADDING =  40; // outer viewport padding after detail/calls layout
+
   // ── Parse embedded payload ───────────────────────────────────────────────
   const raw = document.getElementById('graph-data').textContent ?? '{}';
   const embeddedAnalysis = JSON.parse(raw);
@@ -967,6 +976,27 @@
     return detailElements;
   }
 
+  // ── layoutDetailTypeNodes ─────────────────────────────────────────────────
+  // Stacks visible type nodes in a strict vertical column, with GROUP_GAP
+  // separating each block.  Replaces the grid layout in file-detail mode with
+  // a deterministic aligned arrangement:
+  //   type₀  (at y = 0)
+  //   ——— GROUP_GAP ———
+  //   type₁  (at y = type₀.height + GROUP_GAP)
+  //   ...
+  // All type nodes share x = 0; deferredFit centres them in the viewport.
+  function layoutDetailTypeNodes() {
+    var typeNodes = cy.nodes('[kind = "type"]').not('.hidden-node');
+    if (typeNodes.length === 0) { return; }
+
+    var curY = 0;
+    typeNodes.forEach(function (tn) {
+      var th = Math.max(32, tn.height() || 32);
+      tn.position({ x: 0, y: curY + th / 2 });
+      curY += th + GROUP_GAP;
+    });
+  }
+
   // ── showFileDetail ────────────────────────────────────────────────────────
   // Drills into a single file: shows its type nodes as top-level flat cards.
   // Func nodes start hidden; clicking a type expands/collapses its funcs.
@@ -1014,25 +1044,21 @@
     // Func nodes start hidden — expand on click
     cy.nodes('[kind = "func"]').addClass('hidden-node');
 
-    // Snap hidden funcs to their type parent's position to prevent bbox inflation
+    // Strict vertical stack: type nodes positioned top-to-bottom with GROUP_GAP.
+    // Run BEFORE snapping funcs so hidden funcs land at each type's final position.
+    layoutDetailTypeNodes();
+
+    // Snap hidden funcs to their type parent's (now-positioned) centre.
+    // Prevents compound bbox inflation when funcs are later revealed.
     cy.nodes('[kind = "func"]').forEach(function (n) {
-      const par = n.parent();
+      var par = n.parent();
       if (par && par.length > 0) {
-        const pp = par.position();
+        var pp = par.position();
         if (pp && typeof pp.x === 'number') { n.position({ x: pp.x, y: pp.y }); }
       }
     });
 
-    // Grid layout on the flat type cards
-    cy.nodes('[kind = "type"]').layout({
-      name: 'grid',
-      padding: 60,
-      avoidOverlap: true,
-      animate: false,
-      fit: false,
-    }).run();
-
-    deferredFit(cy.nodes('[kind = "type"]'), 80);
+    deferredFit(cy.nodes('[kind = "type"]'), DETAIL_PADDING);
     console.log('[FlowMap] showFileDetail: showing ' + typeCount + ' types for ' + fileNodeId);
   }
 
@@ -1070,50 +1096,54 @@
   // Positions the visible children of a compound node in a small grid,
   // centred on the parent's current position. Prevents revealed nodes from
   // clumping at (0, 0) (their default preset position).
+  // ── layoutChildrenOf ─────────────────────────────────────────────────────
+  // Positions the visible children of a compound node in a 1–2 column grid
+  // directly below the parent, using the hard-minimum CARD_GAP constants.
+  // No two children overlap; every row is neatly aligned.
+  //
+  //   Column count rule: ≤3 children → 1 column, 4+ → 2 columns.
+  //
+  //   Geometry (centred on parent's x):
+  //     startX = parentCentreX − blockWidth/2 + childW/2
+  //     startY = parentBottom  + CARD_GAP_Y   + childH/2
+  //
+  // After positioning immediate children, recurse into any revealed type nodes
+  // so their func children are also placed immediately.
   function layoutChildrenOf(parentNode) {
-    const visibleChildren = parentNode.children().not('.hidden-node');
+    var visibleChildren = parentNode.children().not('.hidden-node');
     if (visibleChildren.length === 0) { return; }
 
-    const px = parentNode.position('x') || 0;
-    const py = parentNode.position('y') || 0;
-    const span = Math.max(220, visibleChildren.length * 70);
+    var px = parentNode.position('x') || 0;
+    var py = parentNode.position('y') || 0;
+    var ph = Math.max(28, parentNode.height() || 28);
 
-    visibleChildren.layout({
-      name: 'grid',
-      animate: false,
-      fit: false,
-      condense: true,
-      avoidOverlap: true,
-      padding: 10,
-      boundingBox: {
-        x1: px - span / 2,
-        y1: py - span / 2,
-        x2: px + span / 2,
-        y2: py + span / 2,
-      },
-    }).run();
+    var n = visibleChildren.length;
+    var nCols = n <= 3 ? 1 : 2;
 
-    // Recurse: also layout func children of any newly revealed type nodes
+    // Measure max child card dimensions from live Cytoscape style.
+    var childW = 80, childH = 28;
+    visibleChildren.forEach(function (c) {
+      childW = Math.max(childW, c.width() || 80);
+      childH = Math.max(childH, c.height() || 28);
+    });
+
+    // Block starts immediately below the parent node.
+    var blockW = nCols * childW + (nCols - 1) * CARD_GAP_X;
+    var startX = px - blockW / 2 + childW / 2;
+    var startY = py + ph / 2 + CARD_GAP_Y + childH / 2;
+
+    visibleChildren.forEach(function (child, i) {
+      child.position({
+        x: startX + (i % nCols) * (childW + CARD_GAP_X),
+        y: startY + Math.floor(i / nCols) * (childH + CARD_GAP_Y),
+      });
+    });
+
+    // Recurse: lay out func children of any newly revealed type nodes.
     visibleChildren.filter('[kind = "type"]').forEach(function (typeNode) {
-      const visibleFuncs = typeNode.children().not('.hidden-node');
-      if (visibleFuncs.length === 0) { return; }
-      const tx = typeNode.position('x') || px;
-      const ty = typeNode.position('y') || py;
-      const fspan = Math.max(160, visibleFuncs.length * 55);
-      visibleFuncs.layout({
-        name: 'grid',
-        animate: false,
-        fit: false,
-        condense: true,
-        avoidOverlap: true,
-        padding: 6,
-        boundingBox: {
-          x1: tx - fspan / 2,
-          y1: ty - fspan / 2,
-          x2: tx + fspan / 2,
-          y2: ty + fspan / 2,
-        },
-      }).run();
+      if (typeNode.children().not('.hidden-node').length > 0) {
+        layoutChildrenOf(typeNode);
+      }
     });
   }
 
