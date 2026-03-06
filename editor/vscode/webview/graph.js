@@ -1557,7 +1557,7 @@
   // are unaffected — this function only changes node positions.
   function runSpacedCallsLayout() {
     var visibleNodes = cy.nodes(':visible');
-    if (visibleNodes.length === 0) { deferredFit(cy.nodes(), 80); return; }
+    if (visibleNodes.length === 0) { deferredFit(cy.nodes(), DETAIL_PADDING); return; }
 
     var fileNodes = cy.nodes('[kind = "file"]:visible');
 
@@ -1565,15 +1565,16 @@
     if (fileNodes.length === 0) {
       cy.layout({
         name: 'cose',
-        padding: 80,
-        nodeRepulsion: function () { return 20000; },
-        nodeOverlap: 20,
-        idealEdgeLength: function () { return 120; },
+        padding: DETAIL_PADDING,
+        nodeRepulsion: function () { return 30000; },
+        nodeOverlap: 40,
+        idealEdgeLength: function () { return 150; },
         edgeElasticity: function () { return 100; },
-        componentSpacing: 200,
+        gravity: 0.5,
+        componentSpacing: COMPONENT_GAP,
         animate: false,
       }).run();
-      deferredFit(cy.nodes(), 80);
+      deferredFit(cy.nodes(), DETAIL_PADDING);
       return;
     }
 
@@ -1626,20 +1627,21 @@
     if (groupArr.length <= 1) {
       cy.layout({
         name: 'cose',
-        padding: 80,
-        nodeRepulsion: function () { return 20000; },
-        nodeOverlap: 20,
-        idealEdgeLength: function () { return 120; },
+        padding: DETAIL_PADDING,
+        nodeRepulsion: function () { return 30000; },
+        nodeOverlap: 40,
+        idealEdgeLength: function () { return 150; },
         edgeElasticity: function () { return 100; },
-        componentSpacing: 200,
+        gravity: 0.5,
+        componentSpacing: COMPONENT_GAP,
         animate: false,
       }).run();
-      deferredFit(cy.nodes(), 80);
+      deferredFit(cy.nodes(), DETAIL_PADDING);
       return;
     }
 
     // ── Step 2b: Independent cose run per component ───────────────────────
-    var GAP = 260; // px gap between component bounding boxes in the grid
+    var GAP = COMPONENT_GAP; // px gap between component bounding boxes in the grid
 
     // Helper: collect all cy nodes belonging to a list of file IDs.
     function nodesForFiles(fileIds) {
@@ -1658,11 +1660,12 @@
       });
       compNodes.union(compEdges).layout({
         name: 'cose',
-        padding: 40,
-        nodeRepulsion: function () { return 20000; },
-        nodeOverlap: 20,
-        idealEdgeLength: function () { return 120; },
+        padding: DETAIL_PADDING,
+        nodeRepulsion: function () { return 30000; },
+        nodeOverlap: 40,
+        idealEdgeLength: function () { return 150; },
         edgeElasticity: function () { return 100; },
+        gravity: 0.5,
         animate: false,
       }).run();
     });
@@ -1701,7 +1704,7 @@
       }
     });
 
-    deferredFit(cy.nodes(), 80);
+    deferredFit(cy.nodes(), DETAIL_PADDING);
   }
 
   // Toolbar
