@@ -221,37 +221,172 @@
     };
   }
 
-  // ── buildFlatFileElements ─────────────────────────────────────────────────
-  // Returns flat (non-compound) Cytoscape node elements for file nodes only.
-  // No parent field is set — every element is a top-level node.
-  // No type/func nodes or edges are included.
-  //
-  // This is the permanent default initial view: file cards in a readable grid.
-  // Flat file nodes are always visible regardless of child count because they
-  // carry no compound children — compound-sizing bbox collapse cannot occur.
-  function buildFlatFileElements() {
-    const fileNodes = (graph.nodes ?? []).filter(function (n) {
+  // ── truncateLabel ─────────────────────────────────────────────────────────
+  // Truncates a string to maxLen characters, appending '…' if truncated.
+  // Used to keep node labels short enough to not dominate the card visually.
+  function truncateLabel(str, maxLen) {
+    if (!str || str.length <= maxLen) { return str; }
+    return str.slice(0, maxLen - 1) + '\u2026'; // U+2026 HORIZONTAL ELLIPSIS
+  }
+
+  // ── getFolderTint ─────────────────────────────────────────────────────────
+  // Returns a CSS rgba() color based on the file's parent directory path.
+  // Hashes the last two directory segments to one of 6 preset tint colors
+  // so sibling files share the same tint, giving an implicit grouping feel.
+  function getFolderTint(uri) {
+    if (!uri) { return null; }
+    var path = uri.replace(/^file:\/\//, '');
+    var slash = path.lastIndexOf('/');
+    if (slash < 0) { return null; }
+    var dir = path.slice(0, slash);
+    var parts = dir.split('/').filter(function (p) { return p.length > 0; });
+    var bucket = parts.slice(-2).join('/');
+    if (!bucket) { return null; }
+    var h = 0;
+    for (var i = 0; i < bucket.length; i++) {
+      h = (h * 31 + bucket.charCodeAt(i)) & 0x7fffffff;
+    }
+    var TINTS = [
+      'rgba(52, 80, 130, 0.52)',   // indigo-blue
+      'rgba(38, 112, 78, 0.52)',   // teal-green
+      'rgba(110, 58, 82, 0.52)',   // rose
+      'rgba(100, 78, 38, 0.52)',   // amber-brown
+      'rgba(62, 62, 118, 0.52)',   // indigo-violet
+      'rgba(38, 98, 105, 0.52)',   // cyan-teal
+    ];
+    return TINTS[h % TINTS.length];
+  }
+
+  // ── getFolderKey ─────────────────────────────────────────────────────────
+  // Returns the immediate parent directory name from a file URI.
+  // Used to group files under virtual folder nodes in the overview.
+  // Strategy: last path segment before the filename (immediate parent dir).
+  //   file:///project/Sources/Networking/File.swift  → "Networking"
+  //   file:///project/Sources/File.swift             → "Sources"
+  //   file:///File.swift                             → "__root__" (no folder)
+  function getFolderKey(uri) {
+    if (!uri) { return '__root__'; }
+    var path = uri.replace(/^file:\/\//, '');
+    var parts = path.split('/').filter(function (p) { return p.length > 0; });
+    if (parts.length < 2) { return '__root__'; }
+    return parts[parts.length - 2]; // immediate parent directory
+  }
+
+  // ── deriveProjectName ────────────────────────────────────────────────────
+  // Heuristically extracts a project name from the first file URI.
+  // Looks for a path segment just before a known source-root directory
+  // (Sources, Source, src).  Falls back to the 3rd-to-last segment.
+  function deriveProjectName() {
+    var files = (graph.nodes ?? []).filter(function (n) {
       return (n.kind ?? 'func') === 'file';
     });
-    const elements = fileNodes.map(function (n) {
-      return {
-        data: {
-          id: n.id,
-          label: n.name ?? n.id,
-          kind: 'file',
-          uri: n.uri ?? '',
-          line: typeof n.line === 'number' ? n.line : 0,
-          diffState: addedNodeIds.has(n.id)
-            ? 'added'
-            : changedNodeIds.has(n.id)
-              ? 'changed'
-              : 'unchanged',
-          impacted: impactIds.has(n.id),
-          // parent intentionally omitted — flat non-compound node
-        },
-      };
+    if (files.length === 0) { return 'Project'; }
+    var uri = (files[0].uri ?? '').replace(/^file:\/\//, '');
+    var parts = uri.split('/').filter(function (p) { return p.length > 0; });
+    var SOURCE_ROOTS = ['Sources', 'Source', 'src', 'Src'];
+    for (var i = 1; i < parts.length; i++) {
+      if (SOURCE_ROOTS.indexOf(parts[i]) !== -1) { return parts[i - 1]; }
+    }
+    if (parts.length >= 3) { return parts[parts.length - 3]; }
+    if (parts.length >= 2) { return parts[parts.length - 2]; }
+    return 'Project';
+  }
+
+  // ── buildOverviewElements ─────────────────────────────────────────────────
+  // Builds the virtual mindmap hierarchy for the overview mode:
+  //   project-root → folder nodes → file nodes
+  // plus branch edges connecting each level.
+  //
+  // Folder and root nodes are display-only — they do NOT exist in the engine
+  // graph and carry no analysis semantics.
+  //
+  // File labels are truncated to 22 chars; fullLabel stored for tooltip.
+  // Folder tints (from getFolderTint) are applied imperatively by renderOverview.
+  function buildOverviewElements() {
+    var elements = [];
+    var fileNodes = (graph.nodes ?? []).filter(function (n) {
+      return (n.kind ?? 'func') === 'file';
     });
-    console.log('[FlowMap] buildFlatFileElements: file count=' + elements.length);
+    if (fileNodes.length === 0) { return []; }
+
+    // Virtual project root
+    var projectName = deriveProjectName();
+    elements.push({
+      data: {
+        id: '__root__',
+        label: truncateLabel(projectName, 14),
+        fullLabel: projectName,
+        kind: 'root',
+      },
+    });
+
+    // Group files by immediate parent folder
+    var folderMap = {};
+    fileNodes.forEach(function (n) {
+      var key = getFolderKey(n.uri ?? '');
+      if (!folderMap[key]) { folderMap[key] = []; }
+      folderMap[key].push(n);
+    });
+
+    Object.keys(folderMap).sort().forEach(function (folderKey) {
+      var folderId = '__folder__' + folderKey;
+      var displayName = folderKey === '__root__' ? '(root)' : folderKey;
+
+      // Virtual folder node
+      elements.push({
+        data: {
+          id: folderId,
+          label: truncateLabel(displayName, 18),
+          fullLabel: displayName,
+          kind: 'folder',
+          folderKey: folderKey,
+          fileCount: folderMap[folderKey].length,
+        },
+      });
+      // Branch edge: root → folder
+      elements.push({
+        data: {
+          id: '__br__root_' + folderId,
+          source: '__root__',
+          target: folderId,
+          kind: 'branch',
+        },
+      });
+
+      // File nodes + folder→file branch edges
+      folderMap[folderKey].forEach(function (n) {
+        var full = n.name ?? n.id;
+        elements.push({
+          data: {
+            id: n.id,
+            label: truncateLabel(full, 22),
+            fullLabel: full,
+            kind: 'file',
+            uri: n.uri ?? '',
+            line: typeof n.line === 'number' ? n.line : 0,
+            diffState: addedNodeIds.has(n.id)
+              ? 'added'
+              : changedNodeIds.has(n.id)
+                ? 'changed'
+                : 'unchanged',
+            impacted: impactIds.has(n.id),
+          },
+        });
+        elements.push({
+          data: {
+            id: '__br__' + folderId + '_' + n.id,
+            source: folderId,
+            target: n.id,
+            kind: 'branch',
+          },
+        });
+      });
+    });
+
+    console.log(
+      '[FlowMap] buildOverviewElements: folders=' + Object.keys(folderMap).length +
+      ' files=' + fileNodes.length
+    );
     return elements;
   }
 
@@ -259,10 +394,21 @@
   // Separate from the payload's analysis.view (which is diff/impact mode).
   // Tracks which layout mode the user has actively selected.
   const state = {
-    mode: 'files',       // 'files' | 'file-detail' | 'calls'
+    mode: 'overview',    // 'overview' | 'file-detail' | 'calls'
     detailFileId: null,  // id of file currently shown in 'file-detail' mode
     searchQuery: '',     // active search text; '' means no search active
   };
+
+  // ── Spacing constants (PR8.6) ─────────────────────────────────────────────
+  // Hard minimum gaps used by all detail and calls layout code.
+  // No layout may place nodes closer than these values.
+  const GROUP_GAP      = 140; // vertical gap between type-group blocks (file-detail)
+  const CARD_GAP_X     =  56; // horizontal gap between func/type cards in a row
+  const CARD_GAP_Y     =  28; // vertical gap between card rows
+  const COMPONENT_GAP  = 180; // gap between component bounding boxes (calls mode)
+  const DETAIL_PADDING =  40; // outer viewport padding after detail/calls layout
+  const PANEL_MIN_W    = 280; // minimum panel slot width  per component (calls mode)
+  const PANEL_MIN_H    = 180; // minimum panel slot height per component (calls mode)
 
   // ── Parse embedded payload ───────────────────────────────────────────────
   const raw = document.getElementById('graph-data').textContent ?? '{}';
@@ -289,7 +435,7 @@
         selector: 'node',
         style: {
           label: 'data(label)',
-          color: '#d0d0d0',
+          color: '#c0c8d8',
           'text-valign': 'center',
           'text-halign': 'center',
           'font-size': '11px',
@@ -297,80 +443,173 @@
           height: 'label',
           padding: '8px',
           shape: 'roundrectangle',
-          'background-color': 'rgb(220,150,70)',
-          'background-opacity': 0.4,
+          'background-color': 'rgba(180, 120, 55, 0.42)',
+          'background-opacity': 1,
           'border-width': 1,
-          'border-color': '#ffffff',
-          'border-opacity': 0.08,
+          'border-color': 'rgba(255, 255, 255, 0.09)',
+          'border-opacity': 1,
         },
       },
-      // ── Hidden elements (files-only initial view) ───────────────────────
+      // ── Hidden elements (overview initial view) ─────────────────────────
       { selector: 'node.hidden-node', style: { display: 'none' } },
       { selector: 'edge.hidden-edge', style: { display: 'none' } },
       // ── Kind-based colours ──────────────────────────────────────────────
+      // File cards: polished pill — centered label, generous horizontal padding,
+      // soft border, neutral blue-gray base (folder tint overrides bg in JS).
       {
         selector: 'node[kind = "file"]',
         style: {
-          'background-color': 'rgb(70,90,110)',
-          'background-opacity': 0.25,
-          'font-size': '13px',
-          'font-weight': 'bold',
-          'text-valign': 'top',
-          'text-margin-y': '-8px',
-          'border-color': '#ffffff',
-          'border-opacity': 0.08,
+          'background-color': 'rgba(52, 72, 105, 0.52)',
+          'background-opacity': 1,
+          'font-size': '12px',
+          'font-weight': '600',
+          color: '#bccce0',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'text-margin-y': '0px',
+          'border-color': 'rgba(255, 255, 255, 0.11)',
+          'border-opacity': 1,
           'border-width': 1,
+          padding: '10px',
+          'min-width': 100,
+          'min-height': 28,
+        },
+      },
+      // Hover glow: added via mouseover event, removed on mouseout
+      {
+        selector: 'node[kind = "file"].file-hover',
+        style: {
+          'border-color': 'rgba(77, 163, 255, 0.45)',
+          'border-width': 1.5,
+          color: '#d0e0ff',
+        },
+      },
+      // ── Overview mindmap nodes ──────────────────────────────────────────
+      // Project root: circular hub, largest node, visually central
+      {
+        selector: 'node[kind = "root"]',
+        style: {
+          shape: 'ellipse',
+          'background-color': 'rgba(28, 45, 85, 0.90)',
+          'background-opacity': 1,
+          'border-color': 'rgba(90, 140, 230, 0.42)',
+          'border-width': 2,
+          'border-opacity': 1,
+          color: '#c0d0f5',
+          'font-size': '14px',
+          'font-weight': '700',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          width: 80,
+          height: 80,
+          'text-wrap': 'ellipsis',
+          'text-max-width': '68px',
+        },
+      },
+      // Folder nodes: medium cards, distinct from file pills
+      {
+        selector: 'node[kind = "folder"]',
+        style: {
+          shape: 'roundrectangle',
+          'background-color': 'rgba(35, 46, 72, 0.82)',
+          'background-opacity': 1,
+          'border-color': 'rgba(80, 110, 195, 0.30)',
+          'border-width': 1.5,
+          'border-opacity': 1,
+          color: '#90a8cc',
+          'font-size': '11px',
+          'font-weight': '600',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'text-margin-y': '0px',
+          padding: '10px',
+          'min-width': 72,
+          'min-height': 28,
+        },
+      },
+      // Folder collapsed: dashed border + muted text
+      {
+        selector: 'node[kind = "folder"].folder-collapsed',
+        style: {
+          'border-style': 'dashed',
+          'border-color': 'rgba(80, 110, 195, 0.18)',
+          color: '#607090',
+        },
+      },
+      // Folder hover glow (via mouseover/mouseout events)
+      {
+        selector: 'node[kind = "folder"].folder-hover',
+        style: {
+          'border-color': 'rgba(90, 140, 230, 0.50)',
+          'border-width': 2,
+          color: '#b0c8e8',
+        },
+      },
+      // ── Branch edges (overview hierarchy only) ──────────────────────────
+      // Thin, subtle arrows: project→folder, folder→file.
+      // Not call edges — exist only in overview mode.
+      {
+        selector: 'edge[kind = "branch"]',
+        style: {
+          width: 1,
+          'line-color': 'rgba(75, 105, 165, 0.22)',
+          'target-arrow-color': 'rgba(75, 105, 165, 0.22)',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'straight',
+          opacity: 0.90,
         },
       },
       {
         selector: 'node[kind = "type"]',
         style: {
-          'background-color': 'rgb(50,140,100)',
-          'background-opacity': 0.35,
-          'font-size': '12px',
-          'border-color': '#ffffff',
-          'border-opacity': 0.08,
+          'background-color': 'rgba(38, 108, 76, 0.44)',
+          'background-opacity': 1,
+          'font-size': '11px',
+          color: '#a8d0b8',
+          'border-color': 'rgba(255, 255, 255, 0.09)',
+          'border-opacity': 1,
           'border-width': 1,
         },
       },
       {
         selector: 'node[kind = "func"]',
         style: {
-          'background-color': 'rgb(220,150,70)',
-          'background-opacity': 0.4,
-          'font-size': '11px',
-          'border-color': '#ffffff',
-          'border-opacity': 0.08,
+          'background-color': 'rgba(175, 110, 45, 0.44)',
+          'background-opacity': 1,
+          'font-size': '10px',
+          color: '#d0b890',
+          'border-color': 'rgba(255, 255, 255, 0.09)',
+          'border-opacity': 1,
           'border-width': 1,
         },
       },
       // ── Diff-state overrides ────────────────────────────────────────────
       {
         selector: 'node[diffState = "added"]',
-        style: { 'background-color': '#1a4a1a', 'background-opacity': 1 },
+        style: { 'background-color': 'rgba(22, 62, 22, 0.90)', 'background-opacity': 1 },
       },
       {
         selector: 'node[diffState = "removed"]',
         style: {
-          'background-color': '#4a1a1a',
+          'background-color': 'rgba(62, 20, 20, 0.90)',
           'background-opacity': 1,
           'border-style': 'dashed',
-          'border-color': '#cc3333',
-          'border-width': 2,
+          'border-color': 'rgba(190, 50, 50, 0.80)',
+          'border-width': 1.5,
           'border-opacity': 1,
-          opacity: 0.75,
+          opacity: 0.70,
         },
       },
       {
         selector: 'node[diffState = "changed"]',
-        style: { 'background-color': '#4a4a1a', 'background-opacity': 1 },
+        style: { 'background-color': 'rgba(62, 58, 18, 0.90)', 'background-opacity': 1 },
       },
-      // ── Impacted node: orange outline ───────────────────────────────────
+      // ── Impacted node: warm orange outline ──────────────────────────────
       {
         selector: 'node[?impacted]',
         style: {
-          'border-color': '#e07b39',
-          'border-width': 3,
+          'border-color': 'rgba(215, 115, 50, 0.90)',
+          'border-width': 2.5,
           'border-style': 'solid',
           'border-opacity': 1,
         },
@@ -429,10 +668,11 @@
       {
         selector: 'node.search-highlight',
         style: {
-          'border-color': '#4da3ff',
+          'border-color': 'rgba(77, 163, 255, 0.90)',
           'border-width': 2,
           'border-style': 'solid',
           'border-opacity': 1,
+          color: '#d8ecff',
         },
       },
       // ── Highlight state (click) ─────────────────────────────────────────
@@ -573,47 +813,99 @@
     deferredFit(files, 120);
   }
 
-  // ── renderFileCardView ────────────────────────────────────────────────────
-  // Default initial view: replaces cy contents with flat (non-compound) file
-  // nodes only, then runs a grid layout.
+  // ── runOverviewLayout ─────────────────────────────────────────────────────
+  // Positions nodes in a radial mindmap layout:
+  //   - root at the origin (0, 0)
+  //   - folder nodes evenly spaced in a ring around root
+  //   - file nodes fanned outward from their folder, away from root
+  // Positions are set directly (no Cytoscape layout engine), giving precise
+  // control over spacing and fan angles.  Then deferred-fit to viewport.
+  function runOverviewLayout() {
+    var root = cy.getElementById('__root__');
+    if (!root || root.length === 0) { deferredFit(cy.nodes(), 60); return; }
+
+    root.position({ x: 0, y: 0 });
+
+    var folderNodes = cy.nodes('[kind = "folder"]');
+    var nFolders = folderNodes.length;
+    if (nFolders === 0) { deferredFit(cy.nodes(), 60); return; }
+
+    // Folder ring: radius grows with folder count
+    var FOLDER_R = Math.max(260, nFolders * 95);
+
+    folderNodes.forEach(function (folder, i) {
+      // Evenly spaced angles, starting at top (−π/2)
+      var angle = (2 * Math.PI * i / nFolders) - Math.PI / 2;
+      var fx = Math.round(FOLDER_R * Math.cos(angle));
+      var fy = Math.round(FOLDER_R * Math.sin(angle));
+      folder.position({ x: fx, y: fy });
+
+      // Files attached to this folder via branch edges
+      var files = cy.edges('[kind = "branch"]').filter(function (e) {
+        return e.source().id() === folder.id();
+      }).targets();
+
+      var nFiles = files.length;
+      if (nFiles === 0) { return; }
+
+      // File ring: radius scales with file count (min 160, per-file 50)
+      var FILE_R = Math.max(160, nFiles * 50);
+      // Fan spread: up to 75% of a half-circle, 38° per file
+      var spread = nFiles === 1 ? 0 : Math.min(Math.PI * 0.75, (nFiles - 1) * 0.38);
+
+      files.forEach(function (file, j) {
+        var fa = angle + (nFiles > 1 ? (j / (nFiles - 1) - 0.5) * 2 * spread : 0);
+        file.position({
+          x: Math.round(fx + FILE_R * Math.cos(fa)),
+          y: Math.round(fy + FILE_R * Math.sin(fa)),
+        });
+      });
+    });
+
+    deferredFit(cy.nodes(), 60);
+  }
+
+  // ── renderOverview ────────────────────────────────────────────────────────
+  // Default initial view: project → folder → file mindmap.
+  // Virtual root and folder nodes are created in the webview only — they are
+  // not part of the engine graph and do not affect analysis.
+  // File nodes keep the polished pill style from PR8.3; folder tints apply.
   //
-  // Flat file cards are always visible regardless of child count because they
-  // carry no compound children — compound-sizing bbox collapse cannot occur.
-  //
-  // Called on: initial render, panel restore, Grid button, and any path that
-  // needs to return to the top-level file overview.
-  function renderFileCardView() {
-    console.log('[FlowMap] renderFileCardView: entering flat file-card view');
+  // Called on: initial render, panel restore, Overview button, Back button.
+  function renderOverview() {
+    console.log('[FlowMap] renderOverview: building mindmap overview');
 
-    const flatElements = buildFlatFileElements();
-    console.log('[FlowMap] renderFileCardView: file count=' + flatElements.length);
+    var elements = buildOverviewElements();
+    var emptyEl = document.getElementById('empty-state');
 
-    const emptyEl = document.getElementById('empty-state');
-
-    if (flatElements.length === 0) {
-      console.warn('[FlowMap] renderFileCardView: 0 file nodes — showing empty state');
+    if (elements.length === 0) {
+      console.warn('[FlowMap] renderOverview: no file nodes — showing empty state');
       if (emptyEl) { emptyEl.style.display = 'flex'; }
       return;
     }
 
     if (emptyEl) { emptyEl.style.display = 'none'; }
 
-    // Replace cy contents with flat file nodes only.
     cy.elements().remove();
-    cy.add(flatElements);
+    cy.add(elements);
 
-    state.mode = 'files';
+    // Apply per-node folder tint colors to file nodes (visual grouping by dir)
+    cy.nodes('[kind = "file"]').forEach(function (n) {
+      var tint = getFolderTint(n.data('uri'));
+      if (tint) { n.style('background-color', tint); }
+    });
+
+    state.mode = 'overview';
     state.detailFileId = null;
+    updateToolbarForMode('overview');
 
     console.log(
-      '[FlowMapDebug] renderFileCardView after cy.add: total=' + cy.nodes().length +
-      ' visible=' + cy.nodes(':visible').length
+      '[FlowMapDebug] renderOverview after cy.add: nodes=' + cy.nodes().length +
+      ' folders=' + cy.nodes('[kind="folder"]').length +
+      ' files=' + cy.nodes('[kind="file"]').length
     );
 
-    // Grid layout + deferred fit.
-    // runGridLayout targets cy.nodes('[kind="file"]') which matches every node
-    // in the flat view — no compound children to cause bbox issues.
-    runGridLayout();
+    runOverviewLayout();
   }
 
   // ── buildDetailElements ───────────────────────────────────────────────────
@@ -635,10 +927,12 @@
     });
 
     typeNodes.forEach(function (t) {
+      const tFull = t.name ?? t.id;
       detailElements.push({
         data: {
           id: t.id,
-          label: t.name ?? t.id,
+          label: truncateLabel(tFull, 20),
+          fullLabel: tFull,
           kind: 'type',
           uri: t.uri ?? '',
           line: typeof t.line === 'number' ? t.line : 0,
@@ -658,10 +952,12 @@
         return funcIds.indexOf(n.id) !== -1 && n.kind === 'func';
       });
       funcNodes.forEach(function (f) {
+        const fFull = f.name ?? f.id;
         detailElements.push({
           data: {
             id: f.id,
-            label: f.name ?? f.id,
+            label: truncateLabel(fFull, 18),
+            fullLabel: fFull,
             kind: 'func',
             uri: f.uri ?? '',
             line: typeof f.line === 'number' ? f.line : 0,
@@ -680,6 +976,27 @@
       ' total-elements=' + detailElements.length
     );
     return detailElements;
+  }
+
+  // ── layoutDetailTypeNodes ─────────────────────────────────────────────────
+  // Stacks visible type nodes in a strict vertical column, with GROUP_GAP
+  // separating each block.  Replaces the grid layout in file-detail mode with
+  // a deterministic aligned arrangement:
+  //   type₀  (at y = 0)
+  //   ——— GROUP_GAP ———
+  //   type₁  (at y = type₀.height + GROUP_GAP)
+  //   ...
+  // All type nodes share x = 0; deferredFit centres them in the viewport.
+  function layoutDetailTypeNodes() {
+    var typeNodes = cy.nodes('[kind = "type"]').not('.hidden-node');
+    if (typeNodes.length === 0) { return; }
+
+    var curY = 0;
+    typeNodes.forEach(function (tn) {
+      var th = Math.max(32, tn.height() || 32);
+      tn.position({ x: 0, y: curY + th / 2 });
+      curY += th + GROUP_GAP;
+    });
   }
 
   // ── showFileDetail ────────────────────────────────────────────────────────
@@ -715,82 +1032,116 @@
     const emptyEl = document.getElementById('empty-state');
     if (emptyEl) { emptyEl.style.display = 'none'; }
 
+    // Show file name as context header below the toolbar
+    const detailHeader = document.getElementById('detail-header');
+    if (detailHeader) {
+      detailHeader.textContent = fileData.name ?? fileNodeId;
+      detailHeader.style.display = 'block';
+    }
+    updateToolbarForMode('file-detail');
+
     cy.elements().remove();
     cy.add(detailElements);
 
     // Func nodes start hidden — expand on click
     cy.nodes('[kind = "func"]').addClass('hidden-node');
 
-    // Snap hidden funcs to their type parent's position to prevent bbox inflation
+    // Strict vertical stack: type nodes positioned top-to-bottom with GROUP_GAP.
+    // Run BEFORE snapping funcs so hidden funcs land at each type's final position.
+    layoutDetailTypeNodes();
+
+    // Snap hidden funcs to their type parent's (now-positioned) centre.
+    // Prevents compound bbox inflation when funcs are later revealed.
     cy.nodes('[kind = "func"]').forEach(function (n) {
-      const par = n.parent();
+      var par = n.parent();
       if (par && par.length > 0) {
-        const pp = par.position();
+        var pp = par.position();
         if (pp && typeof pp.x === 'number') { n.position({ x: pp.x, y: pp.y }); }
       }
     });
 
-    // Grid layout on the flat type cards
-    cy.nodes('[kind = "type"]').layout({
-      name: 'grid',
-      padding: 60,
-      avoidOverlap: true,
-      animate: false,
-      fit: false,
-    }).run();
-
-    deferredFit(cy.nodes('[kind = "type"]'), 80);
+    deferredFit(cy.nodes('[kind = "type"]'), DETAIL_PADDING);
     console.log('[FlowMap] showFileDetail: showing ' + typeCount + ' types for ' + fileNodeId);
   }
 
+  // ── toggleFolderExpand ───────────────────────────────────────────────────
+  // Collapses or expands a folder node in overview mode by hiding/showing
+  // its connected file nodes and outgoing branch edges.
+  // A collapsed folder is styled with a dashed border via .folder-collapsed.
+  function toggleFolderExpand(folderId) {
+    var folder = cy.getElementById(folderId);
+    if (!folder || folder.length === 0) { return; }
+
+    var outEdges = cy.edges('[kind = "branch"]').filter(function (e) {
+      return e.source().id() === folderId;
+    });
+    var fileNodes = outEdges.targets();
+    var anyVisible = fileNodes.not('.hidden-node').length > 0;
+
+    if (anyVisible) {
+      // Collapse: hide file nodes and their branch edges
+      fileNodes.addClass('hidden-node');
+      outEdges.addClass('hidden-edge');
+      folder.addClass('folder-collapsed');
+    } else {
+      // Expand: restore file nodes and branch edges
+      fileNodes.removeClass('hidden-node');
+      outEdges.removeClass('hidden-edge');
+      folder.removeClass('folder-collapsed');
+    }
+
+    // Re-fit visible nodes after collapse/expand
+    deferredFit(cy.nodes(':visible'), 60);
+  }
+
   // ── layoutChildrenOf ─────────────────────────────────────────────────────
-  // Positions the visible children of a compound node in a small grid,
-  // centred on the parent's current position. Prevents revealed nodes from
-  // clumping at (0, 0) (their default preset position).
+  // Positions the visible children of a compound node in a 1–2 column grid
+  // directly below the parent, using the hard-minimum CARD_GAP constants.
+  // No two children overlap; every row is neatly aligned.
+  //
+  //   Column count rule: ≤3 children → 1 column, 4+ → 2 columns.
+  //
+  //   Geometry (centred on parent's x):
+  //     startX = parentCentreX − blockWidth/2 + childW/2
+  //     startY = parentBottom  + CARD_GAP_Y   + childH/2
+  //
+  // After positioning immediate children, recurse into any revealed type nodes
+  // so their func children are also placed immediately.
   function layoutChildrenOf(parentNode) {
-    const visibleChildren = parentNode.children().not('.hidden-node');
+    var visibleChildren = parentNode.children().not('.hidden-node');
     if (visibleChildren.length === 0) { return; }
 
-    const px = parentNode.position('x') || 0;
-    const py = parentNode.position('y') || 0;
-    const span = Math.max(220, visibleChildren.length * 70);
+    var px = parentNode.position('x') || 0;
+    var py = parentNode.position('y') || 0;
+    var ph = Math.max(28, parentNode.height() || 28);
 
-    visibleChildren.layout({
-      name: 'grid',
-      animate: false,
-      fit: false,
-      condense: true,
-      avoidOverlap: true,
-      padding: 10,
-      boundingBox: {
-        x1: px - span / 2,
-        y1: py - span / 2,
-        x2: px + span / 2,
-        y2: py + span / 2,
-      },
-    }).run();
+    var n = visibleChildren.length;
+    var nCols = n <= 3 ? 1 : 2;
 
-    // Recurse: also layout func children of any newly revealed type nodes
+    // Measure max child card dimensions from live Cytoscape style.
+    var childW = 80, childH = 28;
+    visibleChildren.forEach(function (c) {
+      childW = Math.max(childW, c.width() || 80);
+      childH = Math.max(childH, c.height() || 28);
+    });
+
+    // Block starts immediately below the parent node.
+    var blockW = nCols * childW + (nCols - 1) * CARD_GAP_X;
+    var startX = px - blockW / 2 + childW / 2;
+    var startY = py + ph / 2 + CARD_GAP_Y + childH / 2;
+
+    visibleChildren.forEach(function (child, i) {
+      child.position({
+        x: startX + (i % nCols) * (childW + CARD_GAP_X),
+        y: startY + Math.floor(i / nCols) * (childH + CARD_GAP_Y),
+      });
+    });
+
+    // Recurse: lay out func children of any newly revealed type nodes.
     visibleChildren.filter('[kind = "type"]').forEach(function (typeNode) {
-      const visibleFuncs = typeNode.children().not('.hidden-node');
-      if (visibleFuncs.length === 0) { return; }
-      const tx = typeNode.position('x') || px;
-      const ty = typeNode.position('y') || py;
-      const fspan = Math.max(160, visibleFuncs.length * 55);
-      visibleFuncs.layout({
-        name: 'grid',
-        animate: false,
-        fit: false,
-        condense: true,
-        avoidOverlap: true,
-        padding: 6,
-        boundingBox: {
-          x1: tx - fspan / 2,
-          y1: ty - fspan / 2,
-          x2: tx + fspan / 2,
-          y2: ty + fspan / 2,
-        },
-      }).run();
+      if (typeNode.children().not('.hidden-node').length > 0) {
+        layoutChildrenOf(typeNode);
+      }
     });
   }
 
@@ -990,7 +1341,7 @@
 
     // Always start with the flat file-card view
     requestAnimationFrame(function () {
-      renderFileCardView();
+      renderOverview();
     });
   }
 
@@ -1015,7 +1366,7 @@
 
     // Flat file-card view: always visible, no compound-bbox collapse possible.
     requestAnimationFrame(function () {
-      renderFileCardView();
+      renderOverview();
     });
   }
 
@@ -1077,12 +1428,21 @@
 
     cy.elements().removeClass('highlighted dimmed');
 
-    if (state.mode === 'files') {
-      // Flat file-card view: clicking a file card drills into its type/func detail.
-      // showFileDetail() also handles the openFile postMessage internally.
+    if (state.mode === 'overview') {
+      // File card: drill into file-detail mode
       if (kind === 'file') {
         showFileDetail(node.id());
-        return; // navigation is handled inside showFileDetail
+        return; // navigation handled inside showFileDetail
+      }
+      // Folder: toggle collapse/expand of its file children
+      if (kind === 'folder') {
+        toggleFolderExpand(node.id());
+        return;
+      }
+      // Root: re-fit the whole overview
+      if (kind === 'root') {
+        deferredFit(cy.nodes(':visible'), 60);
+        return;
       }
 
     } else if (state.mode === 'file-detail') {
@@ -1131,24 +1491,305 @@
     }
   });
 
+  // ── Hover glow for file cards and folder nodes ──────────────────────────
+  cy.on('mouseover', 'node[kind = "file"]', function (evt) {
+    evt.target.addClass('file-hover');
+  });
+  cy.on('mouseout', 'node[kind = "file"]', function (evt) {
+    evt.target.removeClass('file-hover');
+  });
+  cy.on('mouseover', 'node[kind = "folder"]', function (evt) {
+    evt.target.addClass('folder-hover');
+  });
+  cy.on('mouseout', 'node[kind = "folder"]', function (evt) {
+    evt.target.removeClass('folder-hover');
+  });
+
+  // ── Tooltip: show full label when the display label was truncated ────────
+  (function initTooltip() {
+    var tooltipEl = document.getElementById('cy-tooltip');
+    if (!tooltipEl) { return; }
+
+    cy.on('mouseover', 'node', function (evt) {
+      var node = evt.target;
+      var full = node.data('fullLabel');
+      var shown = node.data('label');
+      // Only show tooltip when the label was truncated
+      if (full && shown && full !== shown) {
+        tooltipEl.textContent = full;
+        tooltipEl.style.display = 'block';
+      }
+    });
+
+    cy.on('mouseout', 'node', function () {
+      tooltipEl.style.display = 'none';
+    });
+
+    // Track the mouse position so the tooltip follows the cursor
+    document.getElementById('cy').addEventListener('mousemove', function (e) {
+      if (tooltipEl.style.display === 'block') {
+        tooltipEl.style.left = (e.clientX + 14) + 'px';
+        tooltipEl.style.top = (e.clientY - 30) + 'px';
+      }
+    });
+  })();
+
   // ═══════════════════════════════════════════════════════════════════════════
+  // Calls Layout
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── layoutComponentBFS ───────────────────────────────────────────────────
+  // Positions func nodes within a component using a BFS depth-layered layout.
+  //
+  // Algorithm:
+  //   1. Build callee adjacency from internal calls edges; compute in-degree.
+  //   2. BFS from roots (in-degree 0 nodes); assign depth = BFS level.
+  //      If every node is in a cycle (no roots), seed all at depth 0.
+  //   3. Group func nodes by depth level; arrange each level as a centered
+  //      horizontal row using CARD_GAP_X between siblings, ROW_GAP between rows.
+  //
+  // Positions are centred at x=0, starting at y=0.  The caller translates
+  // the resulting bounding box into its panel slot.
+  function layoutComponentBFS(compNodes) {
+    var funcNodes = compNodes.filter('[kind = "func"]');
+    if (funcNodes.length === 0) { return; }
+
+    // Build callee adjacency and in-degree within this component only.
+    var callees = {};
+    var inDeg   = {};
+    funcNodes.forEach(function (n) { callees[n.id()] = []; inDeg[n.id()] = 0; });
+
+    cy.edges('[kind = "calls"]:visible').forEach(function (e) {
+      if (funcNodes.has(e.source()) && funcNodes.has(e.target())) {
+        callees[e.source().id()].push(e.target().id());
+        inDeg[e.target().id()]++;
+      }
+    });
+
+    // BFS from roots (in-degree 0 nodes within component).
+    var depth = {};
+    var queue = [];
+    funcNodes.forEach(function (n) {
+      if (inDeg[n.id()] === 0) { depth[n.id()] = 0; queue.push(n.id()); }
+    });
+    // If all nodes have callers (cycle graph), seed every node at depth 0.
+    if (queue.length === 0) {
+      funcNodes.forEach(function (n) { depth[n.id()] = 0; queue.push(n.id()); });
+    }
+
+    var qi = 0;
+    while (qi < queue.length) {
+      var nid = queue[qi++];
+      callees[nid].forEach(function (tid) {
+        if (depth[tid] === undefined) {
+          depth[tid] = depth[nid] + 1;
+          queue.push(tid);
+        }
+      });
+    }
+    // Unreachable nodes (disconnected within component): assign depth 0.
+    funcNodes.forEach(function (n) {
+      if (depth[n.id()] === undefined) { depth[n.id()] = 0; }
+    });
+
+    // Group func nodes by depth level.
+    var levels = {};
+    funcNodes.forEach(function (n) {
+      var d = depth[n.id()];
+      if (!levels[d]) { levels[d] = []; }
+      levels[d].push(n.id());
+    });
+
+    var depthKeys = Object.keys(levels).map(Number).sort(function (a, b) { return a - b; });
+    var ROW_GAP = CARD_GAP_Y * 3; // generous vertical separation between depth rows
+    var curY = 0;
+
+    depthKeys.forEach(function (d) {
+      var ids = levels[d];
+      // Measure max card dimensions across this depth level.
+      var nodeW = 80, nodeH = 28;
+      ids.forEach(function (id) {
+        var n = cy.getElementById(id);
+        nodeW = Math.max(nodeW, n.width()  || 80);
+        nodeH = Math.max(nodeH, n.height() || 28);
+      });
+      // Centre the row at x = 0.
+      var rowW   = ids.length * nodeW + (ids.length - 1) * CARD_GAP_X;
+      var startX = -rowW / 2 + nodeW / 2;
+      ids.forEach(function (id, i) {
+        cy.getElementById(id).position({
+          x: startX + i * (nodeW + CARD_GAP_X),
+          y: curY + nodeH / 2,
+        });
+      });
+      curY += nodeH + ROW_GAP;
+    });
+  }
+
+  // ── runSpacedCallsLayout ─────────────────────────────────────────────────
+  // Redesigned Calls-mode layout: normalized component panels in a grid.
+  //
+  // Algorithm:
+  //   1. Detect file-level connected components via union-find over calls edges.
+  //   2. Run layoutComponentBFS() on each component (deterministic BFS rows).
+  //   3. Arrange components in a 1/2/3-column panel grid; each slot is clamped
+  //      to at least PANEL_MIN_W × PANEL_MIN_H; component bounding box is
+  //      centred inside its slot.
+  //   4. Fit viewport to all nodes with DETAIL_PADDING.
+  //
+  // Column count: 1 comp → 1 col | 2–4 comps → 2 cols | 5+ comps → 3 cols.
+  function runSpacedCallsLayout() {
+    var visibleNodes = cy.nodes(':visible');
+    if (visibleNodes.length === 0) { deferredFit(cy.nodes(), DETAIL_PADDING); return; }
+
+    var fileNodes = cy.nodes('[kind = "file"]:visible');
+    if (fileNodes.length === 0) { deferredFit(cy.nodes(), DETAIL_PADDING); return; }
+
+    // ── Step 1: Union-Find component detection ─────────────────────────────
+    var uf = {};
+    fileNodes.forEach(function (n) { uf[n.id()] = n.id(); });
+
+    function ufFind(x) {
+      while (uf[x] !== x) { uf[x] = uf[uf[x]]; x = uf[x]; }
+      return x;
+    }
+    function ufUnion(x, y) {
+      var px = ufFind(x), py = ufFind(y);
+      if (px !== py) { uf[px] = py; }
+    }
+
+    // Traverse compound parent chain to find the owning file node.
+    function fileAncestorOf(node) {
+      var cur = node;
+      while (cur && cur.length > 0) {
+        if (cur.data('kind') === 'file') { return cur; }
+        var par = cur.data('parent');
+        if (!par) { return null; }
+        cur = cy.getElementById(par);
+      }
+      return null;
+    }
+
+    cy.edges('[kind = "calls"]:visible').forEach(function (e) {
+      var sf = fileAncestorOf(e.source());
+      var tf = fileAncestorOf(e.target());
+      if (sf && tf && uf[sf.id()] !== undefined && uf[tf.id()] !== undefined) {
+        ufUnion(sf.id(), tf.id());
+      }
+    });
+
+    // Group file IDs by their union-find root.
+    var compGroups = {};
+    fileNodes.forEach(function (n) {
+      var root = ufFind(n.id());
+      if (!compGroups[root]) { compGroups[root] = []; }
+      compGroups[root].push(n.id());
+    });
+
+    var groupArr = Object.values(compGroups);
+    // Largest component (most files) → first panel (top-left).
+    groupArr.sort(function (a, b) { return b.length - a.length; });
+
+    // Helper: collect all cy nodes for a list of file IDs.
+    function nodesForFiles(fileIds) {
+      var col = cy.collection();
+      fileIds.forEach(function (fid) {
+        var fn = cy.getElementById(fid);
+        col = col.union(fn).union(fn.descendants());
+      });
+      return col;
+    }
+
+    // ── Step 2: BFS layout per component ──────────────────────────────────
+    groupArr.forEach(function (fileIds) {
+      layoutComponentBFS(nodesForFiles(fileIds));
+    });
+
+    // ── Step 3: Normalized panel grid ─────────────────────────────────────
+    var nComps = groupArr.length;
+    var nCols  = nComps <= 1 ? 1 : nComps <= 4 ? 2 : 3;
+    var PGX = COMPONENT_GAP; // panel gap X (= COMPONENT_GAP = 180)
+    var PGY = GROUP_GAP;     // panel gap Y (= GROUP_GAP     = 140)
+
+    var cursorX = 0, cursorY = 0, col = 0, rowMaxH = 0;
+
+    groupArr.forEach(function (fileIds) {
+      var compNodes = nodesForFiles(fileIds);
+      var bb = compNodes.boundingBox({ includeLabels: false });
+      if (!bb || bb.w === 0) { return; }
+
+      // Slot dimensions are at least PANEL_MIN_W × PANEL_MIN_H.
+      var slotW = Math.max(PANEL_MIN_W, bb.w);
+      var slotH = Math.max(PANEL_MIN_H, bb.h);
+
+      // Centre the component's bounding box within its slot.
+      var slotCX = cursorX + slotW / 2;
+      var slotCY = cursorY + slotH / 2;
+      var compCX = (bb.x1 + bb.x2) / 2;
+      var compCY = (bb.y1 + bb.y2) / 2;
+      var dx = slotCX - compCX;
+      var dy = slotCY - compCY;
+
+      compNodes.positions(function (node) {
+        return { x: node.position('x') + dx, y: node.position('y') + dy };
+      });
+
+      rowMaxH  = Math.max(rowMaxH, slotH);
+      cursorX += slotW + PGX;
+      col++;
+      if (col >= nCols) {
+        col = 0; cursorX = 0;
+        cursorY += rowMaxH + PGY;
+        rowMaxH = 0;
+      }
+    });
+
+    deferredFit(cy.nodes(), DETAIL_PADDING);
+  }
+
   // Toolbar
   // ═══════════════════════════════════════════════════════════════════════════
+  // ── updateToolbarForMode ─────────────────────────────────────────────────
+  // Toggles the Back button visibility and hides the detail header when
+  // leaving file-detail mode.  Called after every mode switch.
+  function updateToolbarForMode(mode) {
+    const backBtn = document.getElementById('btn-back');
+    const detailHeader = document.getElementById('detail-header');
+    if (backBtn) {
+      backBtn.style.display = (mode === 'file-detail') ? '' : 'none';
+    }
+    if (detailHeader && mode !== 'file-detail') {
+      detailHeader.style.display = 'none';
+    }
+  }
+
   (function initToolbar() {
-    const gridBtn = document.getElementById('btn-grid');
+    const overviewBtn = document.getElementById('btn-overview');
+    const backBtn = document.getElementById('btn-back');
     const callsBtn = document.getElementById('btn-calls');
     const fitBtn = document.getElementById('btn-fit');
     const searchInput = document.getElementById('search-input');
 
-    // ── Grid button ─────────────────────────────────────────────────────
-    // Returns to the top-level flat file-card grid.
+    // ── Overview button ─────────────────────────────────────────────────
+    // Returns to the top-level flat file-card overview.
     // Works from any mode (file-detail, calls) — rebuilds cy from scratch.
-    if (gridBtn) {
-      gridBtn.addEventListener('click', function () {
+    if (overviewBtn) {
+      overviewBtn.addEventListener('click', function () {
         state.searchQuery = '';
         if (searchInput) { searchInput.value = ''; }
         cy.elements().removeClass('highlighted dimmed search-highlight');
-        renderFileCardView();
+        renderOverview();
+      });
+    }
+
+    // ── Back button ─────────────────────────────────────────────────────
+    // Navigates back from file-detail to overview.
+    // Only visible when state.mode === 'file-detail'.
+    if (backBtn) {
+      backBtn.addEventListener('click', function () {
+        state.searchQuery = '';
+        if (searchInput) { searchInput.value = ''; }
+        cy.elements().removeClass('highlighted dimmed search-highlight');
+        renderOverview();
       });
     }
 
@@ -1160,6 +1801,7 @@
     if (callsBtn) {
       callsBtn.addEventListener('click', function () {
         state.mode = 'calls';
+        updateToolbarForMode('calls');
         state.searchQuery = '';
         if (searchInput) { searchInput.value = ''; }
 
@@ -1176,19 +1818,9 @@
         cy.edges().removeClass('hidden-edge');
         cy.elements().removeClass('highlighted dimmed search-highlight');
 
-        // Force-directed layout over the full graph.
-        cy.layout({
-          name: 'cose',
-          padding: 40,
-          nodeRepulsion: function () { return 8000; },
-          nodeOverlap: 10,
-          idealEdgeLength: function () { return 80; },
-          edgeElasticity: function () { return 100; },
-          animate: false,
-        }).run();
-
-        // Deferred fit ensures bounding boxes are computed after layout flush.
-        deferredFit(cy.nodes(), 40);
+        // Spacious force-directed layout: detects connected components and
+        // arranges them in a grid with generous spacing between components.
+        runSpacedCallsLayout();
       });
     }
 
@@ -1224,36 +1856,46 @@
 
         if (!query) { return; }
 
-        if (state.mode === 'files') {
-          // ── Files mode: match file cards, plus indirect type/func hits ──
-          const fileMatchIds = new Set();
+        if (state.mode === 'overview') {
+          // ── Overview mode: file label, folder name, type/func → file ────
+          var matchIds = new Set();
 
-          // Direct matches on file card labels
-          cy.nodes().forEach(function (n) {
-            if (n.data('label').toLowerCase().includes(query)) {
-              fileMatchIds.add(n.id());
+          // File node matches (check fullLabel for truncated display labels)
+          cy.nodes('[kind = "file"]').forEach(function (n) {
+            var lbl = (n.data('fullLabel') || n.data('label') || '').toLowerCase();
+            if (lbl.includes(query)) { matchIds.add(n.id()); }
+          });
+
+          // Folder name matches → highlight folder + all its child file nodes
+          cy.nodes('[kind = "folder"]').forEach(function (n) {
+            var key = (n.data('folderKey') || '').toLowerCase();
+            var lbl = (n.data('fullLabel') || n.data('label') || '').toLowerCase();
+            if (key.includes(query) || lbl.includes(query)) {
+              matchIds.add(n.id());
+              cy.edges('[kind = "branch"]').filter(function (e) {
+                return e.source().id() === n.id();
+              }).targets().forEach(function (f) { matchIds.add(f.id()); });
             }
           });
 
-          // Indirect: type/func label matches in raw data → find parent file card
+          // Indirect: type/func label matches in raw data → highlight parent file
           (graph.nodes ?? []).forEach(function (rawNode) {
             if (rawNode.kind !== 'type' && rawNode.kind !== 'func') { return; }
             if (!(rawNode.name ?? rawNode.id).toLowerCase().includes(query)) { return; }
-            // Walk parentMap up to a file node
             var curr = rawNode.id;
             for (var hop = 0; hop < 4; hop++) {
               var par = parentMap[curr];
               if (!par) { break; }
               var parRaw = (graph.nodes ?? []).find(function (pn) { return pn.id === par; });
-              if (parRaw && parRaw.kind === 'file') { fileMatchIds.add(par); break; }
+              if (parRaw && parRaw.kind === 'file') { matchIds.add(par); break; }
               curr = par;
             }
           });
 
-          if (fileMatchIds.size === 0) { return; }
+          if (matchIds.size === 0) { return; }
 
           var fileMatches = cy.nodes().filter(function (n) {
-            return fileMatchIds.has(n.id());
+            return matchIds.has(n.id());
           });
           fileMatches.addClass('search-highlight');
           deferredFit(fileMatches, 80);
