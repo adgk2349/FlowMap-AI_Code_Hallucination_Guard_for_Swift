@@ -1538,14 +1538,17 @@
   // Calls Layout
   // ═══════════════════════════════════════════════════════════════════════════
   // ── layoutComponentBFS ───────────────────────────────────────────────────
-  // Positions func nodes within a component using a BFS depth-layered layout.
+  // Positions func nodes within a component using compact vertical stacking.
   //
   // Algorithm:
   //   1. Build callee adjacency from internal calls edges; compute in-degree.
-  //   2. BFS from roots (in-degree 0 nodes); assign depth = BFS level.
-  //      If every node is in a cycle (no roots), seed all at depth 0.
-  //   3. Group func nodes by depth level; arrange each level as a centered
-  //      horizontal row using CARD_GAP_X between siblings, ROW_GAP between rows.
+  //   2. BFS traversal from roots (in-degree 0 nodes) to produce a stable
+  //      ordering — callers appear before their callees in the list.
+  //      Cycle-only components seed all nodes at the start.
+  //   3. Place nodes in BFS order, top-to-bottom in 1 or 2 columns:
+  //        – ≤8 func nodes → 1 column  (prefer narrow)
+  //        – >8 func nodes → 2 columns (still compact, not wide)
+  //      GAP_Y = 20 px vertical  |  GAP_X = 36 px horizontal (2-col only)
   //
   // Positions are centred at x=0, starting at y=0.  The caller translates
   // the resulting bounding box into its panel slot.
@@ -1565,63 +1568,56 @@
       }
     });
 
-    // BFS from roots (in-degree 0 nodes within component).
-    var depth = {};
-    var queue = [];
+    // BFS traversal to build a stable ordering (callers before callees).
+    var orderedIds = [];
+    var visited    = {};
+    var queue      = [];
     funcNodes.forEach(function (n) {
-      if (inDeg[n.id()] === 0) { depth[n.id()] = 0; queue.push(n.id()); }
+      if (inDeg[n.id()] === 0) { queue.push(n.id()); visited[n.id()] = true; }
     });
-    // If all nodes have callers (cycle graph), seed every node at depth 0.
+    // Cycle-only component: seed every node so none are skipped.
     if (queue.length === 0) {
-      funcNodes.forEach(function (n) { depth[n.id()] = 0; queue.push(n.id()); });
+      funcNodes.forEach(function (n) { queue.push(n.id()); visited[n.id()] = true; });
     }
 
     var qi = 0;
     while (qi < queue.length) {
       var nid = queue[qi++];
+      orderedIds.push(nid);
       callees[nid].forEach(function (tid) {
-        if (depth[tid] === undefined) {
-          depth[tid] = depth[nid] + 1;
-          queue.push(tid);
-        }
+        if (!visited[tid]) { visited[tid] = true; queue.push(tid); }
       });
     }
-    // Unreachable nodes (disconnected within component): assign depth 0.
+    // Any nodes unreachable from roots (isolated within component).
     funcNodes.forEach(function (n) {
-      if (depth[n.id()] === undefined) { depth[n.id()] = 0; }
+      if (!visited[n.id()]) { orderedIds.push(n.id()); }
     });
 
-    // Group func nodes by depth level.
-    var levels = {};
-    funcNodes.forEach(function (n) {
-      var d = depth[n.id()];
-      if (!levels[d]) { levels[d] = []; }
-      levels[d].push(n.id());
+    // Compact vertical stacking: narrow over wide.
+    var total = orderedIds.length;
+    var nCols = total > 8 ? 2 : 1; // 2 columns only for large components
+    var GAP_Y = 20;                 // compact vertical gap  (~18–22 px)
+    var GAP_X = 36;                 // small horizontal gap  (2-col only)
+
+    // Measure max card dimensions across all func nodes in this component.
+    var nodeW = 80, nodeH = 28;
+    orderedIds.forEach(function (id) {
+      var n = cy.getElementById(id);
+      nodeW = Math.max(nodeW, n.width()  || 80);
+      nodeH = Math.max(nodeH, n.height() || 28);
     });
 
-    var depthKeys = Object.keys(levels).map(Number).sort(function (a, b) { return a - b; });
-    var ROW_GAP = CARD_GAP_Y * 3; // generous vertical separation between depth rows
-    var curY = 0;
+    // Block centred at x=0; nodes fill top-to-bottom, left-to-right.
+    var blockW = nCols * nodeW + (nCols - 1) * GAP_X;
+    var startX = -blockW / 2 + nodeW / 2;
 
-    depthKeys.forEach(function (d) {
-      var ids = levels[d];
-      // Measure max card dimensions across this depth level.
-      var nodeW = 80, nodeH = 28;
-      ids.forEach(function (id) {
-        var n = cy.getElementById(id);
-        nodeW = Math.max(nodeW, n.width()  || 80);
-        nodeH = Math.max(nodeH, n.height() || 28);
+    orderedIds.forEach(function (id, i) {
+      var c = i % nCols;
+      var r = Math.floor(i / nCols);
+      cy.getElementById(id).position({
+        x: startX + c * (nodeW + GAP_X),
+        y: r * (nodeH + GAP_Y) + nodeH / 2,
       });
-      // Centre the row at x = 0.
-      var rowW   = ids.length * nodeW + (ids.length - 1) * CARD_GAP_X;
-      var startX = -rowW / 2 + nodeW / 2;
-      ids.forEach(function (id, i) {
-        cy.getElementById(id).position({
-          x: startX + i * (nodeW + CARD_GAP_X),
-          y: curY + nodeH / 2,
-        });
-      });
-      curY += nodeH + ROW_GAP;
     });
   }
 
