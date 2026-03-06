@@ -473,6 +473,81 @@
           color: '#d0e0ff',
         },
       },
+      // ── Overview mindmap nodes ──────────────────────────────────────────
+      // Project root: circular hub, largest node, visually central
+      {
+        selector: 'node[kind = "root"]',
+        style: {
+          shape: 'ellipse',
+          'background-color': 'rgba(28, 45, 85, 0.90)',
+          'background-opacity': 1,
+          'border-color': 'rgba(90, 140, 230, 0.42)',
+          'border-width': 2,
+          'border-opacity': 1,
+          color: '#c0d0f5',
+          'font-size': '14px',
+          'font-weight': '700',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          width: 80,
+          height: 80,
+          'text-wrap': 'ellipsis',
+          'text-max-width': '68px',
+        },
+      },
+      // Folder nodes: medium cards, distinct from file pills
+      {
+        selector: 'node[kind = "folder"]',
+        style: {
+          shape: 'roundrectangle',
+          'background-color': 'rgba(35, 46, 72, 0.82)',
+          'background-opacity': 1,
+          'border-color': 'rgba(80, 110, 195, 0.30)',
+          'border-width': 1.5,
+          'border-opacity': 1,
+          color: '#90a8cc',
+          'font-size': '11px',
+          'font-weight': '600',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'text-margin-y': '0px',
+          padding: '10px',
+          'min-width': 72,
+          'min-height': 28,
+        },
+      },
+      // Folder collapsed: dashed border + muted text
+      {
+        selector: 'node[kind = "folder"].folder-collapsed',
+        style: {
+          'border-style': 'dashed',
+          'border-color': 'rgba(80, 110, 195, 0.18)',
+          color: '#607090',
+        },
+      },
+      // Folder hover glow (via mouseover/mouseout events)
+      {
+        selector: 'node[kind = "folder"].folder-hover',
+        style: {
+          'border-color': 'rgba(90, 140, 230, 0.50)',
+          'border-width': 2,
+          color: '#b0c8e8',
+        },
+      },
+      // ── Branch edges (overview hierarchy only) ──────────────────────────
+      // Thin, subtle arrows: project→folder, folder→file.
+      // Not call edges — exist only in overview mode.
+      {
+        selector: 'edge[kind = "branch"]',
+        style: {
+          width: 1,
+          'line-color': 'rgba(75, 105, 165, 0.22)',
+          'target-arrow-color': 'rgba(75, 105, 165, 0.22)',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'straight',
+          opacity: 0.90,
+        },
+      },
       {
         selector: 'node[kind = "type"]',
         style: {
@@ -961,6 +1036,36 @@
     console.log('[FlowMap] showFileDetail: showing ' + typeCount + ' types for ' + fileNodeId);
   }
 
+  // ── toggleFolderExpand ───────────────────────────────────────────────────
+  // Collapses or expands a folder node in overview mode by hiding/showing
+  // its connected file nodes and outgoing branch edges.
+  // A collapsed folder is styled with a dashed border via .folder-collapsed.
+  function toggleFolderExpand(folderId) {
+    var folder = cy.getElementById(folderId);
+    if (!folder || folder.length === 0) { return; }
+
+    var outEdges = cy.edges('[kind = "branch"]').filter(function (e) {
+      return e.source().id() === folderId;
+    });
+    var fileNodes = outEdges.targets();
+    var anyVisible = fileNodes.not('.hidden-node').length > 0;
+
+    if (anyVisible) {
+      // Collapse: hide file nodes and their branch edges
+      fileNodes.addClass('hidden-node');
+      outEdges.addClass('hidden-edge');
+      folder.addClass('folder-collapsed');
+    } else {
+      // Expand: restore file nodes and branch edges
+      fileNodes.removeClass('hidden-node');
+      outEdges.removeClass('hidden-edge');
+      folder.removeClass('folder-collapsed');
+    }
+
+    // Re-fit visible nodes after collapse/expand
+    deferredFit(cy.nodes(':visible'), 60);
+  }
+
   // ── layoutChildrenOf ─────────────────────────────────────────────────────
   // Positions the visible children of a compound node in a small grid,
   // centred on the parent's current position. Prevents revealed nodes from
@@ -1296,11 +1401,20 @@
     cy.elements().removeClass('highlighted dimmed');
 
     if (state.mode === 'overview') {
-      // Overview: clicking a file card drills into its type/func detail.
-      // showFileDetail() also handles the openFile postMessage internally.
+      // File card: drill into file-detail mode
       if (kind === 'file') {
         showFileDetail(node.id());
-        return; // navigation is handled inside showFileDetail
+        return; // navigation handled inside showFileDetail
+      }
+      // Folder: toggle collapse/expand of its file children
+      if (kind === 'folder') {
+        toggleFolderExpand(node.id());
+        return;
+      }
+      // Root: re-fit the whole overview
+      if (kind === 'root') {
+        deferredFit(cy.nodes(':visible'), 60);
+        return;
       }
 
     } else if (state.mode === 'file-detail') {
@@ -1349,12 +1463,18 @@
     }
   });
 
-  // ── Hover glow for file cards ────────────────────────────────────────────
+  // ── Hover glow for file cards and folder nodes ──────────────────────────
   cy.on('mouseover', 'node[kind = "file"]', function (evt) {
     evt.target.addClass('file-hover');
   });
   cy.on('mouseout', 'node[kind = "file"]', function (evt) {
     evt.target.removeClass('file-hover');
+  });
+  cy.on('mouseover', 'node[kind = "folder"]', function (evt) {
+    evt.target.addClass('folder-hover');
+  });
+  cy.on('mouseout', 'node[kind = "folder"]', function (evt) {
+    evt.target.removeClass('folder-hover');
   });
 
   // ── Tooltip: show full label when the display label was truncated ────────
