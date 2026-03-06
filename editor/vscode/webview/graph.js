@@ -9,14 +9,152 @@
     vscodeApi = { postMessage: function () {} };
   }
 
-  // ── Parse analysis payload ───────────────────────────────────────────────
-  const raw = document.getElementById('graph-data').textContent ?? '{}';
-  const analysis = JSON.parse(raw);
+  // ── Mutable analysis state (set by applyAnalysisData) ────────────────────
+  // Declared as let so renderGraphFromAnalysis() can update them in place.
+  let graph, diff, impactIds, payloadViewMode;
+  let addedNodeIds, removedNodeIds, changedNodeIds, addedEdgeKeys, removedEdgeKeys;
+  let isClean;
+  let parentMap, containsIds;
 
-  const graph = analysis.graph ?? { nodes: [], edges: [] };
-  const diff = analysis.diff ?? {};
-  const impactIds = new Set(analysis.impact ?? []);
-  const payloadViewMode = analysis.view ?? 'all'; // 'all' | 'diff' | 'impact'
+  /**
+   * Populate all module-level data vars from an analysis payload object.
+   * Called once on startup (from the embedded JSON) and again by
+   * renderGraphFromAnalysis() when the extension sends cached data.
+   */
+  function applyAnalysisData(a) {
+    graph = a.graph ?? { nodes: [], edges: [] };
+    diff = a.diff ?? {};
+    impactIds = new Set(a.impact ?? []);
+    payloadViewMode = a.view ?? 'all'; // 'all' | 'diff' | 'impact'
+
+    addedNodeIds = new Set(
+      (diff.added_nodes ?? []).map(function (n) { return n.id; })
+    );
+    removedNodeIds = new Set(
+      (diff.removed_nodes ?? []).map(function (n) { return n.id; })
+    );
+    changedNodeIds = new Set(
+      (diff.changed_nodes ?? []).map(function (n) { return n.id; })
+    );
+    addedEdgeKeys = new Set(
+      (diff.added_edges ?? []).map(function (e) {
+        return e.from + '::' + e.to + '::' + e.kind;
+      })
+    );
+    removedEdgeKeys = new Set(
+      (diff.removed_edges ?? []).map(function (e) {
+        return e.from + '::' + e.to + '::' + e.kind;
+      })
+    );
+
+    isClean = (
+      (diff.added_nodes   ?? []).length === 0 &&
+      (diff.removed_nodes ?? []).length === 0 &&
+      (diff.changed_nodes ?? []).length === 0 &&
+      (diff.added_edges   ?? []).length === 0 &&
+      (diff.removed_edges ?? []).length === 0
+    );
+
+    parentMap = {};
+    containsIds = new Set();
+    (graph.edges ?? []).forEach(function (e) {
+      if (e.kind === 'contains') {
+        parentMap[e.to] = e.from;
+        containsIds.add(e.id);
+      }
+    });
+  }
+
+  /**
+   * Build Cytoscape-ready element arrays from the current data vars.
+   * Returns { cyNodes, phantomNodes, cyEdges, phantomEdges }.
+   */
+  function buildCyElements() {
+    const cyNodes = (graph.nodes ?? []).map(function (n) {
+      const data = {
+        id: n.id,
+        label: n.name ?? n.id,
+        kind: n.kind ?? 'func',
+        uri: n.uri ?? '',
+        line: typeof n.line === 'number' ? n.line : 0,
+        diffState: addedNodeIds.has(n.id)
+          ? 'added'
+          : changedNodeIds.has(n.id)
+            ? 'changed'
+            : 'unchanged',
+        impacted: impactIds.has(n.id),
+      };
+      if (parentMap[n.id]) {
+        data.parent = parentMap[n.id];
+      }
+      return { data: data };
+    });
+
+    // Phantom nodes for removed nodes (existed in HEAD but not current tree)
+    const phantomNodes = (diff.removed_nodes ?? [])
+      .filter(function (n) {
+        return !(graph.nodes ?? []).some(function (gn) { return gn.id === n.id; });
+      })
+      .map(function (n) {
+        return {
+          data: {
+            id: n.id,
+            label: (n.name ?? n.id) + ' ✕',
+            kind: n.kind ?? 'func',
+            uri: n.uri ?? '',
+            line: typeof n.line === 'number' ? n.line : 0,
+            diffState: 'removed',
+            impacted: false,
+          },
+        };
+      });
+
+    // Non-contains edges → cytoscape edges
+    const cyEdges = (graph.edges ?? [])
+      .filter(function (e) { return !containsIds.has(e.id); })
+      .map(function (e) {
+        const key = e.from + '::' + e.to + '::' + e.kind;
+        return {
+          data: {
+            id: e.id,
+            source: e.from,
+            target: e.to,
+            kind: e.kind ?? '',
+            diffState: addedEdgeKeys.has(key)
+              ? 'added'
+              : removedEdgeKeys.has(key)
+                ? 'removed'
+                : 'unchanged',
+          },
+        };
+      });
+
+    // Phantom edges for removed edges
+    const phantomEdges = (diff.removed_edges ?? [])
+      .filter(function (e) {
+        return !(graph.edges ?? []).some(function (ge) {
+          return ge.from === e.from && ge.to === e.to && ge.kind === e.kind;
+        });
+      })
+      .map(function (e) {
+        return {
+          data: {
+            id: 'removed::' + e.from + '::' + e.to + '::' + e.kind,
+            source: e.from,
+            target: e.to,
+            kind: e.kind ?? '',
+            diffState: 'removed',
+          },
+        };
+      });
+
+    return {
+      cyNodes: cyNodes,
+      phantomNodes: phantomNodes,
+      cyEdges: cyEdges,
+      phantomEdges: phantomEdges,
+    };
+  }
 
   // ── Explicit runtime view state ──────────────────────────────────────────
   // Separate from the payload's analysis.view (which is diff/impact mode).
@@ -26,119 +164,22 @@
     searchQuery: '', // active search text; '' means no search active
   };
 
-  // ── Build diff lookup sets ───────────────────────────────────────────────
-  const addedNodeIds = new Set((diff.added_nodes ?? []).map((n) => n.id));
-  const removedNodeIds = new Set((diff.removed_nodes ?? []).map((n) => n.id));
-  const changedNodeIds = new Set((diff.changed_nodes ?? []).map((n) => n.id));
-  const addedEdgeKeys = new Set(
-    (diff.added_edges ?? []).map((e) => `${e.from}::${e.to}::${e.kind}`)
-  );
-  const removedEdgeKeys = new Set(
-    (diff.removed_edges ?? []).map((e) => `${e.from}::${e.to}::${e.kind}`)
-  );
+  // ── Parse embedded payload ───────────────────────────────────────────────
+  const raw = document.getElementById('graph-data').textContent ?? '{}';
+  const embeddedAnalysis = JSON.parse(raw);
 
-  // ── Derive clean/changed status ─────────────────────────────────────────
-  const isClean =
-    (diff.added_nodes ?? []).length === 0 &&
-    (diff.removed_nodes ?? []).length === 0 &&
-    (diff.changed_nodes ?? []).length === 0 &&
-    (diff.added_edges ?? []).length === 0 &&
-    (diff.removed_edges ?? []).length === 0;
+  // Initialize all data vars from embedded payload (may be empty on restore)
+  applyAnalysisData(embeddedAnalysis);
 
-  // ── Build parent map from "contains" edges ───────────────────────────────
-  const parentMap = {};
-  const containsIds = new Set();
-  (graph.edges ?? []).forEach(function (e) {
-    if (e.kind === 'contains') {
-      parentMap[e.to] = e.from;
-      containsIds.add(e.id);
-    }
-  });
-
-  // ── Map protocol nodes → cytoscape elements ──────────────────────────────
-  const cyNodes = (graph.nodes ?? []).map(function (n) {
-    const data = {
-      id: n.id,
-      label: n.name ?? n.id,
-      kind: n.kind ?? 'func',
-      uri: n.uri ?? '',
-      line: typeof n.line === 'number' ? n.line : 0,
-      diffState: addedNodeIds.has(n.id)
-        ? 'added'
-        : changedNodeIds.has(n.id)
-          ? 'changed'
-          : 'unchanged',
-      impacted: impactIds.has(n.id),
-    };
-    if (parentMap[n.id]) {
-      data.parent = parentMap[n.id];
-    }
-    return { data: data };
-  });
-
-  // Phantom nodes for removed nodes (existed in HEAD but not in current tree)
-  const phantomNodes = (diff.removed_nodes ?? [])
-    .filter((n) => !graph.nodes.some((gn) => gn.id === n.id))
-    .map(function (n) {
-      return {
-        data: {
-          id: n.id,
-          label: (n.name ?? n.id) + ' ✕',
-          kind: n.kind ?? 'func',
-          uri: n.uri ?? '',
-          line: typeof n.line === 'number' ? n.line : 0,
-          diffState: 'removed',
-          impacted: false,
-        },
-      };
-    });
-
-  // ── Map non-contains edges → cytoscape edges ─────────────────────────────
-  const cyEdges = (graph.edges ?? [])
-    .filter(function (e) { return !containsIds.has(e.id); })
-    .map(function (e) {
-      const key = `${e.from}::${e.to}::${e.kind}`;
-      return {
-        data: {
-          id: e.id,
-          source: e.from,
-          target: e.to,
-          kind: e.kind ?? '',
-          diffState: addedEdgeKeys.has(key)
-            ? 'added'
-            : removedEdgeKeys.has(key)
-              ? 'removed'
-              : 'unchanged',
-        },
-      };
-    });
-
-  // Phantom edges for removed edges
-  const phantomEdges = (diff.removed_edges ?? [])
-    .filter(
-      (e) =>
-        !graph.edges.some(
-          (ge) => ge.from === e.from && ge.to === e.to && ge.kind === e.kind
-        )
-    )
-    .map(function (e) {
-      return {
-        data: {
-          id: `removed::${e.from}::${e.to}::${e.kind}`,
-          source: e.from,
-          target: e.to,
-          kind: e.kind ?? '',
-          diffState: 'removed',
-        },
-      };
-    });
+  // Build initial Cytoscape elements from current data vars
+  const initialElements = buildCyElements();
 
   // ── Cytoscape instance ───────────────────────────────────────────────────
   const cy = cytoscape({
     container: document.getElementById('cy'),
     elements: {
-      nodes: [...cyNodes, ...phantomNodes],
-      edges: [...cyEdges, ...phantomEdges],
+      nodes: [...initialElements.cyNodes, ...initialElements.phantomNodes],
+      edges: [...initialElements.cyEdges, ...initialElements.phantomEdges],
     },
     style: [
       // ── Base node ──────────────────────────────────────────────────────
@@ -487,17 +528,321 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Initial render: files-only grid
+  // UI helpers — defined before first use
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // File nodes are NEVER added to hidden-node. Only type/func nodes.
-  cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
-  cy.edges('[kind = "calls"]').addClass('hidden-edge');
+  // ── applyLicenseBadge ────────────────────────────────────────────────────
+  function applyLicenseBadge(status) {
+    const badge = document.getElementById('license-badge');
+    if (!badge) { return; }
+    if (status === 'pro') {
+      badge.textContent = '★ Pro';
+      badge.className = 'license-pro';
+    } else {
+      badge.textContent = 'Free';
+      badge.className = 'license-free';
+    }
+  }
 
-  // Defer the initial layout one rAF so Cytoscape has processed the classes.
-  requestAnimationFrame(function () {
-    runGridLayout();
-  });
+  // ── buildLegend ──────────────────────────────────────────────────────────
+  // Named function (was IIFE in PR8.1).
+  // Clears old legend entries then rebuilds from current data vars.
+  // Safe to call multiple times (e.g., from renderGraphFromAnalysis).
+  function buildLegend() {
+    const legend = document.getElementById('legend');
+    if (!legend) { return; }
+
+    // Clear existing entries, preserving the #legend-title element.
+    const titleEl = document.getElementById('legend-title');
+    while (legend.firstChild) { legend.removeChild(legend.firstChild); }
+    if (titleEl) { legend.appendChild(titleEl); }
+
+    const hasDiff =
+      addedNodeIds.size > 0 ||
+      removedNodeIds.size > 0 ||
+      changedNodeIds.size > 0 ||
+      impactIds.size > 0;
+
+    let items = [
+      { color: 'rgb(70,90,110)', label: 'File node' },
+      { color: 'rgb(50,140,100)', label: 'Type node' },
+      { color: 'rgb(220,150,70)', label: 'Func node' },
+    ];
+
+    if (hasDiff) {
+      items = items.concat([
+        { color: '#1a4a1a', label: 'Added' },
+        { color: '#4a1a1a', label: 'Removed' },
+        { color: '#4a4a1a', label: 'Changed' },
+        { color: 'transparent', label: 'Impacted (orange border)', border: '#e07b39' },
+      ]);
+    }
+
+    items.forEach(function (item) {
+      const div = document.createElement('div');
+      div.style.display = 'flex';
+      div.style.alignItems = 'center';
+      div.style.marginBottom = '4px';
+
+      const swatch = document.createElement('span');
+      swatch.style.display = 'inline-block';
+      swatch.style.width = '12px';
+      swatch.style.height = '12px';
+      swatch.style.marginRight = '6px';
+      swatch.style.borderRadius = '3px';
+      swatch.style.background = item.color;
+      if (item.border) { swatch.style.border = '2px solid ' + item.border; }
+
+      const text = document.createElement('span');
+      text.textContent = item.label;
+      text.style.fontSize = '10px';
+      text.style.color = '#ccc';
+
+      div.appendChild(swatch);
+      div.appendChild(text);
+      legend.appendChild(div);
+    });
+
+    if (addedEdgeKeys.size > 0 || removedEdgeKeys.size > 0) {
+      [
+        { color: '#33cc33', label: 'Added edge' },
+        { color: '#cc3333', label: 'Removed edge' },
+      ].forEach(function (item) {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.marginBottom = '4px';
+
+        const line = document.createElement('span');
+        line.style.display = 'inline-block';
+        line.style.width = '12px';
+        line.style.height = '2px';
+        line.style.marginRight = '6px';
+        line.style.borderTop = '2px dashed ' + item.color;
+
+        const text = document.createElement('span');
+        text.textContent = item.label;
+        text.style.fontSize = '10px';
+        text.style.color = '#ccc';
+
+        div.appendChild(line);
+        div.appendChild(text);
+        legend.appendChild(div);
+      });
+    }
+  }
+
+  // ── buildStatusBadge ─────────────────────────────────────────────────────
+  // Named function (was IIFE in PR8.1).
+  // Rebuilds the status badge from current data vars.
+  // Safe to call multiple times (e.g., from renderGraphFromAnalysis).
+  function buildStatusBadge() {
+    const badge = document.getElementById('status-badge');
+    if (!badge) { return; }
+    if ((graph.nodes ?? []).length === 0) {
+      badge.style.display = 'none';
+      return;
+    }
+
+    badge.style.display = 'block';
+
+    if (isClean) {
+      badge.textContent = '✓ Clean';
+      badge.className = 'status-clean';
+    } else {
+      const an = (diff.added_nodes ?? []).length;
+      const rn = (diff.removed_nodes ?? []).length;
+      const cn = (diff.changed_nodes ?? []).length;
+      const ae = (diff.added_edges ?? []).length;
+      const re = (diff.removed_edges ?? []).length;
+
+      const parts = [];
+      if (an > 0) { parts.push('+' + an + ' nodes'); }
+      if (rn > 0) { parts.push('-' + rn + ' nodes'); }
+      if (cn > 0) { parts.push('~' + cn + ' nodes'); }
+      if (ae > 0) { parts.push('+' + ae + ' edges'); }
+      if (re > 0) { parts.push('-' + re + ' edges'); }
+
+      const countsHtml = parts.length > 0
+        ? '<span class="badge-counts">' + parts.join('  ') + '</span>'
+        : '';
+      badge.innerHTML = '⚑ Changed' + countsHtml;
+      badge.className = 'status-changed';
+    }
+  }
+
+  // ── showAnalyzePrompt ─────────────────────────────────────────────────────
+  // Shows the empty-state overlay with the "Analyze Workspace" button.
+  // Called when the webview has no graph data to display (no analysis yet).
+  function showAnalyzePrompt() {
+    const emptyEl = document.getElementById('empty-state');
+    const emptyMsg = document.getElementById('empty-msg');
+    const analyzeBtn = document.getElementById('btn-analyze');
+    if (emptyEl) { emptyEl.style.display = 'flex'; }
+    if (emptyMsg) {
+      emptyMsg.textContent = 'No analysis yet. Open a Swift project and run the analyzer.';
+    }
+    if (analyzeBtn) { analyzeBtn.style.display = 'inline-block'; }
+  }
+
+  // ── renderGraphFromAnalysis ───────────────────────────────────────────────
+  // Full graph render from a new analysis payload.
+  // Used by the flowmap.analysisState handshake (restore case) so the graph
+  // can be populated without a full HTML rebuild.
+  //
+  // Steps:
+  //   1. Update module-level data vars via applyAnalysisData
+  //   2. Remove existing cy elements, add new ones from buildCyElements
+  //   3. Apply initial hidden state (types/funcs hidden → files-only view)
+  //   4. Apply diff/impact overlays
+  //   5. Rebuild legend and status badge
+  //   6. Run grid layout (hides/shows empty-state as appropriate)
+  function renderGraphFromAnalysis(newAnalysis) {
+    // 1. Update all module-level data vars
+    applyAnalysisData(newAnalysis);
+
+    // 2. Rebuild cy elements from new data
+    const elements = buildCyElements();
+    cy.elements().remove();
+    cy.add({
+      nodes: [...elements.cyNodes, ...elements.phantomNodes],
+      edges: [...elements.cyEdges, ...elements.phantomEdges],
+    });
+
+    // 3. Apply initial hidden state (files-only view)
+    cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
+    cy.edges('[kind = "calls"]').addClass('hidden-edge');
+
+    // Reset layout state
+    state.mode = 'grid';
+    state.searchQuery = '';
+    const searchInputEl = document.getElementById('search-input');
+    if (searchInputEl) { searchInputEl.value = ''; }
+
+    // 4. Apply diff/impact overlays
+    if (!isClean) {
+      cy.nodes().forEach(function (n) {
+        if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
+          n.addClass('muted-bg');
+        }
+      });
+    }
+
+    if (payloadViewMode === 'diff') {
+      cy.nodes().forEach(function (n) {
+        if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
+          n.addClass('dimmed');
+        }
+      });
+    } else if (payloadViewMode === 'impact') {
+      cy.nodes().forEach(function (n) {
+        const isChanged =
+          n.data('diffState') === 'added' ||
+          n.data('diffState') === 'changed' ||
+          n.data('diffState') === 'removed';
+        if (!n.data('impacted') && !isChanged) {
+          n.addClass('dimmed');
+        }
+      });
+    }
+
+    // 5. Rebuild legend + status badge + license badge with new data
+    buildLegend();
+    buildStatusBadge();
+    applyLicenseBadge(newAnalysis.licenseStatus ?? 'free');
+
+    // 6. Run grid layout — this also hides/shows the empty-state overlay.
+    //    Three nested rAFs after the layout rAF ensure the log and robustness
+    //    check run after deferredFit's own double-rAF (where cy.fit() fires).
+    //
+    //    rAF chain: outer (runGridLayout) → dF-1 → dF-2 (cy.fit) → check-3
+    //    All queued from within the same outer rAF body, so:
+    //      frame 1: runGridLayout + inner1 queued
+    //      frame 2: dF-1 + inner1 run, dF-2 + inner2 queued
+    //      frame 3: dF-2 (cy.fit) + inner2 run, inner3 queued
+    //      frame 4: inner3 runs → log + robustness check (after cy.fit ✓)
+    requestAnimationFrame(function () {
+      runGridLayout();
+
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            const files = cy.nodes('[kind = "file"]');
+            const visibleFiles = files.filter(':visible');
+            console.log(
+              '[FlowMap] renderGraphFromAnalysis: ' +
+              'files=' + files.length +
+              ', visible=' + visibleFiles.length +
+              ', nodes=' + cy.nodes().length
+            );
+            // Part 5 robustness: if file nodes exist but none are visible
+            // (e.g. stale hidden class after a rapid sequence of renders),
+            // force-show file nodes and rerun the grid layout.
+            if (files.length > 0 && visibleFiles.length === 0) {
+              console.warn('[FlowMap] Defensive: 0 visible file nodes — force-show and rerun grid');
+              cy.nodes('[kind = "file"]').removeClass('hidden-node');
+              runGridLayout();
+            }
+          });
+        });
+      });
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Initial render
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (graph.nodes.length === 0) {
+    // Empty payload: panel was restored or opened without prior analysis.
+    // Request the cached analysis from the extension via handshake.
+    // Show the analyze prompt in the meantime (also covers outside-VS-Code dev).
+    vscodeApi.postMessage({ command: 'flowmap.requestAnalysisState' });
+    showAnalyzePrompt();
+  } else {
+    // Has embedded data: render immediately (normal show() / update() path).
+    // File nodes are NEVER added to hidden-node. Only type/func nodes.
+    cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
+    cy.edges('[kind = "calls"]').addClass('hidden-edge');
+
+    // Mute unchanged nodes when a diff exists
+    if (!isClean) {
+      cy.nodes().forEach(function (n) {
+        if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
+          n.addClass('muted-bg');
+        }
+      });
+    }
+
+    // Apply initial view-mode focus (diff / impact overlays)
+    if (payloadViewMode === 'diff') {
+      cy.nodes().forEach(function (n) {
+        if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
+          n.addClass('dimmed');
+        }
+      });
+    } else if (payloadViewMode === 'impact') {
+      cy.nodes().forEach(function (n) {
+        const isChanged =
+          n.data('diffState') === 'added' ||
+          n.data('diffState') === 'changed' ||
+          n.data('diffState') === 'removed';
+        if (!n.data('impacted') && !isChanged) {
+          n.addClass('dimmed');
+        }
+      });
+    }
+
+    // Build legend and status badge
+    buildLegend();
+    buildStatusBadge();
+    applyLicenseBadge(embeddedAnalysis.licenseStatus ?? 'free');
+
+    // Defer the initial layout one rAF so Cytoscape has processed the classes.
+    requestAnimationFrame(function () {
+      runGridLayout();
+    });
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Node expansion toggle (click FILE → toggle types; click TYPE → toggle funcs)
@@ -737,168 +1082,40 @@
         deferredFit(matches, 80);
       });
     }
-  })();
 
-  // ── Legend ───────────────────────────────────────────────────────────────
-  (function buildLegend() {
-    const legend = document.getElementById('legend');
-    if (!legend) { return; }
-
-    const hasDiff =
-      addedNodeIds.size > 0 ||
-      removedNodeIds.size > 0 ||
-      changedNodeIds.size > 0 ||
-      impactIds.size > 0;
-
-    let items = [
-      { color: 'rgb(70,90,110)', label: 'File node' },
-      { color: 'rgb(50,140,100)', label: 'Type node' },
-      { color: 'rgb(220,150,70)', label: 'Func node' },
-    ];
-
-    if (hasDiff) {
-      items = items.concat([
-        { color: '#1a4a1a', label: 'Added' },
-        { color: '#4a1a1a', label: 'Removed' },
-        { color: '#4a4a1a', label: 'Changed' },
-        { color: 'transparent', label: 'Impacted (orange border)', border: '#e07b39' },
-      ]);
-    }
-
-    items.forEach(function (item) {
-      const div = document.createElement('div');
-      div.style.display = 'flex';
-      div.style.alignItems = 'center';
-      div.style.marginBottom = '4px';
-
-      const swatch = document.createElement('span');
-      swatch.style.display = 'inline-block';
-      swatch.style.width = '12px';
-      swatch.style.height = '12px';
-      swatch.style.marginRight = '6px';
-      swatch.style.borderRadius = '3px';
-      swatch.style.background = item.color;
-      if (item.border) { swatch.style.border = '2px solid ' + item.border; }
-
-      const text = document.createElement('span');
-      text.textContent = item.label;
-      text.style.fontSize = '10px';
-      text.style.color = '#ccc';
-
-      div.appendChild(swatch);
-      div.appendChild(text);
-      legend.appendChild(div);
-    });
-
-    if (addedEdgeKeys.size > 0 || removedEdgeKeys.size > 0) {
-      [
-        { color: '#33cc33', label: 'Added edge' },
-        { color: '#cc3333', label: 'Removed edge' },
-      ].forEach(function (item) {
-        const div = document.createElement('div');
-        div.style.display = 'flex';
-        div.style.alignItems = 'center';
-        div.style.marginBottom = '4px';
-
-        const line = document.createElement('span');
-        line.style.display = 'inline-block';
-        line.style.width = '12px';
-        line.style.height = '2px';
-        line.style.marginRight = '6px';
-        line.style.borderTop = '2px dashed ' + item.color;
-
-        const text = document.createElement('span');
-        text.textContent = item.label;
-        text.style.fontSize = '10px';
-        text.style.color = '#ccc';
-
-        div.appendChild(line);
-        div.appendChild(text);
-        legend.appendChild(div);
+    // ── Analyze button (in empty-state panel) ───────────────────────────
+    // Clicking this tells the extension to run the analyzeWorkspace command,
+    // which will call GraphView.show() and rebuild the HTML with real data.
+    const analyzeBtn = document.getElementById('btn-analyze');
+    if (analyzeBtn) {
+      analyzeBtn.addEventListener('click', function () {
+        vscodeApi.postMessage({ command: 'flowmap.runAnalyze' });
       });
     }
   })();
 
-  // ── Mute unchanged nodes when diff exists ────────────────────────────────
-  if (!isClean) {
-    cy.nodes().forEach(function (n) {
-      if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
-        n.addClass('muted-bg');
-      }
-    });
-  }
-
-  // ── Status badge (unchanged from PR6) ────────────────────────────────────
-  (function buildStatusBadge() {
-    const badge = document.getElementById('status-badge');
-    if (!badge) { return; }
-    if ((graph.nodes ?? []).length === 0) { return; }
-
-    badge.style.display = 'block';
-
-    if (isClean) {
-      badge.textContent = '✓ Clean';
-      badge.className = 'status-clean';
-    } else {
-      const an = (diff.added_nodes ?? []).length;
-      const rn = (diff.removed_nodes ?? []).length;
-      const cn = (diff.changed_nodes ?? []).length;
-      const ae = (diff.added_edges ?? []).length;
-      const re = (diff.removed_edges ?? []).length;
-
-      const parts = [];
-      if (an > 0) { parts.push('+' + an + ' nodes'); }
-      if (rn > 0) { parts.push('-' + rn + ' nodes'); }
-      if (cn > 0) { parts.push('~' + cn + ' nodes'); }
-      if (ae > 0) { parts.push('+' + ae + ' edges'); }
-      if (re > 0) { parts.push('-' + re + ' edges'); }
-
-      const countsHtml = parts.length > 0
-        ? '<span class="badge-counts">' + parts.join('  ') + '</span>'
-        : '';
-      badge.innerHTML = '⚑ Changed' + countsHtml;
-      badge.className = 'status-changed';
-    }
-  })();
-
-  // ── Apply initial view-mode focus (diff / impact overlays) ───────────────
-  if (payloadViewMode === 'diff') {
-    cy.nodes().forEach(function (n) {
-      if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
-        n.addClass('dimmed');
-      }
-    });
-  } else if (payloadViewMode === 'impact') {
-    cy.nodes().forEach(function (n) {
-      const isChanged =
-        n.data('diffState') === 'added' ||
-        n.data('diffState') === 'changed' ||
-        n.data('diffState') === 'removed';
-      if (!n.data('impacted') && !isChanged) {
-        n.addClass('dimmed');
-      }
-    });
-  }
-
-  // ── License badge ─────────────────────────────────────────────────────────
-  function applyLicenseBadge(status) {
-    const badge = document.getElementById('license-badge');
-    if (!badge) { return; }
-    if (status === 'pro') {
-      badge.textContent = '★ Pro';
-      badge.className = 'license-pro';
-    } else {
-      badge.textContent = 'Free';
-      badge.className = 'license-free';
-    }
-  }
-
-  applyLicenseBadge(analysis.licenseStatus ?? 'free');
-
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Message handler
+  // ═══════════════════════════════════════════════════════════════════════════
   window.addEventListener('message', function (event) {
     const msg = event.data;
-    if (msg && msg.command === 'updateLicenseStatus') {
+    if (!msg) { return; }
+
+    // ── Live license badge update ────────────────────────────────────────
+    if (msg.command === 'updateLicenseStatus') {
       applyLicenseBadge(msg.status ?? 'free');
+    }
+
+    // ── Analysis handshake response ──────────────────────────────────────
+    // Extension responds to our flowmap.requestAnalysisState postMessage.
+    //   analysis non-null → render graph with cached data
+    //   analysis null     → show the analyze prompt (no analysis exists yet)
+    if (msg.command === 'flowmap.analysisState') {
+      if (msg.analysis) {
+        renderGraphFromAnalysis(msg.analysis);
+      } else {
+        showAnalyzePrompt();
+      }
     }
   });
 })();
