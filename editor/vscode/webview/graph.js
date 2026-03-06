@@ -1507,6 +1507,173 @@
   })();
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // Calls Layout
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── runSpacedCallsLayout ─────────────────────────────────────────────────
+  // Spacious force-directed layout for Calls mode.
+  //
+  // Algorithm:
+  //   1. Detect file-level connected components via union-find over calls
+  //      edges.  Two file nodes are in the same component when any function
+  //      in one file calls any function in the other (transitively).
+  //   2a. Single component (or ≤1 file): run cose with generous spacing
+  //       parameters and a large componentSpacing value.
+  //   2b. Multiple components: lay out each component independently with its
+  //       own cose run, then translate each component's nodes so the bounding
+  //       boxes sit in a tidy grid separated by GAP pixels.
+  //   3. Fit the viewport to all nodes with generous padding.
+  //
+  // All existing interactions (click highlight, search, fit, back/overview)
+  // are unaffected — this function only changes node positions.
+  function runSpacedCallsLayout() {
+    var visibleNodes = cy.nodes(':visible');
+    if (visibleNodes.length === 0) { deferredFit(cy.nodes(), 80); return; }
+
+    var fileNodes = cy.nodes('[kind = "file"]:visible');
+
+    // No compound file nodes (unusual) — single enhanced cose run.
+    if (fileNodes.length === 0) {
+      cy.layout({
+        name: 'cose',
+        padding: 80,
+        nodeRepulsion: function () { return 20000; },
+        nodeOverlap: 20,
+        idealEdgeLength: function () { return 120; },
+        edgeElasticity: function () { return 100; },
+        componentSpacing: 200,
+        animate: false,
+      }).run();
+      deferredFit(cy.nodes(), 80);
+      return;
+    }
+
+    // ── Step 1: Union-Find over file nodes keyed by calls edges ──────────
+    var uf = {};
+    fileNodes.forEach(function (n) { uf[n.id()] = n.id(); });
+
+    function ufFind(x) {
+      while (uf[x] !== x) { uf[x] = uf[uf[x]]; x = uf[x]; }
+      return x;
+    }
+    function ufUnion(x, y) {
+      var px = ufFind(x), py = ufFind(y);
+      if (px !== py) { uf[px] = py; }
+    }
+
+    // Traverse compound parent chain to find the owning file node.
+    function fileAncestorOf(node) {
+      var cur = node;
+      while (cur && cur.length > 0) {
+        if (cur.data('kind') === 'file') { return cur; }
+        var par = cur.data('parent');
+        if (!par) { return null; }
+        cur = cy.getElementById(par);
+      }
+      return null;
+    }
+
+    cy.edges('[kind = "calls"]:visible').forEach(function (e) {
+      var sf = fileAncestorOf(e.source());
+      var tf = fileAncestorOf(e.target());
+      if (sf && tf && uf[sf.id()] !== undefined && uf[tf.id()] !== undefined) {
+        ufUnion(sf.id(), tf.id());
+      }
+    });
+
+    // Group file IDs by their union-find root.
+    var compGroups = {};
+    fileNodes.forEach(function (n) {
+      var root = ufFind(n.id());
+      if (!compGroups[root]) { compGroups[root] = []; }
+      compGroups[root].push(n.id());
+    });
+
+    var groupArr = Object.values(compGroups);
+    // Largest component (most files) → top-left.
+    groupArr.sort(function (a, b) { return b.length - a.length; });
+
+    // ── Step 2a: Single component ─────────────────────────────────────────
+    if (groupArr.length <= 1) {
+      cy.layout({
+        name: 'cose',
+        padding: 80,
+        nodeRepulsion: function () { return 20000; },
+        nodeOverlap: 20,
+        idealEdgeLength: function () { return 120; },
+        edgeElasticity: function () { return 100; },
+        componentSpacing: 200,
+        animate: false,
+      }).run();
+      deferredFit(cy.nodes(), 80);
+      return;
+    }
+
+    // ── Step 2b: Independent cose run per component ───────────────────────
+    var GAP = 260; // px gap between component bounding boxes in the grid
+
+    // Helper: collect all cy nodes belonging to a list of file IDs.
+    function nodesForFiles(fileIds) {
+      var col = cy.collection();
+      fileIds.forEach(function (fid) {
+        var fn = cy.getElementById(fid);
+        col = col.union(fn).union(fn.descendants());
+      });
+      return col;
+    }
+
+    groupArr.forEach(function (fileIds) {
+      var compNodes = nodesForFiles(fileIds);
+      var compEdges = cy.edges('[kind = "calls"]:visible').filter(function (e) {
+        return compNodes.has(e.source()) && compNodes.has(e.target());
+      });
+      compNodes.union(compEdges).layout({
+        name: 'cose',
+        padding: 40,
+        nodeRepulsion: function () { return 20000; },
+        nodeOverlap: 20,
+        idealEdgeLength: function () { return 120; },
+        edgeElasticity: function () { return 100; },
+        animate: false,
+      }).run();
+    });
+
+    // ── Step 3: Arrange component bounding boxes in a grid ────────────────
+    var nCols = Math.max(1, Math.ceil(Math.sqrt(groupArr.length)));
+    var cursorX = 0;
+    var cursorY = 0;
+    var col = 0;
+    var rowMaxH = 0;
+
+    groupArr.forEach(function (fileIds) {
+      var compNodes = nodesForFiles(fileIds);
+      var bb = compNodes.boundingBox({ includeLabels: false });
+      if (!bb || bb.w === 0) { return; }
+
+      var dx = cursorX - bb.x1;
+      var dy = cursorY - bb.y1;
+
+      // Translate all nodes in this component by (dx, dy).
+      compNodes.positions(function (node) {
+        return {
+          x: node.position('x') + dx,
+          y: node.position('y') + dy,
+        };
+      });
+
+      rowMaxH = Math.max(rowMaxH, bb.h);
+      cursorX += bb.w + GAP;
+      col++;
+      if (col >= nCols) {
+        col = 0;
+        cursorX = 0;
+        cursorY += rowMaxH + GAP;
+        rowMaxH = 0;
+      }
+    });
+
+    deferredFit(cy.nodes(), 80);
+  }
+
   // Toolbar
   // ═══════════════════════════════════════════════════════════════════════════
   // ── updateToolbarForMode ─────────────────────────────────────────────────
@@ -1579,19 +1746,9 @@
         cy.edges().removeClass('hidden-edge');
         cy.elements().removeClass('highlighted dimmed search-highlight');
 
-        // Force-directed layout over the full graph.
-        cy.layout({
-          name: 'cose',
-          padding: 40,
-          nodeRepulsion: function () { return 8000; },
-          nodeOverlap: 10,
-          idealEdgeLength: function () { return 80; },
-          edgeElasticity: function () { return 100; },
-          animate: false,
-        }).run();
-
-        // Deferred fit ensures bounding boxes are computed after layout flush.
-        deferredFit(cy.nodes(), 40);
+        // Spacious force-directed layout: detects connected components and
+        // arranges them in a grid with generous spacing between components.
+        runSpacedCallsLayout();
       });
     }
 
