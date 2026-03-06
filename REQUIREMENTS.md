@@ -1,60 +1,66 @@
-# FlowMap MVP Requirements
+# FlowMap MVP Requirements (Swift-first)
 
-## Goal
-Visualize function/variable/module bindings from AI‑generated Swift code.
+## Product Goal
+Reduce AI-assisted coding breakage by visualizing **Swift** code structure and change impact.
 
-Show graph diff similar to code diff:
-- + green = added
-- - red = removed
-
-Allow click navigation:
-Graph node → source code location.
-
----
-
-## Repo Setup
-- [ ] Create monorepo
-- [ ] Rust workspace
-- [ ] flowmap CLI tool
+- Visualize: file/type/func nodes (now)
+- Add: call edges (next)
+- Show graph diff like code diff:
+  - + green = added
+  - - red = removed
+  - ~ yellow = changed
+- Impact analysis:
+  - impacted nodes get orange outline
+- Navigation:
+  - Click node → jump to source code location
 
 ---
 
-## Protocol
-- [ ] Implement JSON protocol types
-- [ ] ping command
-- [ ] analyze command (dummy)
+## Status
+
+### Repo Setup
+- [x] Monorepo created
+- [x] Rust workspace
+- [x] `flowmap` CLI tool
+
+### Protocol
+- [x] Implement JSON protocol types
+- [x] `ping`
+- [x] `analyze`
+
+### VSCode Extension
+- [x] Extension scaffold
+- [x] Webview graph panel (Cytoscape)
+- [x] Run Rust engine binary (configurable path)
+- [x] Show analysis results
+
+### Change Detection / Diff
+- [x] Detect changed Swift files via `git diff`
+- [x] Build old/new fragments (HEAD vs working tree)
+- [x] Graph diff: added/removed/changed nodes + edges
+- [x] Impact analysis: BFS downstream from changed nodes
+- [x] Diff visualization colors + legend
 
 ---
 
-## VSCode Extension
-- [ ] Extension scaffold
-- [ ] Webview graph panel
-- [ ] Run Rust engine binary
-- [ ] Display ping output
+## Next: PR5 (Calls edges)
+
+### Graph Builder
+- [ ] Extract `calls` edges from SwiftSyntax AST
+  - Start with same-file resolution (best-effort)
+  - Emit edges: `kind = "calls"`
+- [ ] Render call edges in graph UI (arrows)
+- [ ] Click node → highlight outgoing calls (and optionally transitive closure)
+
+### Validation
+- [ ] Test on 2-3 real Swift projects (including at least one iOS app)
+- [ ] Record a short GIF demo for README
 
 ---
 
-## Change Detection
-- [ ] Detect large code edits
-- [ ] Analyze last change command
+## Future (after Swift MVP)
 
----
-
-## Graph Builder
-- [ ] Nodes for functions/variables/types
-- [ ] Edges for calls and references
-- [ ] Depth traversal
-
----
-
-## Graph Diff
-- [ ] Detect added nodes
-- [ ] Detect removed nodes
-- [ ] Detect modified nodes
-
----
-
-## UI
-- [ ] Graph visualization panel
-- [ ] Green/red diff coloring
-- [ ] Node click → jump to code
+- [ ] Cross-file call resolution (imports + simple name mapping)
+- [ ] Variable / parameter / property binding nodes
+- [ ] Type-resolution-assisted impact analysis
+- [ ] Packaging (brew / cargo install) and VSCode marketplace release

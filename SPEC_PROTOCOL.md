@@ -114,19 +114,16 @@ Error
 ```
 
 Node kinds:
-- module
+- file
 - type
-- function
-- variable
-- parameter
-- return
-- property
+- func
 
 Edge kinds:
-- call
-- assign
-- reference_read
-- reference_write
-- return
-- property_get
-- property_set
+- contains
+- calls
+
+---
+
+## Notes (non-normative)
+- This document defines the stable v0.1 schema. Do not change schema fields or enums without explicit approval.
+- Examples may use human-friendly words like "function"/"call"; implementations MUST use the enum values above.

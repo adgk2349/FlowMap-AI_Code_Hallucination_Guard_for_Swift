@@ -15,6 +15,10 @@ export class GraphView {
   private static panel: vscode.WebviewPanel | undefined;
   /** Tracks the view mode so auto-analyze updates preserve the active mode. */
   private static lastViewMode: 'all' | 'diff' | 'impact' = 'all';
+  /** Cached analysis from the last show()/update() call. Sent to the webview on restore via the handshake. */
+  private static lastAnalysis: FlowAnalysis | undefined;
+  /** Cached license status matching lastAnalysis. */
+  private static lastLicenseStatus: LicenseStatus = 'free';
 
   /**
    * Restore a webview panel that VS Code serialized from a previous session.
@@ -39,7 +43,8 @@ export class GraphView {
       context.subscriptions
     );
     GraphView.registerMessageHandler(context, panel);
-    // Show an empty graph until the user runs analyze again
+    // Show an empty graph initially; the webview will request the cached
+    // analysis via the flowmap.requestAnalysisState handshake.
     const emptyAnalysis: FlowAnalysis = {
       graph: { nodes: [], edges: [] },
       diff: {
@@ -66,6 +71,12 @@ export class GraphView {
     licenseStatus: LicenseStatus = 'free'
   ): void {
     GraphView.lastViewMode = view;
+    GraphView.lastAnalysis = analysis;
+    GraphView.lastLicenseStatus = licenseStatus;
+    console.log(
+      `[FlowMapDebug] GraphView.show: cached lastAnalysis, ` +
+      `nodes=${analysis.graph?.nodes?.length ?? 0}, view=${view}, license=${licenseStatus}`
+    );
     const title = VIEW_TITLES[view] ?? 'FlowMap Graph';
 
     if (GraphView.panel) {
@@ -119,6 +130,12 @@ export class GraphView {
     if (!GraphView.panel) {
       return;
     }
+    GraphView.lastAnalysis = analysis;
+    GraphView.lastLicenseStatus = licenseStatus;
+    console.log(
+      `[FlowMapDebug] GraphView.update: cached lastAnalysis, ` +
+      `nodes=${analysis.graph?.nodes?.length ?? 0}, license=${licenseStatus}`
+    );
     GraphView.panel.webview.html = GraphView.buildHtml(
       context,
       GraphView.panel.webview,
@@ -154,7 +171,7 @@ export class GraphView {
     panel: vscode.WebviewPanel
   ): void {
     panel.webview.onDidReceiveMessage(
-      async (message: { command: string; uri: string; line: number }) => {
+      async (message: { command: string; uri?: string; line?: number }) => {
         if (message.command === 'openFile' && message.uri) {
           try {
             const doc = await vscode.workspace.openTextDocument(
@@ -172,6 +189,48 @@ export class GraphView {
               `FlowMap: Cannot open file — ${(err as Error).message}`
             );
           }
+        }
+
+        // ── Analysis handshake ────────────────────────────────────────────
+        // Webview sends this on load when its embedded payload is empty
+        // (e.g. after a panel restore). We respond with the cached analysis
+        // so the graph can be rendered without a full HTML rebuild.
+        if (message.command === 'flowmap.requestAnalysisState') {
+          const hasAnalysis = GraphView.lastAnalysis !== undefined;
+          console.log(
+            `[FlowMapDebug] received flowmap.requestAnalysisState: ` +
+            `lastAnalysis=${hasAnalysis ? 'non-null (nodes=' + (GraphView.lastAnalysis?.graph?.nodes?.length ?? 0) + ')' : 'null'}`
+          );
+          if (GraphView.lastAnalysis) {
+            // Merge view + licenseStatus into the payload, matching the
+            // shape that buildHtml() embeds in {{GRAPH_DATA}}.
+            const payload = {
+              ...GraphView.lastAnalysis,
+              view: GraphView.lastViewMode,
+              licenseStatus: GraphView.lastLicenseStatus,
+            };
+            console.log(
+              `[FlowMapDebug] posting flowmap.analysisState with analysis ` +
+              `(nodes=${payload.graph?.nodes?.length ?? 0})`
+            );
+            void panel.webview.postMessage({
+              command: 'flowmap.analysisState',
+              analysis: payload,
+            });
+          } else {
+            // No cached analysis yet — webview will show the analyze prompt.
+            console.log('[FlowMapDebug] posting flowmap.analysisState with analysis=null');
+            void panel.webview.postMessage({
+              command: 'flowmap.analysisState',
+              analysis: null,
+            });
+          }
+        }
+
+        // ── Analyze-button trigger ────────────────────────────────────────
+        // Webview's empty-state "Analyze Workspace" button fires this.
+        if (message.command === 'flowmap.runAnalyze') {
+          void vscode.commands.executeCommand('flowmap.analyzeWorkspace');
         }
       },
       null,

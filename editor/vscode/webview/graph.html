@@ -27,12 +27,32 @@
         display: none; /* shown by JS when no file nodes exist */
         position: absolute;
         inset: 0;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         color: #555566;
         font-size: 14px;
         pointer-events: none;
         z-index: 5;
+        gap: 12px;
+      }
+      /* Analyze Workspace button — shown only when no analysis exists yet */
+      .analyze-btn {
+        display: none; /* revealed by showAnalyzePrompt() in graph.js */
+        background: rgba(77, 163, 255, 0.15);
+        border: 1px solid #4da3ff;
+        border-radius: 4px;
+        color: #4da3ff;
+        font-size: 12px;
+        padding: 6px 18px;
+        cursor: pointer;
+        font-family: inherit;
+        pointer-events: auto; /* override parent's pointer-events: none */
+        transition: background 0.15s, color 0.15s;
+      }
+      .analyze-btn:hover {
+        background: rgba(77, 163, 255, 0.30);
+        color: #c8d8ff;
       }
       /* ── Toolbar (search + layout buttons) ─────────────────────────────── */
       /* Slightly compact (PR8.1): reduced padding and font-size vs PR8 */
@@ -163,8 +183,11 @@
   </head>
   <body>
     <div id="cy"></div>
-    <!-- Empty state: shown when workspace has no file nodes -->
-    <div id="empty-state">No Swift files found in this workspace.</div>
+    <!-- Empty state: shown when no file nodes exist or no analysis has run yet -->
+    <div id="empty-state">
+      <span id="empty-msg">No Swift files found in this workspace.</span>
+      <button id="btn-analyze" class="analyze-btn">Analyze Workspace</button>
+    </div>
     <div id="status-badge"></div>
     <div id="license-badge"></div>
     <!-- Toolbar: search + layout switcher buttons (top-centre) -->
