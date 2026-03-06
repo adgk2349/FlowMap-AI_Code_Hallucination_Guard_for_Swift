@@ -73,6 +73,10 @@ export class GraphView {
     GraphView.lastViewMode = view;
     GraphView.lastAnalysis = analysis;
     GraphView.lastLicenseStatus = licenseStatus;
+    console.log(
+      `[FlowMapDebug] GraphView.show: cached lastAnalysis, ` +
+      `nodes=${analysis.graph?.nodes?.length ?? 0}, view=${view}, license=${licenseStatus}`
+    );
     const title = VIEW_TITLES[view] ?? 'FlowMap Graph';
 
     if (GraphView.panel) {
@@ -128,6 +132,10 @@ export class GraphView {
     }
     GraphView.lastAnalysis = analysis;
     GraphView.lastLicenseStatus = licenseStatus;
+    console.log(
+      `[FlowMapDebug] GraphView.update: cached lastAnalysis, ` +
+      `nodes=${analysis.graph?.nodes?.length ?? 0}, license=${licenseStatus}`
+    );
     GraphView.panel.webview.html = GraphView.buildHtml(
       context,
       GraphView.panel.webview,
@@ -188,6 +196,11 @@ export class GraphView {
         // (e.g. after a panel restore). We respond with the cached analysis
         // so the graph can be rendered without a full HTML rebuild.
         if (message.command === 'flowmap.requestAnalysisState') {
+          const hasAnalysis = GraphView.lastAnalysis !== undefined;
+          console.log(
+            `[FlowMapDebug] received flowmap.requestAnalysisState: ` +
+            `lastAnalysis=${hasAnalysis ? 'non-null (nodes=' + (GraphView.lastAnalysis?.graph?.nodes?.length ?? 0) + ')' : 'null'}`
+          );
           if (GraphView.lastAnalysis) {
             // Merge view + licenseStatus into the payload, matching the
             // shape that buildHtml() embeds in {{GRAPH_DATA}}.
@@ -196,12 +209,17 @@ export class GraphView {
               view: GraphView.lastViewMode,
               licenseStatus: GraphView.lastLicenseStatus,
             };
+            console.log(
+              `[FlowMapDebug] posting flowmap.analysisState with analysis ` +
+              `(nodes=${payload.graph?.nodes?.length ?? 0})`
+            );
             void panel.webview.postMessage({
               command: 'flowmap.analysisState',
               analysis: payload,
             });
           } else {
             // No cached analysis yet — webview will show the analyze prompt.
+            console.log('[FlowMapDebug] posting flowmap.analysisState with analysis=null');
             void panel.webview.postMessage({
               command: 'flowmap.analysisState',
               analysis: null,

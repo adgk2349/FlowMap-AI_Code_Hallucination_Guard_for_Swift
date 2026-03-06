@@ -9,23 +9,81 @@
     vscodeApi = { postMessage: function () {} };
   }
 
+  // Part 1: startup diagnostic
+  console.log('[FlowMapDebug] graph.js initialized');
+
   // ── Mutable analysis state (set by applyAnalysisData) ────────────────────
   // Declared as let so renderGraphFromAnalysis() can update them in place.
-  let graph, diff, impactIds, payloadViewMode;
+  let graph, diff, impactIds, payloadViewMode, payloadLicenseStatus;
   let addedNodeIds, removedNodeIds, changedNodeIds, addedEdgeKeys, removedEdgeKeys;
   let isClean;
   let parentMap, containsIds;
 
+  // Part 3: race-guard for cy-not-ready
+  let pendingAnalysis = null;
+  let cyReady = false;
+
+  // ── getGraphPayload ──────────────────────────────────────────────────────
+  // Part 2: normalises an analysis object that may come in two different
+  // shapes from the extension:
+  //   • direct shape:  { graph, diff, impact, view, licenseStatus, … }
+  //   • wrapped shape: { payload: { graph, diff, impact, view }, licenseStatus, … }
+  // Returns a consistently shaped object safe to pass to applyAnalysisData().
+  function getGraphPayload(analysis) {
+    if (!analysis || typeof analysis !== 'object') {
+      console.warn('[FlowMapDebug] getGraphPayload: received null/invalid analysis');
+      return { graph: { nodes: [], edges: [] }, diff: {}, impact: [], view: 'all', licenseStatus: 'free' };
+    }
+
+    // Detect which shape is present
+    const hasDirectGraph = analysis.graph && typeof analysis.graph === 'object';
+    const hasPayloadGraph =
+      analysis.payload &&
+      typeof analysis.payload === 'object' &&
+      analysis.payload.graph &&
+      typeof analysis.payload.graph === 'object';
+
+    const graphPath = hasDirectGraph ? 'direct' : hasPayloadGraph ? 'payload' : 'none';
+    const src = hasPayloadGraph && !hasDirectGraph ? analysis.payload : analysis;
+
+    const nodeCount = ((src.graph || {}).nodes || []).length;
+    const edgeCount = ((src.graph || {}).edges || []).length;
+    console.log(
+      '[FlowMapDebug] getGraphPayload: path=' + graphPath +
+      ', analysis.graph?.nodes=' + (analysis.graph ? (analysis.graph.nodes || []).length : 'n/a') +
+      ', analysis.payload?.graph?.nodes=' + (hasPayloadGraph ? (analysis.payload.graph.nodes || []).length : 'n/a') +
+      ' → selected nodes=' + nodeCount + ' edges=' + edgeCount
+    );
+
+    return {
+      graph:         src.graph         ?? { nodes: [], edges: [] },
+      diff:          src.diff          ?? {},
+      impact:        src.impact        ?? [],
+      view:          analysis.view     ?? src.view ?? 'all',
+      licenseStatus: analysis.licenseStatus ?? src.licenseStatus ?? 'free',
+    };
+  }
+
   /**
    * Populate all module-level data vars from an analysis payload object.
+   * Internally normalises the shape via getGraphPayload().
    * Called once on startup (from the embedded JSON) and again by
    * renderGraphFromAnalysis() when the extension sends cached data.
    */
   function applyAnalysisData(a) {
-    graph = a.graph ?? { nodes: [], edges: [] };
-    diff = a.diff ?? {};
-    impactIds = new Set(a.impact ?? []);
-    payloadViewMode = a.view ?? 'all'; // 'all' | 'diff' | 'impact'
+    const payload = getGraphPayload(a);
+
+    graph         = payload.graph;
+    diff          = payload.diff;
+    impactIds     = new Set(payload.impact);
+    payloadViewMode    = payload.view;
+    payloadLicenseStatus = payload.licenseStatus;
+
+    console.log(
+      '[FlowMapDebug] applyAnalysisData: nodes=' + (graph.nodes || []).length +
+      ' edges=' + (graph.edges || []).length +
+      ' view=' + payloadViewMode + ' license=' + payloadLicenseStatus
+    );
 
     addedNodeIds = new Set(
       (diff.added_nodes ?? []).map(function (n) { return n.id; })
@@ -148,6 +206,13 @@
         };
       });
 
+    console.log(
+      '[FlowMapDebug] buildCyElements: cyNodes=' + cyNodes.length +
+      ' phantomNodes=' + phantomNodes.length +
+      ' cyEdges=' + cyEdges.length +
+      ' phantomEdges=' + phantomEdges.length
+    );
+
     return {
       cyNodes: cyNodes,
       phantomNodes: phantomNodes,
@@ -167,6 +232,8 @@
   // ── Parse embedded payload ───────────────────────────────────────────────
   const raw = document.getElementById('graph-data').textContent ?? '{}';
   const embeddedAnalysis = JSON.parse(raw);
+
+  console.log('[FlowMapDebug] embedded payload: raw length=' + raw.length);
 
   // Initialize all data vars from embedded payload (may be empty on restore)
   applyAnalysisData(embeddedAnalysis);
@@ -373,6 +440,11 @@
     boxSelectionEnabled: false,
   });
 
+  console.log(
+    '[FlowMapDebug] cy created: total=' + cy.nodes().length +
+    ' files=' + cy.nodes('[kind="file"]').length
+  );
+
   // ═══════════════════════════════════════════════════════════════════════════
   // Core layout helpers
   // ═══════════════════════════════════════════════════════════════════════════
@@ -440,6 +512,8 @@
     const files = cy.nodes('[kind = "file"]');
     const emptyEl = document.getElementById('empty-state');
 
+    console.log('[FlowMapDebug] runGridLayout: file nodes=' + files.length);
+
     if (files.length === 0) {
       if (emptyEl) { emptyEl.style.display = 'flex'; }
       return;
@@ -460,6 +534,7 @@
     resetHiddenPositions();
 
     // Fit after two rAFs: ensures display:none is fully computed before fit.
+    console.log('[FlowMapDebug] runGridLayout: calling deferredFit(files, 120)');
     deferredFit(files, 120);
   }
 
@@ -691,14 +766,16 @@
   // can be populated without a full HTML rebuild.
   //
   // Steps:
-  //   1. Update module-level data vars via applyAnalysisData
+  //   1. Update module-level data vars via applyAnalysisData (which normalises shape)
   //   2. Remove existing cy elements, add new ones from buildCyElements
   //   3. Apply initial hidden state (types/funcs hidden → files-only view)
   //   4. Apply diff/impact overlays
   //   5. Rebuild legend and status badge
-  //   6. Run grid layout (hides/shows empty-state as appropriate)
+  //   6. Run grid layout + robustness check (hides/shows empty-state)
   function renderGraphFromAnalysis(newAnalysis) {
-    // 1. Update all module-level data vars
+    console.log('[FlowMapDebug] renderGraphFromAnalysis: entry');
+
+    // 1. Update all module-level data vars (shape-normalised inside applyAnalysisData)
     applyAnalysisData(newAnalysis);
 
     // 2. Rebuild cy elements from new data
@@ -709,9 +786,23 @@
       edges: [...elements.cyEdges, ...elements.phantomEdges],
     });
 
+    const totalAfterAdd = cy.nodes().length;
+    const filesAfterAdd = cy.nodes('[kind = "file"]').length;
+    console.log(
+      '[FlowMapDebug] after cy.add: total=' + totalAfterAdd +
+      ' files=' + filesAfterAdd +
+      ' visible-files=' + cy.nodes('[kind = "file"]:visible').length
+    );
+
     // 3. Apply initial hidden state (files-only view)
     cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
     cy.edges('[kind = "calls"]').addClass('hidden-edge');
+
+    // Part 4: Defensive force-show — ensure all file nodes are visible
+    // before the layout runs, regardless of any stale hidden-node class.
+    if (filesAfterAdd > 0) {
+      cy.nodes('[kind = "file"]').removeClass('hidden-node');
+    }
 
     // Reset layout state
     state.mode = 'grid';
@@ -749,11 +840,11 @@
     // 5. Rebuild legend + status badge + license badge with new data
     buildLegend();
     buildStatusBadge();
-    applyLicenseBadge(newAnalysis.licenseStatus ?? 'free');
+    applyLicenseBadge(payloadLicenseStatus);
 
     // 6. Run grid layout — this also hides/shows the empty-state overlay.
-    //    Three nested rAFs after the layout rAF ensure the log and robustness
-    //    check run after deferredFit's own double-rAF (where cy.fit() fires).
+    //    Three nested rAFs after the layout rAF ensure the robustness check
+    //    runs after deferredFit's own double-rAF (where cy.fit() fires).
     //
     //    rAF chain: outer (runGridLayout) → dF-1 → dF-2 (cy.fit) → check-3
     //    All queued from within the same outer rAF body, so:
@@ -767,21 +858,34 @@
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           requestAnimationFrame(function () {
-            const files = cy.nodes('[kind = "file"]');
-            const visibleFiles = files.filter(':visible');
+            var files = cy.nodes('[kind = "file"]');
+            var visibleFiles = files.filter(':visible');
             console.log(
-              '[FlowMap] renderGraphFromAnalysis: ' +
+              '[FlowMapDebug] post-layout check: ' +
               'files=' + files.length +
               ', visible=' + visibleFiles.length +
-              ', nodes=' + cy.nodes().length
+              ', total-nodes=' + cy.nodes().length
             );
-            // Part 5 robustness: if file nodes exist but none are visible
-            // (e.g. stale hidden class after a rapid sequence of renders),
-            // force-show file nodes and rerun the grid layout.
+
             if (files.length > 0 && visibleFiles.length === 0) {
-              console.warn('[FlowMap] Defensive: 0 visible file nodes — force-show and rerun grid');
+              // Primary recovery: force-show file nodes and re-run grid
+              console.warn('[FlowMapDebug] 0 visible files — force-show, rerun grid');
               cy.nodes('[kind = "file"]').removeClass('hidden-node');
               runGridLayout();
+
+              // Secondary fallback: after another double-rAF, if still 0 visible,
+              // show ALL nodes and fit — diagnostic last resort
+              requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                  var visibleFiles2 = cy.nodes('[kind = "file"]').filter(':visible');
+                  if (visibleFiles2.length === 0) {
+                    console.error('[FlowMapDebug] Still 0 visible files after recovery — fallback: show all');
+                    cy.nodes().removeClass('hidden-node hidden-edge');
+                    cy.edges().removeClass('hidden-edge');
+                    deferredFit(cy.nodes(':visible'), 40);
+                  }
+                });
+              });
             }
           });
         });
@@ -797,13 +901,17 @@
     // Empty payload: panel was restored or opened without prior analysis.
     // Request the cached analysis from the extension via handshake.
     // Show the analyze prompt in the meantime (also covers outside-VS-Code dev).
+    console.log('[FlowMapDebug] embedded nodes=0 — posting flowmap.requestAnalysisState');
     vscodeApi.postMessage({ command: 'flowmap.requestAnalysisState' });
     showAnalyzePrompt();
   } else {
     // Has embedded data: render immediately (normal show() / update() path).
     // File nodes are NEVER added to hidden-node. Only type/func nodes.
+    console.log('[FlowMapDebug] embedded nodes=' + graph.nodes.length + ' — rendering from embedded data');
     cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
     cy.edges('[kind = "calls"]').addClass('hidden-edge');
+    // Defensive: ensure file nodes have no hidden-node class
+    cy.nodes('[kind = "file"]').removeClass('hidden-node');
 
     // Mute unchanged nodes when a diff exists
     if (!isClean) {
@@ -836,12 +944,22 @@
     // Build legend and status badge
     buildLegend();
     buildStatusBadge();
-    applyLicenseBadge(embeddedAnalysis.licenseStatus ?? 'free');
+    applyLicenseBadge(payloadLicenseStatus);
 
     // Defer the initial layout one rAF so Cytoscape has processed the classes.
     requestAnimationFrame(function () {
       runGridLayout();
     });
+  }
+
+  // Part 3: cy is now ready — mark it and consume any analysis that arrived
+  // before the message listener was registered (edge-case safety net).
+  cyReady = true;
+  if (pendingAnalysis !== null) {
+    console.log('[FlowMapDebug] consuming pendingAnalysis that arrived before cyReady');
+    var pa = pendingAnalysis;
+    pendingAnalysis = null;
+    renderGraphFromAnalysis(pa);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1111,8 +1229,23 @@
     //   analysis non-null → render graph with cached data
     //   analysis null     → show the analyze prompt (no analysis exists yet)
     if (msg.command === 'flowmap.analysisState') {
-      if (msg.analysis) {
-        renderGraphFromAnalysis(msg.analysis);
+      const analysis = msg.analysis;
+      console.log(
+        '[FlowMapDebug] received flowmap.analysisState: ' +
+        'null=' + (analysis === null || analysis === undefined) +
+        ', analysis.graph?.nodes=' + (analysis && analysis.graph ? (analysis.graph.nodes || []).length : 'n/a') +
+        ', analysis.payload?.graph?.nodes=' + (analysis && analysis.payload && analysis.payload.graph ? (analysis.payload.graph.nodes || []).length : 'n/a')
+      );
+
+      if (analysis) {
+        // Part 3: guard for cy-not-ready (edge case — message could theoretically
+        // arrive before the cy block finishes if the event loop permits it)
+        if (cyReady) {
+          renderGraphFromAnalysis(analysis);
+        } else {
+          console.log('[FlowMapDebug] cy not ready yet — storing as pendingAnalysis');
+          pendingAnalysis = analysis;
+        }
       } else {
         showAnalyzePrompt();
       }
