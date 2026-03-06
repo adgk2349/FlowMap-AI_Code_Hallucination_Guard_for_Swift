@@ -221,25 +221,15 @@
     };
   }
 
-  // ── PR8.2.3-debug: plain file-node fallback render ───────────────────────
-  // Purpose: bypass all compound-node / hidden-child machinery to isolate the
-  // root cause of the blank initial graph.
+  // ── buildFlatFileElements ─────────────────────────────────────────────────
+  // Returns flat (non-compound) Cytoscape node elements for file nodes only.
+  // No parent field is set — every element is a top-level node.
+  // No type/func nodes or edges are included.
   //
-  // When true: initial view renders ONLY flat (non-compound) file nodes —
-  //   no parent field, no type/func children, no edges.
-  // If these plain nodes appear while compound nodes do not, the root cause is
-  // confirmed to be compound-node sizing / display:none interaction.
-  //
-  // Set to false to restore normal compound rendering.
-  const DEBUG_PLAIN_FILE_RENDER = true;
-
-  /**
-   * Debug-only: build flat (non-compound) Cytoscape node elements for file
-   * nodes only.  No parent field is set — every node is top-level.
-   * No type/func nodes, no edges are included.
-   * Relies on the same module-level data vars as buildCyElements().
-   */
-  function buildDebugFlatFileElements() {
+  // This is the permanent default initial view: file cards in a readable grid.
+  // Flat file nodes are always visible regardless of child count because they
+  // carry no compound children — compound-sizing bbox collapse cannot occur.
+  function buildFlatFileElements() {
     const fileNodes = (graph.nodes ?? []).filter(function (n) {
       return (n.kind ?? 'func') === 'file';
     });
@@ -257,13 +247,11 @@
               ? 'changed'
               : 'unchanged',
           impacted: impactIds.has(n.id),
-          // parent intentionally omitted → plain non-compound node
+          // parent intentionally omitted — flat non-compound node
         },
       };
     });
-    console.log(
-      '[FlowMapDebug] buildDebugFlatFileElements: flat file count=' + elements.length
-    );
+    console.log('[FlowMap] buildFlatFileElements: file count=' + elements.length);
     return elements;
   }
 
@@ -271,8 +259,9 @@
   // Separate from the payload's analysis.view (which is diff/impact mode).
   // Tracks which layout mode the user has actively selected.
   const state = {
-    mode: 'grid',    // 'grid' | 'calls' — current layout mode
-    searchQuery: '', // active search text; '' means no search active
+    mode: 'files',       // 'files' | 'file-detail' | 'calls'
+    detailFileId: null,  // id of file currently shown in 'file-detail' mode
+    searchQuery: '',     // active search text; '' means no search active
   };
 
   // ── Parse embedded payload ───────────────────────────────────────────────
@@ -584,54 +573,47 @@
     deferredFit(files, 120);
   }
 
-  // ── runDebugFlatRender ───────────────────────────────────────────────────
-  // Debug render path: replaces the cy canvas contents with ONLY flat (non-
-  // compound) file nodes.  No parent links, no type/func, no edges.
+  // ── renderFileCardView ────────────────────────────────────────────────────
+  // Default initial view: replaces cy contents with flat (non-compound) file
+  // nodes only, then runs a grid layout.
   //
-  // Diagnostic intent:
-  //   If these plain file nodes are visible, the root cause of the blank
-  //   graph is confirmed to be compound-node sizing / display:none collapse,
-  //   NOT a problem with data loading, payload shape, or the layout engine.
+  // Flat file cards are always visible regardless of child count because they
+  // carry no compound children — compound-sizing bbox collapse cannot occur.
   //
-  //   If these nodes are ALSO invisible, the issue is elsewhere (CSS, container
-  //   sizing, Cytoscape initialisation) and a different fix is needed.
-  function runDebugFlatRender() {
-    console.log('[FlowMapDebug] DEBUG_PLAIN_FILE_RENDER=true — entering flat file render');
+  // Called on: initial render, panel restore, Grid button, and any path that
+  // needs to return to the top-level file overview.
+  function renderFileCardView() {
+    console.log('[FlowMap] renderFileCardView: entering flat file-card view');
 
-    const flatElements = buildDebugFlatFileElements();
-    console.log('[FlowMapDebug] flat file count=' + flatElements.length);
+    const flatElements = buildFlatFileElements();
+    console.log('[FlowMap] renderFileCardView: file count=' + flatElements.length);
 
     const emptyEl = document.getElementById('empty-state');
 
     if (flatElements.length === 0) {
-      console.warn('[FlowMapDebug] flat render: 0 file nodes — showing empty state');
+      console.warn('[FlowMap] renderFileCardView: 0 file nodes — showing empty state');
       if (emptyEl) { emptyEl.style.display = 'flex'; }
       return;
     }
 
     if (emptyEl) { emptyEl.style.display = 'none'; }
 
-    // Replace all cy contents with flat file nodes only.
+    // Replace cy contents with flat file nodes only.
     cy.elements().remove();
     cy.add(flatElements);
 
+    state.mode = 'files';
+    state.detailFileId = null;
+
     console.log(
-      '[FlowMapDebug] after cy.add (flat): total=' + cy.nodes().length +
+      '[FlowMapDebug] renderFileCardView after cy.add: total=' + cy.nodes().length +
       ' visible=' + cy.nodes(':visible').length
     );
 
-    // Simple grid layout — no compound bbox issues.
-    cy.nodes().layout({
-      name: 'grid',
-      padding: 60,
-      avoidOverlap: true,
-      condense: false,
-      animate: false,
-      fit: false,
-    }).run();
-
-    console.log('[FlowMapDebug] flat render: grid layout run, calling deferredFit');
-    deferredFit(cy.nodes(), 80);
+    // Grid layout + deferred fit.
+    // runGridLayout targets cy.nodes('[kind="file"]') which matches every node
+    // in the flat view — no compound children to cause bbox issues.
+    runGridLayout();
   }
 
   // ── layoutChildrenOf ─────────────────────────────────────────────────────
@@ -861,143 +843,27 @@
   // Used by the flowmap.analysisState handshake (restore case) so the graph
   // can be populated without a full HTML rebuild.
   //
-  // Steps:
-  //   1. Update module-level data vars via applyAnalysisData (which normalises shape)
-  //   2. Remove existing cy elements, add new ones from buildCyElements
-  //   3. Apply initial hidden state (types/funcs hidden → files-only view)
-  //   4. Apply diff/impact overlays
-  //   5. Rebuild legend and status badge
-  //   6. Run grid layout + robustness check (hides/shows empty-state)
+  // Always renders the flat file-card view as the initial state.
+  // The Calls button is the entry point for the full compound graph.
   function renderGraphFromAnalysis(newAnalysis) {
-    console.log('[FlowMapDebug] renderGraphFromAnalysis: entry');
+    console.log('[FlowMap] renderGraphFromAnalysis: entry');
 
-    // 1. Update all module-level data vars (shape-normalised inside applyAnalysisData)
+    // Update all module-level data vars (normalised inside applyAnalysisData)
     applyAnalysisData(newAnalysis);
 
-    // Reset layout state (both paths need this)
-    state.mode = 'grid';
+    // Reset search state
     state.searchQuery = '';
     const searchInputEl = document.getElementById('search-input');
     if (searchInputEl) { searchInputEl.value = ''; }
 
-    // Rebuild UI badges (both paths need this)
+    // Rebuild UI badges
     buildLegend();
     buildStatusBadge();
     applyLicenseBadge(payloadLicenseStatus);
 
-    if (DEBUG_PLAIN_FILE_RENDER) {
-      // ── Debug path: flat file nodes only ─────────────────────────────────
-      // Bypass all compound/hidden-child machinery.
-      console.log('[FlowMapDebug] renderGraphFromAnalysis: DEBUG_PLAIN_FILE_RENDER active');
-      requestAnimationFrame(function () {
-        runDebugFlatRender();
-      });
-      return;
-    }
-
-    // ── Normal compound render path ───────────────────────────────────────
-
-    // 2. Rebuild cy elements from new data
-    const elements = buildCyElements();
-    cy.elements().remove();
-    cy.add({
-      nodes: [...elements.cyNodes, ...elements.phantomNodes],
-      edges: [...elements.cyEdges, ...elements.phantomEdges],
-    });
-
-    const totalAfterAdd = cy.nodes().length;
-    const filesAfterAdd = cy.nodes('[kind = "file"]').length;
-    console.log(
-      '[FlowMapDebug] after cy.add: total=' + totalAfterAdd +
-      ' files=' + filesAfterAdd +
-      ' visible-files=' + cy.nodes('[kind = "file"]:visible').length
-    );
-
-    // 3. Apply initial hidden state (files-only view)
-    cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
-    cy.edges('[kind = "calls"]').addClass('hidden-edge');
-
-    // Part 4: Defensive force-show — ensure all file nodes are visible
-    // before the layout runs, regardless of any stale hidden-node class.
-    if (filesAfterAdd > 0) {
-      cy.nodes('[kind = "file"]').removeClass('hidden-node');
-    }
-
-    // 4. Apply diff/impact overlays
-    if (!isClean) {
-      cy.nodes().forEach(function (n) {
-        if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
-          n.addClass('muted-bg');
-        }
-      });
-    }
-
-    if (payloadViewMode === 'diff') {
-      cy.nodes().forEach(function (n) {
-        if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
-          n.addClass('dimmed');
-        }
-      });
-    } else if (payloadViewMode === 'impact') {
-      cy.nodes().forEach(function (n) {
-        const isChanged =
-          n.data('diffState') === 'added' ||
-          n.data('diffState') === 'changed' ||
-          n.data('diffState') === 'removed';
-        if (!n.data('impacted') && !isChanged) {
-          n.addClass('dimmed');
-        }
-      });
-    }
-
-    // 6. Run grid layout — this also hides/shows the empty-state overlay.
-    //    Three nested rAFs after the layout rAF ensure the robustness check
-    //    runs after deferredFit's own double-rAF (where cy.fit() fires).
-    //
-    //    rAF chain: outer (runGridLayout) → dF-1 → dF-2 (cy.fit) → check-3
-    //    All queued from within the same outer rAF body, so:
-    //      frame 1: runGridLayout + inner1 queued
-    //      frame 2: dF-1 + inner1 run, dF-2 + inner2 queued
-    //      frame 3: dF-2 (cy.fit) + inner2 run, inner3 queued
-    //      frame 4: inner3 runs → log + robustness check (after cy.fit ✓)
+    // Always start with the flat file-card view
     requestAnimationFrame(function () {
-      runGridLayout();
-
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () {
-            var files = cy.nodes('[kind = "file"]');
-            var visibleFiles = files.filter(':visible');
-            console.log(
-              '[FlowMapDebug] post-layout check: ' +
-              'files=' + files.length +
-              ', visible=' + visibleFiles.length +
-              ', total-nodes=' + cy.nodes().length
-            );
-
-            if (files.length > 0 && visibleFiles.length === 0) {
-              // Primary recovery: force-show file nodes and re-run grid
-              console.warn('[FlowMapDebug] 0 visible files — force-show, rerun grid');
-              cy.nodes('[kind = "file"]').removeClass('hidden-node');
-              runGridLayout();
-
-              // Secondary fallback: after another double-rAF, if still 0 visible,
-              // show ALL nodes and fit — diagnostic last resort
-              requestAnimationFrame(function () {
-                requestAnimationFrame(function () {
-                  var visibleFiles2 = cy.nodes('[kind = "file"]').filter(':visible');
-                  if (visibleFiles2.length === 0) {
-                    console.error('[FlowMapDebug] Still 0 visible files after recovery — fallback: show all');
-                    cy.nodes().removeClass('hidden-node hidden-edge');
-                    cy.edges().removeClass('hidden-edge');
-                    deferredFit(cy.nodes(':visible'), 40);
-                  }
-                });
-              });
-            }
-          });
-        });
-      });
+      renderFileCardView();
     });
   }
 
@@ -1009,74 +875,28 @@
     // Empty payload: panel was restored or opened without prior analysis.
     // Request the cached analysis from the extension via handshake.
     // Show the analyze prompt in the meantime (also covers outside-VS-Code dev).
-    console.log('[FlowMapDebug] embedded nodes=0 — posting flowmap.requestAnalysisState');
+    console.log('[FlowMap] embedded nodes=0 — posting flowmap.requestAnalysisState');
     vscodeApi.postMessage({ command: 'flowmap.requestAnalysisState' });
     showAnalyzePrompt();
   } else {
-    // Has embedded data: render immediately (normal show() / update() path).
-    console.log('[FlowMapDebug] embedded nodes=' + graph.nodes.length + ' — rendering from embedded data');
+    // Has embedded data: render the flat file-card view immediately.
+    console.log('[FlowMap] embedded nodes=' + graph.nodes.length + ' — rendering file-card view');
 
-    // Always build legend/badge regardless of render path.
     buildLegend();
     buildStatusBadge();
     applyLicenseBadge(payloadLicenseStatus);
 
-    if (DEBUG_PLAIN_FILE_RENDER) {
-      // ── Debug path: flat file nodes only ─────────────────────────────────
-      // Bypass all compound/hidden-child machinery.  Confirms root cause if
-      // plain nodes appear where compound nodes did not.
-      console.log('[FlowMapDebug] embedded: DEBUG_PLAIN_FILE_RENDER active — skipping compound setup');
-      requestAnimationFrame(function () {
-        runDebugFlatRender();
-      });
-    } else {
-      // ── Normal compound render path ───────────────────────────────────────
-      // File nodes are NEVER added to hidden-node. Only type/func nodes.
-      cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
-      cy.edges('[kind = "calls"]').addClass('hidden-edge');
-      // Defensive: ensure file nodes have no hidden-node class
-      cy.nodes('[kind = "file"]').removeClass('hidden-node');
-
-      // Mute unchanged nodes when a diff exists
-      if (!isClean) {
-        cy.nodes().forEach(function (n) {
-          if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
-            n.addClass('muted-bg');
-          }
-        });
-      }
-
-      // Apply initial view-mode focus (diff / impact overlays)
-      if (payloadViewMode === 'diff') {
-        cy.nodes().forEach(function (n) {
-          if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
-            n.addClass('dimmed');
-          }
-        });
-      } else if (payloadViewMode === 'impact') {
-        cy.nodes().forEach(function (n) {
-          const isChanged =
-            n.data('diffState') === 'added' ||
-            n.data('diffState') === 'changed' ||
-            n.data('diffState') === 'removed';
-          if (!n.data('impacted') && !isChanged) {
-            n.addClass('dimmed');
-          }
-        });
-      }
-
-      // Defer the initial layout one rAF so Cytoscape has processed the classes.
-      requestAnimationFrame(function () {
-        runGridLayout();
-      });
-    }
+    // Flat file-card view: always visible, no compound-bbox collapse possible.
+    requestAnimationFrame(function () {
+      renderFileCardView();
+    });
   }
 
-  // Part 3: cy is now ready — mark it and consume any analysis that arrived
-  // before the message listener was registered (edge-case safety net).
+  // cy is now ready — mark it and consume any analysis that arrived before the
+  // message listener was registered (edge-case safety net).
   cyReady = true;
   if (pendingAnalysis !== null) {
-    console.log('[FlowMapDebug] consuming pendingAnalysis that arrived before cyReady');
+    console.log('[FlowMap] consuming pendingAnalysis that arrived before cyReady');
     var pa = pendingAnalysis;
     pendingAnalysis = null;
     renderGraphFromAnalysis(pa);
@@ -1166,53 +986,14 @@
     const searchInput = document.getElementById('search-input');
 
     // ── Grid button ─────────────────────────────────────────────────────
-    // Resets to files-only grid view.
-    //
-    // Bug this fixes (PR8.2):
-    //   After a search reveals type/func nodes, clicking Grid caused the graph
-    //   to go blank. The root cause: addClass('hidden-node') on type/func nodes
-    //   was not yet reflected in Cytoscape's compound bounding-box cache when
-    //   cy.fit() ran synchronously, so the fit zoomed out to include the old
-    //   search-revealed positions → nodes appeared invisible.
-    //
-    //   Fix: runGridLayout() now calls resetHiddenPositions() (snaps hidden
-    //   children to parent position) then deferredFit() (double-rAF) so the
-    //   fit always runs after style flush with correct bounding boxes.
+    // Returns to the top-level flat file-card grid.
+    // Works from any mode (file-detail, calls) — rebuilds cy from scratch.
     if (gridBtn) {
       gridBtn.addEventListener('click', function () {
-        state.mode = 'grid';
         state.searchQuery = '';
-
-        // 1. Hide type/func nodes and calls edges
-        cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
-        cy.edges('[kind = "calls"]').addClass('hidden-edge');
-
-        // 2. Explicitly ensure ALL file nodes are visible (defensive guard)
-        cy.nodes('[kind = "file"]').removeClass('hidden-node');
-
-        // 3. Clear all visual / search state
-        cy.elements().removeClass('highlighted dimmed search-highlight muted-bg');
         if (searchInput) { searchInput.value = ''; }
-
-        // 4. Defensive: bail early if there are genuinely no file nodes
-        const files = cy.nodes('[kind = "file"]');
-        if (files.length === 0) {
-          const emptyEl = document.getElementById('empty-state');
-          if (emptyEl) { emptyEl.style.display = 'flex'; }
-          return;
-        }
-
-        // 5. Reapply muted-bg if diff exists (was cleared in step 3)
-        if (!isClean) {
-          cy.nodes().forEach(function (n) {
-            if (n.data('diffState') === 'unchanged' && !n.data('impacted')) {
-              n.addClass('muted-bg');
-            }
-          });
-        }
-
-        // 6. Run grid layout + deferred fit (handles style-flush timing)
-        runGridLayout();
+        cy.elements().removeClass('highlighted dimmed search-highlight');
+        renderFileCardView();
       });
     }
 
