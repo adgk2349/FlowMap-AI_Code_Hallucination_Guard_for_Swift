@@ -409,6 +409,7 @@
   const DETAIL_PADDING =  40; // outer viewport padding after detail/calls layout
   const PANEL_MIN_W    = 280; // minimum panel slot width  per component (calls mode)
   const PANEL_MIN_H    = 180; // minimum panel slot height per component (calls mode)
+  const TILE_GAP       =  20; // minimum gap between component tiles     (calls mode)
 
   // ── Parse embedded payload ───────────────────────────────────────────────
   const raw = document.getElementById('graph-data').textContent ?? '{}';
@@ -1622,17 +1623,27 @@
   }
 
   // ── runSpacedCallsLayout ─────────────────────────────────────────────────
-  // Redesigned Calls-mode layout: normalized component panels in a grid.
+  // Calls-mode layout: irregular dense skyline (bottom-left) packing.
   //
   // Algorithm:
   //   1. Detect file-level connected components via union-find over calls edges.
-  //   2. Run layoutComponentBFS() on each component (deterministic BFS rows).
-  //   3. Arrange components in a 1/2/3-column panel grid; each slot is clamped
-  //      to at least PANEL_MIN_W × PANEL_MIN_H; component bounding box is
-  //      centred inside its slot.
-  //   4. Fit viewport to all nodes with DETAIL_PADDING.
+  //   2. Run layoutComponentBFS() on each component (compact vertical stacking).
+  //      Immediately capture the component's bounding box dimensions.
+  //   3. Skyline packing (irregular, non-grid):
+  //      a. Sort tiles by area descending — largest tiles first, better fill.
+  //      b. Compute target row width = max(widest tile, sqrt(totalArea) × 1.2).
+  //      c. Maintain a "skyline" — a sorted list of {x, y} left-edge segments.
+  //         Segment i covers [skyline[i].x, skyline[i+1].x) at height y.
+  //      d. For each tile: try placing its left edge at every skyline breakpoint
+  //         where x ≤ maxRowW.  The effective placement y is the maximum skyline
+  //         height over the tile's footprint.  Choose minimum y; tiebreak: min x.
+  //      e. Translate the component so its bbox top-left aligns to (bestX, bestY).
+  //      f. Raise the skyline over [bestX, bestX + tileW + GAP) to bestY + tileH + GAP.
+  //   4. Fit all visible nodes with DETAIL_PADDING.
   //
-  // Column count: 1 comp → 1 col | 2–4 comps → 2 cols | 5+ comps → 3 cols.
+  // Irregular placement arises naturally: tall components create high "peaks" in
+  // the skyline; shorter components fill the "valleys" beside them, producing a
+  // dense, tetris-like composition rather than a uniform grid.
   function runSpacedCallsLayout() {
     var visibleNodes = cy.nodes(':visible');
     if (visibleNodes.length === 0) { deferredFit(cy.nodes(), DETAIL_PADDING); return; }
@@ -1682,8 +1693,6 @@
     });
 
     var groupArr = Object.values(compGroups);
-    // Largest component (most files) → first panel (top-left).
-    groupArr.sort(function (a, b) { return b.length - a.length; });
 
     // Helper: collect all cy nodes for a list of file IDs.
     function nodesForFiles(fileIds) {
@@ -1695,48 +1704,111 @@
       return col;
     }
 
-    // ── Step 2: BFS layout per component ──────────────────────────────────
-    groupArr.forEach(function (fileIds) {
-      layoutComponentBFS(nodesForFiles(fileIds));
-    });
-
-    // ── Step 3: Normalized panel grid ─────────────────────────────────────
-    var nComps = groupArr.length;
-    var nCols  = nComps <= 1 ? 1 : nComps <= 4 ? 2 : 3;
-    var PGX = COMPONENT_GAP; // panel gap X (= COMPONENT_GAP = 180)
-    var PGY = GROUP_GAP;     // panel gap Y (= GROUP_GAP     = 140)
-
-    var cursorX = 0, cursorY = 0, col = 0, rowMaxH = 0;
+    // ── Step 2: BFS layout per component; collect tiles ───────────────────
+    var tiles     = [];
+    var maxTileW  = 0;
+    var totalArea = 0;
 
     groupArr.forEach(function (fileIds) {
       var compNodes = nodesForFiles(fileIds);
+      layoutComponentBFS(compNodes);
       var bb = compNodes.boundingBox({ includeLabels: false });
       if (!bb || bb.w === 0) { return; }
+      maxTileW   = Math.max(maxTileW, bb.w);
+      totalArea += (bb.w + TILE_GAP) * (bb.h + TILE_GAP);
+      tiles.push({ compNodes: compNodes, bb: bb });
+    });
 
-      // Slot dimensions are at least PANEL_MIN_W × PANEL_MIN_H.
-      var slotW = Math.max(PANEL_MIN_W, bb.w);
-      var slotH = Math.max(PANEL_MIN_H, bb.h);
+    if (tiles.length === 0) { deferredFit(cy.nodes(), DETAIL_PADDING); return; }
 
-      // Centre the component's bounding box within its slot.
-      var slotCX = cursorX + slotW / 2;
-      var slotCY = cursorY + slotH / 2;
-      var compCX = (bb.x1 + bb.x2) / 2;
-      var compCY = (bb.y1 + bb.y2) / 2;
-      var dx = slotCX - compCX;
-      var dy = slotCY - compCY;
+    // ── Step 3: Skyline (bottom-left) packing ─────────────────────────────
+    // Largest area tiles first — harder to place later, better fill now.
+    tiles.sort(function (a, b) {
+      return (b.bb.w * b.bb.h) - (a.bb.w * a.bb.h);
+    });
 
-      compNodes.positions(function (node) {
+    // Target row width for a near-square, landscape-friendly composition.
+    var maxRowW = Math.max(maxTileW, Math.sqrt(totalArea) * 1.2);
+
+    // skyline: [{x, y}] sorted by x.
+    // Segment i covers the horizontal range [skyline[i].x, skyline[i+1].x)
+    // at height skyline[i].y.  The final segment extends to +Infinity.
+    var skyline = [{ x: 0, y: 0 }];
+
+    // Max skyline height over the range [x1, x1 + w).
+    function skyGetY(x1, w) {
+      var x2 = x1 + w, maxY = 0;
+      for (var si = 0; si < skyline.length; si++) {
+        var sl = skyline[si].x;
+        var sr = (si + 1 < skyline.length) ? skyline[si + 1].x : Infinity;
+        if (sl < x2 && sr > x1) { maxY = Math.max(maxY, skyline[si].y); }
+      }
+      return maxY;
+    }
+
+    // Skyline height at a single x point.
+    function skyYAt(px) {
+      for (var si = skyline.length - 1; si >= 0; si--) {
+        if (skyline[si].x <= px) { return skyline[si].y; }
+      }
+      return 0;
+    }
+
+    // Raise the skyline over [x1, x1 + w) to newY.
+    function skyRaise(x1, w, newY) {
+      var x2 = x1 + w;
+      // Ensure segment boundaries exist at x1 and x2.
+      [x1, x2].forEach(function (px) {
+        if (skyline.every(function (s) { return s.x !== px; })) {
+          var py = skyYAt(px), ins = false;
+          for (var si = 0; si < skyline.length; si++) {
+            if (skyline[si].x > px) {
+              skyline.splice(si, 0, { x: px, y: py });
+              ins = true; break;
+            }
+          }
+          if (!ins) { skyline.push({ x: px, y: py }); }
+        }
+      });
+      // Raise all segments fully inside [x1, x2).
+      for (var si = 0; si < skyline.length; si++) {
+        if (skyline[si].x >= x1 && skyline[si].x < x2) { skyline[si].y = newY; }
+      }
+      // Merge consecutive segments at the same height.
+      var si = 0;
+      while (si < skyline.length - 1) {
+        if (skyline[si].y === skyline[si + 1].y) {
+          skyline.splice(si + 1, 1);
+        } else { si++; }
+      }
+    }
+
+    tiles.forEach(function (t) {
+      var tw = t.bb.w + TILE_GAP; // footprint width  (tile + trailing gap)
+      var th = t.bb.h + TILE_GAP; // footprint height (tile + trailing gap)
+      var bestX = 0, bestY = Infinity;
+
+      // Evaluate every skyline breakpoint as a candidate left-edge position.
+      // Skip positions beyond maxRowW to keep the composition bounded.
+      for (var si = 0; si < skyline.length; si++) {
+        var tryX = skyline[si].x;
+        if (tryX > maxRowW) { break; }
+        var tryY = skyGetY(tryX, tw);
+        if (tryY < bestY || (tryY === bestY && tryX < bestX)) {
+          bestX = tryX; bestY = tryY;
+        }
+      }
+      if (bestY === Infinity) { bestX = 0; bestY = skyGetY(0, tw); }
+
+      // Align tile's bbox top-left to (bestX, bestY) via a uniform translation.
+      var dx = bestX - t.bb.x1;
+      var dy = bestY - t.bb.y1;
+      t.compNodes.positions(function (node) {
         return { x: node.position('x') + dx, y: node.position('y') + dy };
       });
 
-      rowMaxH  = Math.max(rowMaxH, slotH);
-      cursorX += slotW + PGX;
-      col++;
-      if (col >= nCols) {
-        col = 0; cursorX = 0;
-        cursorY += rowMaxH + PGY;
-        rowMaxH = 0;
-      }
+      // Raise the skyline over this tile's footprint (including trailing gap).
+      skyRaise(bestX, tw, bestY + th);
     });
 
     deferredFit(cy.nodes(), DETAIL_PADDING);
