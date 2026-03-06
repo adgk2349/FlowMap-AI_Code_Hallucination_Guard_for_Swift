@@ -125,6 +125,39 @@
         margin-bottom: 6px;
         letter-spacing: 0.04em;
       }
+      /* ── Detail mode header (file name context, shown below toolbar) ────── */
+      #detail-header {
+        display: none;
+        position: absolute;
+        top: 46px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #8899bb;
+        font-size: 11px;
+        font-weight: 500;
+        pointer-events: none;
+        z-index: 10;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 60%;
+        text-align: center;
+        letter-spacing: 0.02em;
+      }
+      /* ── Node tooltip (full label on hover for truncated labels) ─────────── */
+      #cy-tooltip {
+        display: none;
+        position: fixed;
+        background: rgba(15, 17, 23, 0.97);
+        border: 1px solid #3a3a4a;
+        border-radius: 4px;
+        color: #c8d0e0;
+        font-size: 10px;
+        padding: 3px 8px;
+        pointer-events: none;
+        z-index: 200;
+        white-space: nowrap;
+      }
       /* ── Status badge (top-left) ────────────────────────────────────────── */
       #status-badge {
         position: absolute;
@@ -192,15 +225,20 @@
     <div id="license-badge"></div>
     <!-- Toolbar: search + layout switcher buttons (top-centre) -->
     <div id="toolbar">
+      <button id="btn-back" style="display:none;">← Back</button>
       <input type="text" id="search-input" placeholder="Search nodes…" />
-      <button id="btn-grid">Grid</button>
+      <button id="btn-overview">Overview</button>
       <button id="btn-calls">Calls</button>
       <button id="btn-fit">Fit</button>
     </div>
+    <!-- Detail mode context: file name shown below toolbar in file-detail mode -->
+    <div id="detail-header"></div>
     <!-- Legend: top-right, positioned below toolbar so they don't overlap -->
     <div id="legend">
       <div id="legend-title">LEGEND</div>
     </div>
+    <!-- Tooltip: full label on hover for truncated node labels -->
+    <div id="cy-tooltip"></div>
     <script type="application/json" id="graph-data">{{GRAPH_DATA}}</script>
     <script src="{{CY_JS_URI}}"></script>
     <script src="{{GRAPH_JS_URI}}"></script>

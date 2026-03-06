@@ -259,7 +259,7 @@
   // Separate from the payload's analysis.view (which is diff/impact mode).
   // Tracks which layout mode the user has actively selected.
   const state = {
-    mode: 'files',       // 'files' | 'file-detail' | 'calls'
+    mode: 'overview',    // 'overview' | 'file-detail' | 'calls'
     detailFileId: null,  // id of file currently shown in 'file-detail' mode
     searchQuery: '',     // active search text; '' means no search active
   };
@@ -602,8 +602,9 @@
     cy.elements().remove();
     cy.add(flatElements);
 
-    state.mode = 'files';
+    state.mode = 'overview';
     state.detailFileId = null;
+    updateToolbarForMode('overview');
 
     console.log(
       '[FlowMapDebug] renderFileCardView after cy.add: total=' + cy.nodes().length +
@@ -714,6 +715,14 @@
 
     const emptyEl = document.getElementById('empty-state');
     if (emptyEl) { emptyEl.style.display = 'none'; }
+
+    // Show file name as context header below the toolbar
+    const detailHeader = document.getElementById('detail-header');
+    if (detailHeader) {
+      detailHeader.textContent = fileData.name ?? fileNodeId;
+      detailHeader.style.display = 'block';
+    }
+    updateToolbarForMode('file-detail');
 
     cy.elements().remove();
     cy.add(detailElements);
@@ -1077,8 +1086,8 @@
 
     cy.elements().removeClass('highlighted dimmed');
 
-    if (state.mode === 'files') {
-      // Flat file-card view: clicking a file card drills into its type/func detail.
+    if (state.mode === 'overview') {
+      // Overview: clicking a file card drills into its type/func detail.
       // showFileDetail() also handles the openFile postMessage internally.
       if (kind === 'file') {
         showFileDetail(node.id());
@@ -1134,17 +1143,44 @@
   // ═══════════════════════════════════════════════════════════════════════════
   // Toolbar
   // ═══════════════════════════════════════════════════════════════════════════
+  // ── updateToolbarForMode ─────────────────────────────────────────────────
+  // Toggles the Back button visibility and hides the detail header when
+  // leaving file-detail mode.  Called after every mode switch.
+  function updateToolbarForMode(mode) {
+    const backBtn = document.getElementById('btn-back');
+    const detailHeader = document.getElementById('detail-header');
+    if (backBtn) {
+      backBtn.style.display = (mode === 'file-detail') ? '' : 'none';
+    }
+    if (detailHeader && mode !== 'file-detail') {
+      detailHeader.style.display = 'none';
+    }
+  }
+
   (function initToolbar() {
-    const gridBtn = document.getElementById('btn-grid');
+    const overviewBtn = document.getElementById('btn-overview');
+    const backBtn = document.getElementById('btn-back');
     const callsBtn = document.getElementById('btn-calls');
     const fitBtn = document.getElementById('btn-fit');
     const searchInput = document.getElementById('search-input');
 
-    // ── Grid button ─────────────────────────────────────────────────────
-    // Returns to the top-level flat file-card grid.
+    // ── Overview button ─────────────────────────────────────────────────
+    // Returns to the top-level flat file-card overview.
     // Works from any mode (file-detail, calls) — rebuilds cy from scratch.
-    if (gridBtn) {
-      gridBtn.addEventListener('click', function () {
+    if (overviewBtn) {
+      overviewBtn.addEventListener('click', function () {
+        state.searchQuery = '';
+        if (searchInput) { searchInput.value = ''; }
+        cy.elements().removeClass('highlighted dimmed search-highlight');
+        renderFileCardView();
+      });
+    }
+
+    // ── Back button ─────────────────────────────────────────────────────
+    // Navigates back from file-detail to overview.
+    // Only visible when state.mode === 'file-detail'.
+    if (backBtn) {
+      backBtn.addEventListener('click', function () {
         state.searchQuery = '';
         if (searchInput) { searchInput.value = ''; }
         cy.elements().removeClass('highlighted dimmed search-highlight');
@@ -1160,6 +1196,7 @@
     if (callsBtn) {
       callsBtn.addEventListener('click', function () {
         state.mode = 'calls';
+        updateToolbarForMode('calls');
         state.searchQuery = '';
         if (searchInput) { searchInput.value = ''; }
 
@@ -1224,8 +1261,8 @@
 
         if (!query) { return; }
 
-        if (state.mode === 'files') {
-          // ── Files mode: match file cards, plus indirect type/func hits ──
+        if (state.mode === 'overview') {
+          // ── Overview mode: match file cards, plus indirect type/func hits ──
           const fileMatchIds = new Set();
 
           // Direct matches on file card labels
