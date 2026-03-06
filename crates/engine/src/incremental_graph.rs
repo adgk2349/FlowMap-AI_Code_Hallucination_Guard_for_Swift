@@ -17,25 +17,27 @@ pub fn build_old_fragment(
     changed_files: &[PathBuf],
     binary: &str,
 ) -> BuiltGraph {
+    use rayon::prelude::*;
+
+    let parsed_graphs: Vec<swift_bridge::SwiftGraph> = changed_files
+        .par_iter()
+        .filter_map(|file| {
+            // Fetch the committed version of this file
+            let content = crate::git_diff::head_content(workspace_root, file)?;
+
+            // Write the content to a temp file so the Swift parser can read it
+            let mut tmp = NamedTempFile::new().ok()?;
+            if tmp.write_all(content.as_bytes()).is_err() {
+                return None;
+            }
+
+            swift_bridge::parse_swift_file(binary, tmp.path())
+        })
+        .collect();
+
     let mut graph = BuiltGraph::default();
-
-    for file in changed_files {
-        // Fetch the committed version of this file
-        let Some(content) = crate::git_diff::head_content(workspace_root, file) else {
-            continue; // new file — no HEAD version to parse
-        };
-
-        // Write the content to a temp file so the Swift parser can read it
-        let Ok(mut tmp) = NamedTempFile::new() else {
-            continue;
-        };
-        if tmp.write_all(content.as_bytes()).is_err() {
-            continue;
-        }
-
-        if let Some(sg) = swift_bridge::parse_swift_file(binary, tmp.path()) {
-            graph.merge(sg);
-        }
+    for sg in parsed_graphs {
+        graph.merge(sg);
     }
 
     graph
@@ -44,12 +46,16 @@ pub fn build_old_fragment(
 /// Parse the **current working-tree** version of each file in `changed_files`,
 /// building a graph fragment that represents the files *after* the edits.
 pub fn build_new_fragment(changed_files: &[PathBuf], binary: &str) -> BuiltGraph {
-    let mut graph = BuiltGraph::default();
+    use rayon::prelude::*;
 
-    for file in changed_files {
-        if let Some(sg) = swift_bridge::parse_swift_file(binary, file) {
-            graph.merge(sg);
-        }
+    let parsed_graphs: Vec<swift_bridge::SwiftGraph> = changed_files
+        .par_iter()
+        .filter_map(|file| swift_bridge::parse_swift_file(binary, file))
+        .collect();
+
+    let mut graph = BuiltGraph::default();
+    for sg in parsed_graphs {
+        graph.merge(sg);
     }
 
     graph
@@ -58,10 +64,10 @@ pub fn build_new_fragment(changed_files: &[PathBuf], binary: &str) -> BuiltGraph
 /// Apply an incremental update to `old_graph`: remove all nodes and edges that
 /// belong to `changed_files`, then re-parse those files from disk and merge
 /// the fresh results.
-#[allow(dead_code)]
 ///
 /// This is useful when the caller already holds a cached workspace-level graph
 /// and wants to avoid a full re-parse of the entire workspace.
+#[allow(dead_code)]
 pub fn update_graph(
     mut old_graph: BuiltGraph,
     changed_files: &[PathBuf],

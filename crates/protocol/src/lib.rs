@@ -33,25 +33,16 @@ pub enum Severity {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum NodeKind {
-    Module,
+    File,
     Type,
-    Function,
-    Variable,
-    Parameter,
-    Return,
-    Property,
+    Func,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "lowercase")]
 pub enum EdgeKind {
-    Call,
-    Assign,
-    ReferenceRead,
-    ReferenceWrite,
-    Return,
-    PropertyGet,
-    PropertySet,
+    Contains,
+    Calls,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

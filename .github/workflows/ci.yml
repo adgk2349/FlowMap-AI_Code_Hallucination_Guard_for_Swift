@@ -27,5 +27,22 @@ jobs:
       - name: Run tests
         run: cargo test
 
-      - name: Build
+      - name: Build Rust engine
         run: cargo build
+
+      - name: Build Swift AST parser
+        run: |
+          cd parsers/swift-ast
+          swift build -c release
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build & Lint VS Code Extension
+        run: |
+          cd editor/vscode
+          npm ci
+          npm run compile
+          npm run lint

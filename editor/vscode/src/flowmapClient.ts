@@ -59,6 +59,8 @@ const ENGINE_TIMEOUT_MS = 15_000;
 export class FlowmapClient {
   private readonly configuredBinary: string;
   private activeProc: ChildProcess | undefined;
+  private stdoutBuffer: string = '';
+  private pendingRequests = new Map<string, (result: FlowAnalysis | undefined) => void>();
 
   constructor() {
     const config = vscode.workspace.getConfiguration('flowmap');
@@ -66,138 +68,139 @@ export class FlowmapClient {
     this.configuredBinary = config.get<string>('binaryPath', '');
   }
 
-  analyze(
-    workspacePath: string,
-    extensionPath: string
-  ): Promise<FlowAnalysis | undefined> {
-    // Priority: explicit setting > extension-relative path (works in any project)
+  private getOrSpawnProcess(extensionPath: string): ChildProcess {
+    if (this.activeProc && !this.activeProc.killed) {
+      return this.activeProc;
+    }
+
     const binary =
       this.configuredBinary ||
       path.join(extensionPath, '..', '..', 'target', 'debug', 'flowmap');
 
+    this.activeProc = spawn(binary, [], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    this.stdoutBuffer = '';
+
+    // --- Error handlers ---
+    this.activeProc.stdin?.on('error', (err: Error) => {
+      console.warn('[flowmap] stdin error (ignored):', err.message);
+    });
+
+    this.activeProc.stdout?.on('error', (err: Error) => {
+      console.warn('[flowmap] stdout error (ignored):', err.message);
+    });
+
+    this.activeProc.stderr?.on('error', (err: Error) => {
+      console.warn('[flowmap] stderr error (ignored):', err.message);
+    });
+
+    this.activeProc.on('error', (err: Error) => {
+      vscode.window.showErrorMessage(`FlowMap: Engine process error — ${err.message}`);
+      this.rejectAllPending();
+      this.activeProc = undefined;
+    });
+
+    this.activeProc.on('close', (code: number | null) => {
+      if (code !== 0 && code !== null) {
+        vscode.window.showErrorMessage(`FlowMap: Engine exited with code ${code}.`);
+      }
+      this.rejectAllPending();
+      this.activeProc = undefined;
+    });
+
+    // --- Data collection ---
+    this.activeProc.stdout?.on('data', (chunk: Buffer) => {
+      this.stdoutBuffer += chunk.toString();
+      this.processBuffer();
+    });
+
+    this.activeProc.stderr?.on('data', (chunk: Buffer) => {
+      console.error('[flowmap]', chunk.toString());
+    });
+
+    return this.activeProc;
+  }
+
+  private rejectAllPending() {
+    for (const resolve of this.pendingRequests.values()) {
+      resolve(undefined);
+    }
+    this.pendingRequests.clear();
+  }
+
+  private processBuffer() {
+    let newlineIndex: number;
+    while ((newlineIndex = this.stdoutBuffer.indexOf('\n')) !== -1) {
+      const line = this.stdoutBuffer.slice(0, newlineIndex).trim();
+      this.stdoutBuffer = this.stdoutBuffer.slice(newlineIndex + 1);
+
+      if (line.length === 0) { continue; }
+
+      try {
+        const resp = JSON.parse(line) as {
+          requestId?: string;
+          ok: boolean;
+          payload?: {
+            graph?: FlowGraph;
+            diff?: FlowDiff;
+            impact?: string[];
+          };
+          error?: { message?: string };
+        };
+
+        if (resp.requestId) {
+          const resolve = this.pendingRequests.get(resp.requestId);
+          if (resolve) {
+            this.pendingRequests.delete(resp.requestId);
+            if (resp.ok && resp.payload?.graph) {
+              resolve({
+                graph: resp.payload.graph,
+                diff: resp.payload.diff ?? EMPTY_DIFF,
+                impact: resp.payload.impact ?? [],
+              });
+            } else {
+              vscode.window.showErrorMessage(`FlowMap: Engine error — ${resp.error?.message ?? 'unknown'}`);
+              resolve(undefined);
+            }
+          }
+        }
+      } catch {
+        console.error('[flowmap] Failed to parse engine response:', line);
+      }
+    }
+  }
+
+  analyze(
+    workspacePath: string,
+    extensionPath: string
+  ): Promise<FlowAnalysis | undefined> {
     return new Promise((resolve) => {
+      const proc = this.getOrSpawnProcess(extensionPath);
+      const reqId = crypto.randomUUID();
+      this.pendingRequests.set(reqId, resolve);
+
       const request =
         JSON.stringify({
           protocolVersion: '0.1',
-          requestId: crypto.randomUUID(),
+          requestId: reqId,
           cmd: 'analyze',
           payload: { path: workspacePath },
         }) + '\n';
 
-      const proc = spawn(binary, [], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-      this.activeProc = proc;
-
-      let stdout = '';
-      let settled = false;
+      proc.stdin?.write(request);
 
       // --- Timeout guard ---
-      const timer = setTimeout(() => {
-        if (!settled) {
-          settled = true;
-          proc.kill('SIGTERM');
+      setTimeout(() => {
+        if (this.pendingRequests.has(reqId)) {
+          this.pendingRequests.delete(reqId);
           vscode.window.showErrorMessage(
             `FlowMap: Engine timed out after ${ENGINE_TIMEOUT_MS / 1000}s.`
           );
           resolve(undefined);
         }
       }, ENGINE_TIMEOUT_MS);
-
-      // --- Pipe error handlers (prevents uncaught SIGPIPE) ---
-      proc.stdin?.on('error', (err: Error) => {
-        console.warn('[flowmap] stdin error (ignored):', err.message);
-      });
-
-      proc.stdout?.on('error', (err: Error) => {
-        console.warn('[flowmap] stdout error (ignored):', err.message);
-      });
-
-      proc.stderr?.on('error', (err: Error) => {
-        console.warn('[flowmap] stderr error (ignored):', err.message);
-      });
-
-      // --- Data collection ---
-      proc.stdout?.on('data', (chunk: Buffer) => {
-        stdout += chunk.toString();
-      });
-
-      proc.stderr?.on('data', (chunk: Buffer) => {
-        console.error('[flowmap]', chunk.toString());
-      });
-
-      // --- Spawn failure ---
-      proc.on('error', (err: Error) => {
-        clearTimeout(timer);
-        if (!settled) {
-          settled = true;
-          vscode.window.showErrorMessage(
-            `FlowMap: Failed to start engine — ${err.message}`
-          );
-          resolve(undefined);
-        }
-      });
-
-      // --- Process exit ---
-      proc.on('close', (code: number | null) => {
-        clearTimeout(timer);
-        this.activeProc = undefined;
-
-        if (settled) {
-          return;
-        }
-        settled = true;
-
-        if (code !== 0 && code !== null) {
-          vscode.window.showErrorMessage(
-            `FlowMap: Engine exited with code ${code}.`
-          );
-          resolve(undefined);
-          return;
-        }
-
-        try {
-          const lines = stdout.split('\n').filter((l) => l.trim().length > 0);
-          if (lines.length === 0) {
-            vscode.window.showErrorMessage(
-              'FlowMap: Engine returned empty response.'
-            );
-            resolve(undefined);
-            return;
-          }
-          const resp = JSON.parse(lines[lines.length - 1]) as {
-            ok: boolean;
-            payload?: {
-              graph?: FlowGraph;
-              diff?: FlowDiff;
-              impact?: string[];
-            };
-            error?: { message?: string };
-          };
-          if (resp.ok && resp.payload?.graph) {
-            resolve({
-              graph: resp.payload.graph,
-              diff: resp.payload.diff ?? EMPTY_DIFF,
-              impact: resp.payload.impact ?? [],
-            });
-          } else {
-            vscode.window.showErrorMessage(
-              `FlowMap: Engine error — ${resp.error?.message ?? 'unknown'}`
-            );
-            resolve(undefined);
-          }
-        } catch {
-          vscode.window.showErrorMessage(
-            'FlowMap: Failed to parse engine response.'
-          );
-          resolve(undefined);
-        }
-      });
-
-      // --- Send request (write callback ensures ordering) ---
-      proc.stdin?.write(request, () => {
-        proc.stdin?.end();
-      });
     });
   }
 
@@ -210,5 +213,6 @@ export class FlowmapClient {
       this.activeProc.kill('SIGTERM');
       this.activeProc = undefined;
     }
+    this.rejectAllPending();
   }
 }

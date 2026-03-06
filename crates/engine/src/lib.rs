@@ -137,11 +137,16 @@ fn build_swift_graph(workspace_path: &str, binary: &str) -> BuiltGraph {
         return BuiltGraph::default();
     }
 
+    use rayon::prelude::*;
+
+    let parsed_graphs: Vec<swift_bridge::SwiftGraph> = swift_files
+        .par_iter()
+        .filter_map(|file| swift_bridge::parse_swift_file(binary, file))
+        .collect();
+
     let mut global = BuiltGraph::default();
-    for file in &swift_files {
-        if let Some(file_graph) = swift_bridge::parse_swift_file(binary, file) {
-            global.merge(file_graph);
-        }
+    for sg in parsed_graphs {
+        global.merge(sg);
     }
     global
 }
