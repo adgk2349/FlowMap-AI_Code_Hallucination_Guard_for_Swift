@@ -1,3 +1,5 @@
+> **PUBLIC BETA NOTICE (March 8, 2026):** FlowMap is in public beta. Licensing is currently local/dev-only preview (no production server-side entitlement enforcement yet).
+
 # FlowMap
 
 > Swift code graph and impact analysis tool — understand and verify code structure, especially when reviewing AI-generated changes.
@@ -5,8 +7,6 @@
 [![CI](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml)
 
 [한국어](README.ko.md) · [日本語](README.ja.md)
-
-**Status: Public Beta**
 
 ## What is FlowMap?
 
@@ -162,6 +162,13 @@ Detailed public beta validation (`reports/public-beta-validation-detail.md`):
 ## License
 
 FlowMap is source-available.
+
+### Public Beta licensing note
+
+- License validation is currently local-only scaffolding for beta testing.
+- Production-grade server-side entitlement enforcement is not implemented yet.
+- Pro licensing/payment enforcement will be introduced before GA.
+- Commercial usage policy remains in effect during beta.
 
 **Swift support**
 - Personal and non-commercial use: free

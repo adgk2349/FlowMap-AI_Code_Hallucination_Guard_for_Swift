@@ -1,3 +1,5 @@
+> **퍼블릭 베타 공지 (2026년 3월 8일):** FlowMap은 퍼블릭 베타 단계입니다. 라이선스 검증은 현재 로컬/개발용 프리뷰이며, 프로덕션 서버 강제 검증은 아직 구현되지 않았습니다.
+
 # FlowMap
 
 > Swift 코드의 구조와 호출 관계를 그래프로 분석하는 도구입니다. AI가 생성한 코드 변경을 검증할 때 특히 유용합니다.
@@ -5,8 +7,6 @@
 [![CI](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml)
 
 [English](README.md) · [日本語](README.ja.md)
-
-**상태: Public Beta**
 
 ## FlowMap이란?
 
@@ -162,6 +162,13 @@ node scripts/run_commit_replay.mjs \
 ## 라이선스
 
 FlowMap은 source-available 방식으로 제공됩니다.
+
+### Public Beta 라이선스 안내
+
+- 현재 라이선스 검증은 베타 테스트용 로컬 스캐폴딩입니다.
+- 프로덕션 수준의 서버 사이드 권한 강제는 아직 미구현 상태입니다.
+- Pro 라이선스/결제 강제는 GA(정식 출시) 전에 도입됩니다.
+- 베타 기간에도 상업적 사용 정책 자체는 유효합니다.
 
 **Swift 지원**
 - 개인 및 비상업적 사용: 무료
