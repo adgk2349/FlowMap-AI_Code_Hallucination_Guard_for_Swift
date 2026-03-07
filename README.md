@@ -87,6 +87,9 @@ swift build -c release
 cd ../..
 ```
 
+> Note: replay/scenario validation scripts look for the parser binary at `parsers/swift-ast/.build/debug/flowmap-swift-ast`.  
+> If you run those scripts, also build debug once: `cd parsers/swift-ast && swift build -c debug`.
+
 **4. Compile the VS Code extension**
 
 ```bash
@@ -103,6 +106,10 @@ cd ../..
 3. In the new VS Code window, open a Swift workspace
 4. Run **FlowMap: Analyze Workspace** from the command palette (`Cmd+Shift+P`)
 5. Open the **FlowMap Graph** panel
+
+### Run from VSIX (installed extension)
+
+If you install FlowMap via `.vsix`, set `flowmap.binaryPath` to your built engine binary path (for example: `/path/to/FlowMap/target/debug/flowmap`), then run **FlowMap: Analyze Workspace**.
 
 ## Usage
 

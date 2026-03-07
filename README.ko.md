@@ -87,6 +87,9 @@ swift build -c release
 cd ../..
 ```
 
+> 참고: 리플레이/시나리오 검증 스크립트는 `parsers/swift-ast/.build/debug/flowmap-swift-ast` 경로를 사용합니다.  
+> 해당 스크립트를 실행할 경우 debug 빌드도 1회 필요합니다: `cd parsers/swift-ast && swift build -c debug`.
+
 **4. VS Code 확장 컴파일**
 
 ```bash
@@ -103,6 +106,10 @@ cd ../..
 3. 새로 열린 VS Code 창에서 Swift 워크스페이스를 엽니다
 4. 커맨드 팔레트에서 **FlowMap: Analyze Workspace**를 실행합니다 (`Cmd+Shift+P`)
 5. **FlowMap Graph** 패널을 엽니다
+
+### VSIX 설치 버전 실행
+
+`.vsix`로 설치한 경우 `flowmap.binaryPath`를 빌드된 엔진 경로(예: `/path/to/FlowMap/target/debug/flowmap`)로 설정한 뒤 **FlowMap: Analyze Workspace**를 실행하세요.
 
 ## 사용 방법
 
