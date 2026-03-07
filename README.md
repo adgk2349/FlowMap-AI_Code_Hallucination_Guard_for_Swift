@@ -161,23 +161,13 @@ Detailed public beta validation (`reports/public-beta-validation-detail.md`):
 
 ## License
 
-FlowMap is source-available.
+FlowMap is currently in **public beta**.
 
-### Public Beta licensing note
+Final licensing terms (including commercial terms) will be announced after the beta period.
 
-- License validation is currently local-only scaffolding for beta testing.
-- Production-grade server-side entitlement enforcement is not implemented yet.
-- Pro licensing/payment enforcement will be introduced before GA.
-- Commercial usage policy remains in effect during beta.
+Until then, all rights are reserved by the author, except that evaluation use for the public beta is permitted.
 
-**Swift support**
-- Personal and non-commercial use: free
-- Commercial, team, or company use: a license is required
-
-**Other languages**
-Additional language support may be provided as separate commercial plugins in the future.
-
-For commercial licensing inquiries, contact: adgk2349b@gmail.com
+For commercial use or redistribution, please contact: adgk2349b@gmail.com
 
 ## Roadmap
 
