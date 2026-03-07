@@ -249,6 +249,18 @@ export class GraphView {
     const jsUri = webview.asWebviewUri(
       vscode.Uri.file(path.join(context.extensionPath, 'webview', 'graph.js'))
     );
+    const stateJsUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(context.extensionPath, 'webview', 'graph.state.js'))
+    );
+    const layoutsJsUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(context.extensionPath, 'webview', 'graph.layouts.js'))
+    );
+    const modesJsUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(context.extensionPath, 'webview', 'graph.modes.js'))
+    );
+    const eventsJsUri = webview.asWebviewUri(
+      vscode.Uri.file(path.join(context.extensionPath, 'webview', 'graph.events.js'))
+    );
 
     const cyUri = webview.asWebviewUri(
       vscode.Uri.file(path.join(context.extensionPath, 'node_modules', 'cytoscape', 'dist', 'cytoscape.min.js'))
@@ -263,6 +275,10 @@ export class GraphView {
       .readFileSync(htmlPath, 'utf8')
       .replace('{{CSP_SOURCE}}', webview.cspSource)
       .replace('{{GRAPH_JS_URI}}', jsUri.toString())
+      .replace('{{GRAPH_STATE_JS_URI}}', stateJsUri.toString())
+      .replace('{{GRAPH_LAYOUTS_JS_URI}}', layoutsJsUri.toString())
+      .replace('{{GRAPH_MODES_JS_URI}}', modesJsUri.toString())
+      .replace('{{GRAPH_EVENTS_JS_URI}}', eventsJsUri.toString())
       .replace('{{CY_JS_URI}}', cyUri.toString())
       .replace('{{GRAPH_DATA}}', safeJson);
   }
