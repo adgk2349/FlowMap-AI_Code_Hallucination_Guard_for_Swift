@@ -1153,9 +1153,9 @@
   }
 
   // ── showFileDetail ────────────────────────────────────────────────────────
-  // Drills into a single file: shows its type nodes as top-level flat cards,
-  // with a file context card above them.  Func nodes start hidden; clicking a
-  // type expands/collapses its funcs.  Press Back/Overview to return.
+  // Drills into a single file: shows its type nodes as top-level flat cards
+  // with a file context card above them. Func nodes are visible by default,
+  // and clicking a type toggles its child funcs. Press Back/Overview to return.
   //
   // Rebuilt entirely from the raw analysis graph — does NOT depend on whatever
   // nodes are currently in the Cytoscape instance (overview virtual nodes etc).
