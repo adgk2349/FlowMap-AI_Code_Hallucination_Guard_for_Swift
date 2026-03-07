@@ -1,0 +1,8 @@
+# Keep package minimal for release VSIX
+**/*
+
+!package.json
+!LICENSE
+!out/**
+!webview/**
+!node_modules/cytoscape/**

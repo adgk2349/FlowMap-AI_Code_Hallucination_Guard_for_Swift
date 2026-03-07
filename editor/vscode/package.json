@@ -3,6 +3,10 @@
   "displayName": "FlowMap",
   "description": "Call-graph visualization for AI-generated Swift code",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adgk2349/FlowMap.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
