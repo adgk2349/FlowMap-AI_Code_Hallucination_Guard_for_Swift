@@ -1,0 +1,324 @@
+{
+  "created_at": "2026-03-07T19:30:58.208Z",
+  "mode": "public-beta-validation-detail",
+  "inputs": {
+    "replay_reports": [
+      "/Users/seungminlee/Desktop/Development/FlowMap/reports/replay-heavy-swift-full-strict.json",
+      "/Users/seungminlee/Desktop/Development/FlowMap/reports/replay-flowmap-75.json",
+      "/Users/seungminlee/Desktop/Development/FlowMap/reports/replay-kdecoder.json"
+    ],
+    "scenario_report": "/Users/seungminlee/Desktop/Development/FlowMap/reports/sample-scenarios-report.json"
+  },
+  "replay": {
+    "totals": {
+      "total_pairs": 209,
+      "swift_pairs": 112,
+      "non_swift_pairs": 97,
+      "tp": 106,
+      "tn": 97,
+      "fp": 0,
+      "fn": 6,
+      "pass_pairs": 203,
+      "warn_pairs": 6,
+      "failed_pairs": 0,
+      "error_pairs": 0
+    },
+    "metrics": {
+      "non_swift_fp_rate": 0,
+      "swift_detection_rate": 0.9464,
+      "overall_match_rate": 0.9713
+    },
+    "reports": [
+      {
+        "report": "replay-heavy-swift-full-strict.json",
+        "repo": "flowmap-heavy-swift-repo",
+        "strict_swift": true,
+        "total_pairs": 120,
+        "swift_pairs": 100,
+        "non_swift_pairs": 20,
+        "confusion": {
+          "tp": 100,
+          "tn": 20,
+          "fp": 0,
+          "fn": 0
+        },
+        "pass_pairs": 120,
+        "warn_pairs": 0,
+        "failed_pairs": 0,
+        "error_pairs": 0,
+        "non_swift_fp_rate": 0,
+        "swift_detection_rate": 1,
+        "gate": {
+          "max_non_swift_fp_rate": 0,
+          "max_errors": 0,
+          "strict_swift_required": true
+        },
+        "gate_passed": true
+      },
+      {
+        "report": "replay-flowmap-75.json",
+        "repo": "FlowMap",
+        "strict_swift": false,
+        "total_pairs": 74,
+        "swift_pairs": 4,
+        "non_swift_pairs": 70,
+        "confusion": {
+          "tp": 4,
+          "tn": 70,
+          "fp": 0,
+          "fn": 0
+        },
+        "pass_pairs": 74,
+        "warn_pairs": 0,
+        "failed_pairs": 0,
+        "error_pairs": 0,
+        "non_swift_fp_rate": 0,
+        "swift_detection_rate": 1,
+        "gate": {
+          "max_non_swift_fp_rate": 0,
+          "max_errors": 0,
+          "strict_swift_required": false
+        },
+        "gate_passed": true
+      },
+      {
+        "report": "replay-kdecoder.json",
+        "repo": "KDecoder",
+        "strict_swift": false,
+        "total_pairs": 15,
+        "swift_pairs": 8,
+        "non_swift_pairs": 7,
+        "confusion": {
+          "tp": 2,
+          "tn": 7,
+          "fp": 0,
+          "fn": 6
+        },
+        "pass_pairs": 9,
+        "warn_pairs": 6,
+        "failed_pairs": 0,
+        "error_pairs": 0,
+        "non_swift_fp_rate": 0,
+        "swift_detection_rate": 0.25,
+        "gate": {
+          "max_non_swift_fp_rate": 0,
+          "max_errors": 0,
+          "strict_swift_required": false
+        },
+        "gate_passed": true
+      }
+    ],
+    "non_pass_summary": {
+      "count": 6,
+      "by_status": {
+        "warn_swift_no_graph_change": 6
+      }
+    },
+    "non_pass_cases": [
+      {
+        "repo": "KDecoder",
+        "report": "replay-kdecoder.json",
+        "level": "warn",
+        "status": "warn_swift_no_graph_change",
+        "prev": "ac97c6859b000be3a354dc3808745fb363f7abdb",
+        "curr": "0bbee279dc78c61e3ce1462ea9a90f05d4583840",
+        "commit": {
+          "short": "0bbee27",
+          "hash": "0bbee279dc78c61e3ce1462ea9a90f05d4583840",
+          "subject": "Bump version to v2.0.1",
+          "author": "adgk2349",
+          "date": "2026-03-02T23:51:44+09:00"
+        },
+        "swift_changed": true,
+        "swift_files": [
+          "KDecoder/View/ContentView.swift"
+        ],
+        "engine_changed": false,
+        "expected_changed": false,
+        "counts": {
+          "added_nodes": 0,
+          "removed_nodes": 0,
+          "changed_nodes": 0,
+          "added_edges": 0,
+          "removed_edges": 0,
+          "impact": 0
+        }
+      },
+      {
+        "repo": "KDecoder",
+        "report": "replay-kdecoder.json",
+        "level": "warn",
+        "status": "warn_swift_no_graph_change",
+        "prev": "9472679eeda62d29422e2c28d37962b72cb7047e",
+        "curr": "dacbd2e2628f36c618f2cd1b04d3dc429bc1e5b5",
+        "commit": {
+          "short": "dacbd2e",
+          "hash": "dacbd2e2628f36c618f2cd1b04d3dc429bc1e5b5",
+          "subject": "Translate README to Korean, add quit button",
+          "author": "adgk2349",
+          "date": "2026-03-03T00:00:26+09:00"
+        },
+        "swift_changed": true,
+        "swift_files": [
+          "KDecoder/View/ContentView.swift"
+        ],
+        "engine_changed": false,
+        "expected_changed": false,
+        "counts": {
+          "added_nodes": 0,
+          "removed_nodes": 0,
+          "changed_nodes": 0,
+          "added_edges": 0,
+          "removed_edges": 0,
+          "impact": 0
+        }
+      },
+      {
+        "repo": "KDecoder",
+        "report": "replay-kdecoder.json",
+        "level": "warn",
+        "status": "warn_swift_no_graph_change",
+        "prev": "dacbd2e2628f36c618f2cd1b04d3dc429bc1e5b5",
+        "curr": "32eb843be13f8a57db450371ba2b600273653546",
+        "commit": {
+          "short": "32eb843",
+          "hash": "32eb843be13f8a57db450371ba2b600273653546",
+          "subject": "Move quit button to bottom bar with visible glassEffect style",
+          "author": "adgk2349",
+          "date": "2026-03-03T00:05:11+09:00"
+        },
+        "swift_changed": true,
+        "swift_files": [
+          "KDecoder/View/ContentView.swift"
+        ],
+        "engine_changed": false,
+        "expected_changed": false,
+        "counts": {
+          "added_nodes": 0,
+          "removed_nodes": 0,
+          "changed_nodes": 0,
+          "added_edges": 0,
+          "removed_edges": 0,
+          "impact": 0
+        }
+      },
+      {
+        "repo": "KDecoder",
+        "report": "replay-kdecoder.json",
+        "level": "warn",
+        "status": "warn_swift_no_graph_change",
+        "prev": "32eb843be13f8a57db450371ba2b600273653546",
+        "curr": "9ce4f79c4ef454433fb8e4d8b261834b010ef174",
+        "commit": {
+          "short": "9ce4f79",
+          "hash": "9ce4f79c4ef454433fb8e4d8b261834b010ef174",
+          "subject": "Rearrange layout: version beside title, quit top-right, checkbox bottom-right",
+          "author": "adgk2349",
+          "date": "2026-03-03T00:08:30+09:00"
+        },
+        "swift_changed": true,
+        "swift_files": [
+          "KDecoder/View/ContentView.swift"
+        ],
+        "engine_changed": false,
+        "expected_changed": false,
+        "counts": {
+          "added_nodes": 0,
+          "removed_nodes": 0,
+          "changed_nodes": 0,
+          "added_edges": 0,
+          "removed_edges": 0,
+          "impact": 0
+        }
+      },
+      {
+        "repo": "KDecoder",
+        "report": "replay-kdecoder.json",
+        "level": "warn",
+        "status": "warn_swift_no_graph_change",
+        "prev": "34ae261cb34b953be0b96c8b94db7038d8b7d121",
+        "curr": "014d377246c4350361321f22246c16c17ee77fc6",
+        "commit": {
+          "short": "014d377",
+          "hash": "014d377246c4350361321f22246c16c17ee77fc6",
+          "subject": "Update repository links to reflect rename to KDecoder-for-Mac",
+          "author": "adgk2349",
+          "date": "2026-03-03T00:53:28+09:00"
+        },
+        "swift_changed": true,
+        "swift_files": [
+          "KDecoder/View/AboutView.swift"
+        ],
+        "engine_changed": false,
+        "expected_changed": false,
+        "counts": {
+          "added_nodes": 0,
+          "removed_nodes": 0,
+          "changed_nodes": 0,
+          "added_edges": 0,
+          "removed_edges": 0,
+          "impact": 0
+        }
+      },
+      {
+        "repo": "KDecoder",
+        "report": "replay-kdecoder.json",
+        "level": "warn",
+        "status": "warn_swift_no_graph_change",
+        "prev": "014d377246c4350361321f22246c16c17ee77fc6",
+        "curr": "36d81f811a61593221eeac7de3994d5a34309871",
+        "commit": {
+          "short": "36d81f8",
+          "hash": "36d81f811a61593221eeac7de3994d5a34309871",
+          "subject": "Correct repository name to KDecoder_for_Mac in links",
+          "author": "adgk2349",
+          "date": "2026-03-03T00:55:20+09:00"
+        },
+        "swift_changed": true,
+        "swift_files": [
+          "KDecoder/View/AboutView.swift"
+        ],
+        "engine_changed": false,
+        "expected_changed": false,
+        "counts": {
+          "added_nodes": 0,
+          "removed_nodes": 0,
+          "changed_nodes": 0,
+          "added_edges": 0,
+          "removed_edges": 0,
+          "impact": 0
+        }
+      }
+    ]
+  },
+  "sample_scenarios": {
+    "scenario_count": 60,
+    "passed": 60,
+    "failed": 0,
+    "pass_rate": 1,
+    "fp_total": 0,
+    "fn_total": 0,
+    "gate_passed": true
+  },
+  "public_beta_gate": {
+    "thresholds": {
+      "replay_non_swift_fp_rate_max": 0.01,
+      "replay_swift_detection_rate_min": 0.9,
+      "replay_overall_match_rate_min": 0.95,
+      "replay_error_pairs_max": 0,
+      "sample_pass_rate_min": 1,
+      "sample_fp_total_max": 0,
+      "sample_fn_total_max": 0
+    },
+    "checks": {
+      "replay_non_swift_fp_rate_ok": true,
+      "replay_swift_detection_rate_ok": true,
+      "replay_overall_match_rate_ok": true,
+      "replay_error_pairs_ok": true,
+      "sample_pass_rate_ok": true,
+      "sample_fp_total_ok": true,
+      "sample_fn_total_ok": true
+    },
+    "passed": true
+  }
+}

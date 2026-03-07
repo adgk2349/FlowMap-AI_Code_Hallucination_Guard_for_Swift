@@ -6,6 +6,8 @@
 
 [English](README.md) · [日本語](README.ja.md)
 
+**상태: Public Beta**
+
 ## FlowMap이란?
 
 FlowMap은 Swift 코드를 파싱해 파일, 타입, 함수, 호출 관계를 워크스페이스 단위로 그래프화하고, VS Code에서 시각적으로 탐색할 수 있게 해주는 개발 도구입니다.
@@ -119,6 +121,7 @@ FlowMap은 실제 Git 커밋 쌍을 리플레이해서 diff 검출 방향이 맞
 - 커밋 리플레이 러너: `scripts/run_commit_replay.mjs`
 - 시나리오 러너(합성 회귀 세트): `scripts/run_sample_scenarios.mjs`
 - 리플레이 요약 빌더: `scripts/build_replay_summary.mjs`
+- 상세 검증 리포트 빌더: `scripts/build_validation_detail.mjs`
 
 예시:
 
@@ -133,6 +136,9 @@ node scripts/run_commit_replay.mjs \
 
 - `reports/replay-validation-bundle.md`
 - `reports/replay-validation-bundle.json`
+- `reports/sample-scenarios-report.json`
+- `reports/public-beta-validation-detail.md`
+- `reports/public-beta-validation-detail.json`
 
 최신 통합 지표(`reports/replay-validation-bundle.md`):
 
@@ -141,6 +147,17 @@ node scripts/run_commit_replay.mjs \
 - Non-Swift FP Rate: 0%
 - Swift Detection Rate: 94.64%
 - Overall Match Rate: 97.13%
+
+최신 시나리오 회귀 검증(`reports/sample-scenarios-report.json`):
+
+- 시나리오 수: 60
+- 통과 / 실패: 60 / 0
+- FP / FN 합계: 0 / 0
+
+퍼블릭 베타 상세 검증(`reports/public-beta-validation-detail.md`):
+
+- 비정상 케이스를 커밋 단위로 상세 기록
+- Public beta gate: PASS
 
 ## 라이선스
 
@@ -181,4 +198,8 @@ FlowMap은 source-available 방식으로 제공됩니다.
 
 ## 상태
 
-FlowMap은 빠르게 발전 중입니다. 현재 버전은 완성된 플랫폼이 아닌 초기 단계 도구입니다. 피드백과 기여를 환영합니다.
+FlowMap은 이제 **Public Beta** 단계입니다.
+
+- 핵심 그래프/디프 파이프라인은 외부 테스트 가능한 수준으로 안정화되었습니다.
+- 검증 산출물은 `reports/`에 공개하여 투명하게 확인할 수 있습니다.
+- Swift 호출 해석의 일부 edge case는 지속적으로 개선 중입니다.

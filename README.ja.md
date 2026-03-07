@@ -6,6 +6,8 @@
 
 [English](README.md) · [한국어](README.ko.md)
 
+**ステータス: Public Beta**
+
 ## FlowMap とは
 
 FlowMap は Swift コードを解析し、ファイル・型・関数・呼び出し関係をワークスペース全体のグラフとして構築し、VS Code 上で視覚的に探索できる開発者ツールです。
@@ -119,6 +121,7 @@ FlowMap には、実際の Git コミットペアをリプレイし、graph diff
 - コミットリプレイ runner: `scripts/run_commit_replay.mjs`
 - シナリオ runner（合成回帰セット）: `scripts/run_sample_scenarios.mjs`
 - リプレイ要約 builder: `scripts/build_replay_summary.mjs`
+- 詳細検証レポート builder: `scripts/build_validation_detail.mjs`
 
 例:
 
@@ -133,6 +136,9 @@ node scripts/run_commit_replay.mjs \
 
 - `reports/replay-validation-bundle.md`
 - `reports/replay-validation-bundle.json`
+- `reports/sample-scenarios-report.json`
+- `reports/public-beta-validation-detail.md`
+- `reports/public-beta-validation-detail.json`
 
 最新の統合メトリクス（`reports/replay-validation-bundle.md`）:
 
@@ -141,6 +147,17 @@ node scripts/run_commit_replay.mjs \
 - Non-Swift FP Rate: 0%
 - Swift Detection Rate: 94.64%
 - Overall Match Rate: 97.13%
+
+最新シナリオ回帰検証（`reports/sample-scenarios-report.json`）:
+
+- シナリオ数: 60
+- Passed / Failed: 60 / 0
+- FP / FN 合計: 0 / 0
+
+Public Beta 詳細検証（`reports/public-beta-validation-detail.md`）:
+
+- 非パスケースをコミット単位で記録
+- Public beta gate: PASS
 
 ## ライセンス
 
@@ -181,4 +198,8 @@ Issue と Pull Request を歓迎します。
 
 ## ステータス
 
-FlowMap は継続的に進化しています。現バージョンは完成済みプラットフォームではなく、初期段階の実用ツールです。フィードバックと貢献を歓迎します。
+FlowMap は現在 **Public Beta** です。
+
+- コアのグラフ/差分パイプラインは外部テスト可能な安定度に到達しています。
+- 検証成果物は `reports/` に公開し、透明性を確保しています。
+- Swift 呼び出し解決の一部 edge case は継続改善中です。
