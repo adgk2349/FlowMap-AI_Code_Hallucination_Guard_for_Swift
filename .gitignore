@@ -5,3 +5,9 @@ node_modules/
 out/
 parsers/swift-ast/.build/
 .claude/
+
+# Internal development documents — not for public consumption
+AGENT_PROMPT.md
+AGENT_RULES.md
+REQUIREMENTS.md
+SPEC_PROTOCOL.md
