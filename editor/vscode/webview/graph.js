@@ -409,6 +409,7 @@
   const DETAIL_PADDING =  40; // outer viewport padding after detail/calls layout
   const PANEL_MIN_W    = 280; // minimum panel slot width  per component (calls mode)
   const PANEL_MIN_H    = 180; // minimum panel slot height per component (calls mode)
+  const TILE_GAP       =  20; // minimum gap between component tiles     (calls mode)
 
   // ── Parse embedded payload ───────────────────────────────────────────────
   const raw = document.getElementById('graph-data').textContent ?? '{}';
@@ -1538,14 +1539,17 @@
   // Calls Layout
   // ═══════════════════════════════════════════════════════════════════════════
   // ── layoutComponentBFS ───────────────────────────────────────────────────
-  // Positions func nodes within a component using a BFS depth-layered layout.
+  // Positions func nodes within a component using compact vertical stacking.
   //
   // Algorithm:
   //   1. Build callee adjacency from internal calls edges; compute in-degree.
-  //   2. BFS from roots (in-degree 0 nodes); assign depth = BFS level.
-  //      If every node is in a cycle (no roots), seed all at depth 0.
-  //   3. Group func nodes by depth level; arrange each level as a centered
-  //      horizontal row using CARD_GAP_X between siblings, ROW_GAP between rows.
+  //   2. BFS traversal from roots (in-degree 0 nodes) to produce a stable
+  //      ordering — callers appear before their callees in the list.
+  //      Cycle-only components seed all nodes at the start.
+  //   3. Place nodes in BFS order, top-to-bottom in 1 or 2 columns:
+  //        – ≤8 func nodes → 1 column  (prefer narrow)
+  //        – >8 func nodes → 2 columns (still compact, not wide)
+  //      GAP_Y = 20 px vertical  |  GAP_X = 36 px horizontal (2-col only)
   //
   // Positions are centred at x=0, starting at y=0.  The caller translates
   // the resulting bounding box into its panel slot.
@@ -1565,78 +1569,81 @@
       }
     });
 
-    // BFS from roots (in-degree 0 nodes within component).
-    var depth = {};
-    var queue = [];
+    // BFS traversal to build a stable ordering (callers before callees).
+    var orderedIds = [];
+    var visited    = {};
+    var queue      = [];
     funcNodes.forEach(function (n) {
-      if (inDeg[n.id()] === 0) { depth[n.id()] = 0; queue.push(n.id()); }
+      if (inDeg[n.id()] === 0) { queue.push(n.id()); visited[n.id()] = true; }
     });
-    // If all nodes have callers (cycle graph), seed every node at depth 0.
+    // Cycle-only component: seed every node so none are skipped.
     if (queue.length === 0) {
-      funcNodes.forEach(function (n) { depth[n.id()] = 0; queue.push(n.id()); });
+      funcNodes.forEach(function (n) { queue.push(n.id()); visited[n.id()] = true; });
     }
 
     var qi = 0;
     while (qi < queue.length) {
       var nid = queue[qi++];
+      orderedIds.push(nid);
       callees[nid].forEach(function (tid) {
-        if (depth[tid] === undefined) {
-          depth[tid] = depth[nid] + 1;
-          queue.push(tid);
-        }
+        if (!visited[tid]) { visited[tid] = true; queue.push(tid); }
       });
     }
-    // Unreachable nodes (disconnected within component): assign depth 0.
+    // Any nodes unreachable from roots (isolated within component).
     funcNodes.forEach(function (n) {
-      if (depth[n.id()] === undefined) { depth[n.id()] = 0; }
+      if (!visited[n.id()]) { orderedIds.push(n.id()); }
     });
 
-    // Group func nodes by depth level.
-    var levels = {};
-    funcNodes.forEach(function (n) {
-      var d = depth[n.id()];
-      if (!levels[d]) { levels[d] = []; }
-      levels[d].push(n.id());
+    // Compact vertical stacking: narrow over wide.
+    var total = orderedIds.length;
+    var nCols = total > 8 ? 2 : 1; // 2 columns only for large components
+    var GAP_Y = 20;                 // compact vertical gap  (~18–22 px)
+    var GAP_X = 36;                 // small horizontal gap  (2-col only)
+
+    // Measure max card dimensions across all func nodes in this component.
+    var nodeW = 80, nodeH = 28;
+    orderedIds.forEach(function (id) {
+      var n = cy.getElementById(id);
+      nodeW = Math.max(nodeW, n.width()  || 80);
+      nodeH = Math.max(nodeH, n.height() || 28);
     });
 
-    var depthKeys = Object.keys(levels).map(Number).sort(function (a, b) { return a - b; });
-    var ROW_GAP = CARD_GAP_Y * 3; // generous vertical separation between depth rows
-    var curY = 0;
+    // Block centred at x=0; nodes fill top-to-bottom, left-to-right.
+    var blockW = nCols * nodeW + (nCols - 1) * GAP_X;
+    var startX = -blockW / 2 + nodeW / 2;
 
-    depthKeys.forEach(function (d) {
-      var ids = levels[d];
-      // Measure max card dimensions across this depth level.
-      var nodeW = 80, nodeH = 28;
-      ids.forEach(function (id) {
-        var n = cy.getElementById(id);
-        nodeW = Math.max(nodeW, n.width()  || 80);
-        nodeH = Math.max(nodeH, n.height() || 28);
+    orderedIds.forEach(function (id, i) {
+      var c = i % nCols;
+      var r = Math.floor(i / nCols);
+      cy.getElementById(id).position({
+        x: startX + c * (nodeW + GAP_X),
+        y: r * (nodeH + GAP_Y) + nodeH / 2,
       });
-      // Centre the row at x = 0.
-      var rowW   = ids.length * nodeW + (ids.length - 1) * CARD_GAP_X;
-      var startX = -rowW / 2 + nodeW / 2;
-      ids.forEach(function (id, i) {
-        cy.getElementById(id).position({
-          x: startX + i * (nodeW + CARD_GAP_X),
-          y: curY + nodeH / 2,
-        });
-      });
-      curY += nodeH + ROW_GAP;
     });
   }
 
   // ── runSpacedCallsLayout ─────────────────────────────────────────────────
-  // Redesigned Calls-mode layout: normalized component panels in a grid.
+  // Calls-mode layout: irregular dense skyline (bottom-left) packing.
   //
   // Algorithm:
   //   1. Detect file-level connected components via union-find over calls edges.
-  //   2. Run layoutComponentBFS() on each component (deterministic BFS rows).
-  //   3. Arrange components in a 1/2/3-column panel grid; each slot is clamped
-  //      to at least PANEL_MIN_W × PANEL_MIN_H; component bounding box is
-  //      centred inside its slot.
-  //   4. Fit viewport to all nodes with DETAIL_PADDING.
+  //   2. Run layoutComponentBFS() on each component (compact vertical stacking).
+  //      Immediately capture the component's bounding box dimensions.
+  //   3. Skyline packing (irregular, non-grid):
+  //      a. Sort tiles by area descending — largest tiles first, better fill.
+  //      b. Compute target row width = max(widest tile, sqrt(totalArea) × 1.2).
+  //      c. Maintain a "skyline" — a sorted list of {x, y} left-edge segments.
+  //         Segment i covers [skyline[i].x, skyline[i+1].x) at height y.
+  //      d. For each tile: try placing its left edge at every skyline breakpoint
+  //         where x ≤ maxRowW.  The effective placement y is the maximum skyline
+  //         height over the tile's footprint.  Choose minimum y; tiebreak: min x.
+  //      e. Translate the component so its bbox top-left aligns to (bestX, bestY).
+  //      f. Raise the skyline over [bestX, bestX + tileW + GAP) to bestY + tileH + GAP.
+  //   4. Fit all visible nodes with DETAIL_PADDING.
   //
-  // Column count: 1 comp → 1 col | 2–4 comps → 2 cols | 5+ comps → 3 cols.
+  // Irregular placement arises naturally: tall components create high "peaks" in
+  // the skyline; shorter components fill the "valleys" beside them, producing a
+  // dense, tetris-like composition rather than a uniform grid.
   function runSpacedCallsLayout() {
     var visibleNodes = cy.nodes(':visible');
     if (visibleNodes.length === 0) { deferredFit(cy.nodes(), DETAIL_PADDING); return; }
@@ -1686,8 +1693,6 @@
     });
 
     var groupArr = Object.values(compGroups);
-    // Largest component (most files) → first panel (top-left).
-    groupArr.sort(function (a, b) { return b.length - a.length; });
 
     // Helper: collect all cy nodes for a list of file IDs.
     function nodesForFiles(fileIds) {
@@ -1699,48 +1704,111 @@
       return col;
     }
 
-    // ── Step 2: BFS layout per component ──────────────────────────────────
-    groupArr.forEach(function (fileIds) {
-      layoutComponentBFS(nodesForFiles(fileIds));
-    });
-
-    // ── Step 3: Normalized panel grid ─────────────────────────────────────
-    var nComps = groupArr.length;
-    var nCols  = nComps <= 1 ? 1 : nComps <= 4 ? 2 : 3;
-    var PGX = COMPONENT_GAP; // panel gap X (= COMPONENT_GAP = 180)
-    var PGY = GROUP_GAP;     // panel gap Y (= GROUP_GAP     = 140)
-
-    var cursorX = 0, cursorY = 0, col = 0, rowMaxH = 0;
+    // ── Step 2: BFS layout per component; collect tiles ───────────────────
+    var tiles     = [];
+    var maxTileW  = 0;
+    var totalArea = 0;
 
     groupArr.forEach(function (fileIds) {
       var compNodes = nodesForFiles(fileIds);
+      layoutComponentBFS(compNodes);
       var bb = compNodes.boundingBox({ includeLabels: false });
       if (!bb || bb.w === 0) { return; }
+      maxTileW   = Math.max(maxTileW, bb.w);
+      totalArea += (bb.w + TILE_GAP) * (bb.h + TILE_GAP);
+      tiles.push({ compNodes: compNodes, bb: bb });
+    });
 
-      // Slot dimensions are at least PANEL_MIN_W × PANEL_MIN_H.
-      var slotW = Math.max(PANEL_MIN_W, bb.w);
-      var slotH = Math.max(PANEL_MIN_H, bb.h);
+    if (tiles.length === 0) { deferredFit(cy.nodes(), DETAIL_PADDING); return; }
 
-      // Centre the component's bounding box within its slot.
-      var slotCX = cursorX + slotW / 2;
-      var slotCY = cursorY + slotH / 2;
-      var compCX = (bb.x1 + bb.x2) / 2;
-      var compCY = (bb.y1 + bb.y2) / 2;
-      var dx = slotCX - compCX;
-      var dy = slotCY - compCY;
+    // ── Step 3: Skyline (bottom-left) packing ─────────────────────────────
+    // Largest area tiles first — harder to place later, better fill now.
+    tiles.sort(function (a, b) {
+      return (b.bb.w * b.bb.h) - (a.bb.w * a.bb.h);
+    });
 
-      compNodes.positions(function (node) {
+    // Target row width for a near-square, landscape-friendly composition.
+    var maxRowW = Math.max(maxTileW, Math.sqrt(totalArea) * 1.2);
+
+    // skyline: [{x, y}] sorted by x.
+    // Segment i covers the horizontal range [skyline[i].x, skyline[i+1].x)
+    // at height skyline[i].y.  The final segment extends to +Infinity.
+    var skyline = [{ x: 0, y: 0 }];
+
+    // Max skyline height over the range [x1, x1 + w).
+    function skyGetY(x1, w) {
+      var x2 = x1 + w, maxY = 0;
+      for (var si = 0; si < skyline.length; si++) {
+        var sl = skyline[si].x;
+        var sr = (si + 1 < skyline.length) ? skyline[si + 1].x : Infinity;
+        if (sl < x2 && sr > x1) { maxY = Math.max(maxY, skyline[si].y); }
+      }
+      return maxY;
+    }
+
+    // Skyline height at a single x point.
+    function skyYAt(px) {
+      for (var si = skyline.length - 1; si >= 0; si--) {
+        if (skyline[si].x <= px) { return skyline[si].y; }
+      }
+      return 0;
+    }
+
+    // Raise the skyline over [x1, x1 + w) to newY.
+    function skyRaise(x1, w, newY) {
+      var x2 = x1 + w;
+      // Ensure segment boundaries exist at x1 and x2.
+      [x1, x2].forEach(function (px) {
+        if (skyline.every(function (s) { return s.x !== px; })) {
+          var py = skyYAt(px), ins = false;
+          for (var si = 0; si < skyline.length; si++) {
+            if (skyline[si].x > px) {
+              skyline.splice(si, 0, { x: px, y: py });
+              ins = true; break;
+            }
+          }
+          if (!ins) { skyline.push({ x: px, y: py }); }
+        }
+      });
+      // Raise all segments fully inside [x1, x2).
+      for (var si = 0; si < skyline.length; si++) {
+        if (skyline[si].x >= x1 && skyline[si].x < x2) { skyline[si].y = newY; }
+      }
+      // Merge consecutive segments at the same height.
+      var si = 0;
+      while (si < skyline.length - 1) {
+        if (skyline[si].y === skyline[si + 1].y) {
+          skyline.splice(si + 1, 1);
+        } else { si++; }
+      }
+    }
+
+    tiles.forEach(function (t) {
+      var tw = t.bb.w + TILE_GAP; // footprint width  (tile + trailing gap)
+      var th = t.bb.h + TILE_GAP; // footprint height (tile + trailing gap)
+      var bestX = 0, bestY = Infinity;
+
+      // Evaluate every skyline breakpoint as a candidate left-edge position.
+      // Skip positions beyond maxRowW to keep the composition bounded.
+      for (var si = 0; si < skyline.length; si++) {
+        var tryX = skyline[si].x;
+        if (tryX > maxRowW) { break; }
+        var tryY = skyGetY(tryX, tw);
+        if (tryY < bestY || (tryY === bestY && tryX < bestX)) {
+          bestX = tryX; bestY = tryY;
+        }
+      }
+      if (bestY === Infinity) { bestX = 0; bestY = skyGetY(0, tw); }
+
+      // Align tile's bbox top-left to (bestX, bestY) via a uniform translation.
+      var dx = bestX - t.bb.x1;
+      var dy = bestY - t.bb.y1;
+      t.compNodes.positions(function (node) {
         return { x: node.position('x') + dx, y: node.position('y') + dy };
       });
 
-      rowMaxH  = Math.max(rowMaxH, slotH);
-      cursorX += slotW + PGX;
-      col++;
-      if (col >= nCols) {
-        col = 0; cursorX = 0;
-        cursorY += rowMaxH + PGY;
-        rowMaxH = 0;
-      }
+      // Raise the skyline over this tile's footprint (including trailing gap).
+      skyRaise(bestX, tw, bestY + th);
     });
 
     deferredFit(cy.nodes(), DETAIL_PADDING);
