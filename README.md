@@ -1,3 +1,5 @@
+> **PUBLIC BETA NOTICE (March 8, 2026):** FlowMap is in public beta. Licensing is currently local/dev-only preview (no production server-side entitlement enforcement yet).
+
 # FlowMap
 
 > Swift code graph and impact analysis tool — understand and verify code structure, especially when reviewing AI-generated changes.
@@ -5,8 +7,6 @@
 [![CI](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml)
 
 [한국어](README.ko.md) · [日本語](README.ja.md)
-
-**Status: Public Beta**
 
 ## What is FlowMap?
 
@@ -87,6 +87,9 @@ swift build -c release
 cd ../..
 ```
 
+> Note: replay/scenario validation scripts look for the parser binary at `parsers/swift-ast/.build/debug/flowmap-swift-ast`.  
+> If you run those scripts, also build debug once: `cd parsers/swift-ast && swift build -c debug`.
+
 **4. Compile the VS Code extension**
 
 ```bash
@@ -103,6 +106,10 @@ cd ../..
 3. In the new VS Code window, open a Swift workspace
 4. Run **FlowMap: Analyze Workspace** from the command palette (`Cmd+Shift+P`)
 5. Open the **FlowMap Graph** panel
+
+### Run from VSIX (installed extension)
+
+If you install FlowMap via `.vsix`, set `flowmap.binaryPath` to your built engine binary path (for example: `/path/to/FlowMap/target/debug/flowmap`), then run **FlowMap: Analyze Workspace**.
 
 ## Usage
 
@@ -161,16 +168,13 @@ Detailed public beta validation (`reports/public-beta-validation-detail.md`):
 
 ## License
 
-FlowMap is source-available.
+FlowMap is currently in **public beta**.
 
-**Swift support**
-- Personal and non-commercial use: free
-- Commercial, team, or company use: a license is required
+Final licensing terms (including commercial terms) will be announced after the beta period.
 
-**Other languages**
-Additional language support may be provided as separate commercial plugins in the future.
+Until then, all rights are reserved by the author, except that evaluation use for the public beta is permitted.
 
-For commercial licensing inquiries, contact: adgk2349b@gmail.com
+For commercial use or redistribution, please contact: adgk2349b@gmail.com
 
 ## Roadmap
 

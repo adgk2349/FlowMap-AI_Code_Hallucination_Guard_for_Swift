@@ -1,0 +1,2591 @@
+{
+  "created_at": "2026-03-07T07:38:36.250Z",
+  "mode": "commit-replay",
+  "config": {
+    "repo": "/tmp/flowmap-heavy-swift-repo",
+    "rev": "HEAD",
+    "count": 100,
+    "strict_swift": true,
+    "keep_temp": false,
+    "report_path": "/Users/seungminlee/Desktop/Development/FlowMap/reports/replay-heavy-swift-strict.json"
+  },
+  "binaries": {
+    "flowmap": "/Users/seungminlee/Desktop/Development/FlowMap/target/debug/flowmap",
+    "parser": "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/debug/flowmap-swift-ast"
+  },
+  "summary": {
+    "total_pairs": 99,
+    "pass_pairs": 99,
+    "warn_pairs": 0,
+    "failed_pairs": 0,
+    "error_pairs": 0,
+    "swift_pairs": 82,
+    "non_swift_pairs": 17,
+    "confusion": {
+      "tp": 82,
+      "tn": 17,
+      "fp": 0,
+      "fn": 0
+    },
+    "non_swift_fp_rate": 0,
+    "swift_detection_rate": 1,
+    "gate": {
+      "max_non_swift_fp_rate": 0,
+      "max_errors": 0,
+      "strict_swift_required": true
+    },
+    "gate_passed": true
+  },
+  "results": [
+    {
+      "prev": "c5ec16b8389ed8a69d6a7632fac666f2b7d228d6",
+      "curr": "14966f5725c12effeff54c8e3950c06a0ea8e922",
+      "commit": {
+        "hash": "14966f5725c12effeff54c8e3950c06a0ea8e922",
+        "short": "14966f5",
+        "subject": "swift: add call pair 22",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "14966f5725c12effeff54c8e3950c06a0ea8e922",
+      "curr": "6180ca4a699e5b3b2c9c53a4991a1d43aeef5c86",
+      "commit": {
+        "hash": "6180ca4a699e5b3b2c9c53a4991a1d43aeef5c86",
+        "short": "6180ca4",
+        "subject": "swift: add call pair 23",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "6180ca4a699e5b3b2c9c53a4991a1d43aeef5c86",
+      "curr": "28646464d3d5be177f1c0ef8e3e4311d80eb9732",
+      "commit": {
+        "hash": "28646464d3d5be177f1c0ef8e3e4311d80eb9732",
+        "short": "2864646",
+        "subject": "docs: update 24",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "28646464d3d5be177f1c0ef8e3e4311d80eb9732",
+      "curr": "0257b3d1eb70a3725a3cd5654a017f14e8dc0359",
+      "commit": {
+        "hash": "0257b3d1eb70a3725a3cd5654a017f14e8dc0359",
+        "short": "0257b3d",
+        "subject": "swift: add call pair 25",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "0257b3d1eb70a3725a3cd5654a017f14e8dc0359",
+      "curr": "3b298d369ef9a4566bb33eae33bf8029735bdcb6",
+      "commit": {
+        "hash": "3b298d369ef9a4566bb33eae33bf8029735bdcb6",
+        "short": "3b298d3",
+        "subject": "swift: add call pair 26",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "3b298d369ef9a4566bb33eae33bf8029735bdcb6",
+      "curr": "4cb8868110a4a5bc1a5602a50f00ee060a5a72d2",
+      "commit": {
+        "hash": "4cb8868110a4a5bc1a5602a50f00ee060a5a72d2",
+        "short": "4cb8868",
+        "subject": "swift: add call pair 27",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "4cb8868110a4a5bc1a5602a50f00ee060a5a72d2",
+      "curr": "18b9f3640a05783e4c7942cc32e9479e944abb7a",
+      "commit": {
+        "hash": "18b9f3640a05783e4c7942cc32e9479e944abb7a",
+        "short": "18b9f36",
+        "subject": "swift: add call pair 28",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/App.swift",
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "18b9f3640a05783e4c7942cc32e9479e944abb7a",
+      "curr": "5cf5f3309b71cbef8a9827184768f937307d567d",
+      "commit": {
+        "hash": "5cf5f3309b71cbef8a9827184768f937307d567d",
+        "short": "5cf5f33",
+        "subject": "swift: add call pair 29",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "5cf5f3309b71cbef8a9827184768f937307d567d",
+      "curr": "a59b18a2d0fc1ae353790827e7e6b01a08c06052",
+      "commit": {
+        "hash": "a59b18a2d0fc1ae353790827e7e6b01a08c06052",
+        "short": "a59b18a",
+        "subject": "docs: update 30",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "a59b18a2d0fc1ae353790827e7e6b01a08c06052",
+      "curr": "0d39854e872256d9aff26d4e631bc7facc36f9eb",
+      "commit": {
+        "hash": "0d39854e872256d9aff26d4e631bc7facc36f9eb",
+        "short": "0d39854",
+        "subject": "swift: add call pair 31",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "0d39854e872256d9aff26d4e631bc7facc36f9eb",
+      "curr": "beb272c799f63b61ed496ea443aa91f4b4398c6e",
+      "commit": {
+        "hash": "beb272c799f63b61ed496ea443aa91f4b4398c6e",
+        "short": "beb272c",
+        "subject": "swift: add call pair 32",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "beb272c799f63b61ed496ea443aa91f4b4398c6e",
+      "curr": "bfd7075ac49de080bdd1e800c26d838ffeeb34df",
+      "commit": {
+        "hash": "bfd7075ac49de080bdd1e800c26d838ffeeb34df",
+        "short": "bfd7075",
+        "subject": "swift: add call pair 33",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "bfd7075ac49de080bdd1e800c26d838ffeeb34df",
+      "curr": "b9648979a04e68a5e6223598ed258aad35f54a01",
+      "commit": {
+        "hash": "b9648979a04e68a5e6223598ed258aad35f54a01",
+        "short": "b964897",
+        "subject": "swift: add call pair 34",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "b9648979a04e68a5e6223598ed258aad35f54a01",
+      "curr": "5b604e811aeb342747996e6445e0d7e15414eb24",
+      "commit": {
+        "hash": "5b604e811aeb342747996e6445e0d7e15414eb24",
+        "short": "5b604e8",
+        "subject": "swift: add call pair 35",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:52+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/App.swift",
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "5b604e811aeb342747996e6445e0d7e15414eb24",
+      "curr": "d5fd7cd5a07efd35842f76f81a1a90fb9501ec8d",
+      "commit": {
+        "hash": "d5fd7cd5a07efd35842f76f81a1a90fb9501ec8d",
+        "short": "d5fd7cd",
+        "subject": "docs: update 36",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "d5fd7cd5a07efd35842f76f81a1a90fb9501ec8d",
+      "curr": "88b18434d25957b3ac28692deed9a647d62d6e00",
+      "commit": {
+        "hash": "88b18434d25957b3ac28692deed9a647d62d6e00",
+        "short": "88b1843",
+        "subject": "swift: add call pair 37",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "88b18434d25957b3ac28692deed9a647d62d6e00",
+      "curr": "5ebf96857e71f5946a7c177d04ea416b2d6d9321",
+      "commit": {
+        "hash": "5ebf96857e71f5946a7c177d04ea416b2d6d9321",
+        "short": "5ebf968",
+        "subject": "swift: add call pair 38",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "5ebf96857e71f5946a7c177d04ea416b2d6d9321",
+      "curr": "f220f298d52fcca7f3318c2fb6a64838a1eff528",
+      "commit": {
+        "hash": "f220f298d52fcca7f3318c2fb6a64838a1eff528",
+        "short": "f220f29",
+        "subject": "swift: add call pair 39",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "f220f298d52fcca7f3318c2fb6a64838a1eff528",
+      "curr": "5ba39ec31a23d645fd57cfd47dda55e6e058fa3d",
+      "commit": {
+        "hash": "5ba39ec31a23d645fd57cfd47dda55e6e058fa3d",
+        "short": "5ba39ec",
+        "subject": "swift: add util_40",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "5ba39ec31a23d645fd57cfd47dda55e6e058fa3d",
+      "curr": "3095fd643da6d071df79c744688045d8956536de",
+      "commit": {
+        "hash": "3095fd643da6d071df79c744688045d8956536de",
+        "short": "3095fd6",
+        "subject": "swift: add call pair 41",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "3095fd643da6d071df79c744688045d8956536de",
+      "curr": "1a9ed145c68ea16a55bc67f392a02ee96bb46dd7",
+      "commit": {
+        "hash": "1a9ed145c68ea16a55bc67f392a02ee96bb46dd7",
+        "short": "1a9ed14",
+        "subject": "docs: update 42",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "1a9ed145c68ea16a55bc67f392a02ee96bb46dd7",
+      "curr": "eaff3bd990589db73dd95be62db0c5384ad2db00",
+      "commit": {
+        "hash": "eaff3bd990589db73dd95be62db0c5384ad2db00",
+        "short": "eaff3bd",
+        "subject": "swift: add call pair 43",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "eaff3bd990589db73dd95be62db0c5384ad2db00",
+      "curr": "cd919902880b0c9db3f9d79250d8d681e8c45342",
+      "commit": {
+        "hash": "cd919902880b0c9db3f9d79250d8d681e8c45342",
+        "short": "cd91990",
+        "subject": "swift: add call pair 44",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "cd919902880b0c9db3f9d79250d8d681e8c45342",
+      "curr": "a9908e2c2ca252171b2512725d04315885f99e0d",
+      "commit": {
+        "hash": "a9908e2c2ca252171b2512725d04315885f99e0d",
+        "short": "a9908e2",
+        "subject": "swift: add feature file 45",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Feature45.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "a9908e2c2ca252171b2512725d04315885f99e0d",
+      "curr": "68907b81f9c786f8dc05095b2191723a433726fd",
+      "commit": {
+        "hash": "68907b81f9c786f8dc05095b2191723a433726fd",
+        "short": "68907b8",
+        "subject": "swift: add call pair 46",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "68907b81f9c786f8dc05095b2191723a433726fd",
+      "curr": "ace6915e6e17ed5f9bb62337a93f36e3538291c0",
+      "commit": {
+        "hash": "ace6915e6e17ed5f9bb62337a93f36e3538291c0",
+        "short": "ace6915",
+        "subject": "swift: add call pair 47",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "ace6915e6e17ed5f9bb62337a93f36e3538291c0",
+      "curr": "9e873faf523e465e04d1735418a99c9b8c438fcb",
+      "commit": {
+        "hash": "9e873faf523e465e04d1735418a99c9b8c438fcb",
+        "short": "9e873fa",
+        "subject": "docs: update 48",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "9e873faf523e465e04d1735418a99c9b8c438fcb",
+      "curr": "bd2340510d453a0cfa7920e1bb3e307e1dfe96e9",
+      "commit": {
+        "hash": "bd2340510d453a0cfa7920e1bb3e307e1dfe96e9",
+        "short": "bd23405",
+        "subject": "swift: add call pair 49",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/App.swift",
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "bd2340510d453a0cfa7920e1bb3e307e1dfe96e9",
+      "curr": "4a95d1d9941bc0e86ab89e91c636d9446370f1e7",
+      "commit": {
+        "hash": "4a95d1d9941bc0e86ab89e91c636d9446370f1e7",
+        "short": "4a95d1d",
+        "subject": "swift: add util_50",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "4a95d1d9941bc0e86ab89e91c636d9446370f1e7",
+      "curr": "254d6b890c94c4b1d57af4184bf4c1d5a197002c",
+      "commit": {
+        "hash": "254d6b890c94c4b1d57af4184bf4c1d5a197002c",
+        "short": "254d6b8",
+        "subject": "swift: add call pair 51",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "254d6b890c94c4b1d57af4184bf4c1d5a197002c",
+      "curr": "c88cabc87e18c84c1340d3b4c338577c432ef417",
+      "commit": {
+        "hash": "c88cabc87e18c84c1340d3b4c338577c432ef417",
+        "short": "c88cabc",
+        "subject": "swift: add call pair 52",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "c88cabc87e18c84c1340d3b4c338577c432ef417",
+      "curr": "8a097e78c3e4ec031d312bdcaab8cae2d812dd0c",
+      "commit": {
+        "hash": "8a097e78c3e4ec031d312bdcaab8cae2d812dd0c",
+        "short": "8a097e7",
+        "subject": "swift: add call pair 53",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "8a097e78c3e4ec031d312bdcaab8cae2d812dd0c",
+      "curr": "a9b348fae42b7987cfa8651fa60aa0cfcfc8ebe8",
+      "commit": {
+        "hash": "a9b348fae42b7987cfa8651fa60aa0cfcfc8ebe8",
+        "short": "a9b348f",
+        "subject": "docs: update 54",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "a9b348fae42b7987cfa8651fa60aa0cfcfc8ebe8",
+      "curr": "8364352b74f263dc8a71565c0762620b9f24e938",
+      "commit": {
+        "hash": "8364352b74f263dc8a71565c0762620b9f24e938",
+        "short": "8364352",
+        "subject": "swift: add call pair 55",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "8364352b74f263dc8a71565c0762620b9f24e938",
+      "curr": "b34f27da884357fa53d16f72d8efcb58707691e3",
+      "commit": {
+        "hash": "b34f27da884357fa53d16f72d8efcb58707691e3",
+        "short": "b34f27d",
+        "subject": "swift: add call pair 56",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/App.swift",
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "b34f27da884357fa53d16f72d8efcb58707691e3",
+      "curr": "ac87bdfd3d5a1f0326ec7e198a359acfa6f21d58",
+      "commit": {
+        "hash": "ac87bdfd3d5a1f0326ec7e198a359acfa6f21d58",
+        "short": "ac87bdf",
+        "subject": "swift: add call pair 57",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "ac87bdfd3d5a1f0326ec7e198a359acfa6f21d58",
+      "curr": "17f8b15984825a5863c1ee428762a921334f5356",
+      "commit": {
+        "hash": "17f8b15984825a5863c1ee428762a921334f5356",
+        "short": "17f8b15",
+        "subject": "swift: add call pair 58",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "17f8b15984825a5863c1ee428762a921334f5356",
+      "curr": "a563e4a14a757c2794ed7c1efd6554367b0cb51f",
+      "commit": {
+        "hash": "a563e4a14a757c2794ed7c1efd6554367b0cb51f",
+        "short": "a563e4a",
+        "subject": "swift: add call pair 59",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "a563e4a14a757c2794ed7c1efd6554367b0cb51f",
+      "curr": "c3fbcc65b5bce87380608a3bf60eeeee71c05791",
+      "commit": {
+        "hash": "c3fbcc65b5bce87380608a3bf60eeeee71c05791",
+        "short": "c3fbcc6",
+        "subject": "docs: update 60",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "c3fbcc65b5bce87380608a3bf60eeeee71c05791",
+      "curr": "d3b2bc90ae66cc5e505452340ad3b2e71583fa92",
+      "commit": {
+        "hash": "d3b2bc90ae66cc5e505452340ad3b2e71583fa92",
+        "short": "d3b2bc9",
+        "subject": "swift: add call pair 61",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "d3b2bc90ae66cc5e505452340ad3b2e71583fa92",
+      "curr": "d33ccaae6ab1f3004af8219b4e8c4950ba6a5716",
+      "commit": {
+        "hash": "d33ccaae6ab1f3004af8219b4e8c4950ba6a5716",
+        "short": "d33ccaa",
+        "subject": "swift: add call pair 62",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "d33ccaae6ab1f3004af8219b4e8c4950ba6a5716",
+      "curr": "6e7ccd7a38e5ed74838dd02a06c0926f58c7c489",
+      "commit": {
+        "hash": "6e7ccd7a38e5ed74838dd02a06c0926f58c7c489",
+        "short": "6e7ccd7",
+        "subject": "swift: add call pair 63",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/App.swift",
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "6e7ccd7a38e5ed74838dd02a06c0926f58c7c489",
+      "curr": "fb11dc3cc2523c92b64c19557d37f96cbc3f4e2f",
+      "commit": {
+        "hash": "fb11dc3cc2523c92b64c19557d37f96cbc3f4e2f",
+        "short": "fb11dc3",
+        "subject": "swift: add call pair 64",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "fb11dc3cc2523c92b64c19557d37f96cbc3f4e2f",
+      "curr": "a0d53e3f32185ccf6e34ecc8957c4a6197fe5627",
+      "commit": {
+        "hash": "a0d53e3f32185ccf6e34ecc8957c4a6197fe5627",
+        "short": "a0d53e3",
+        "subject": "swift: add call pair 65",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "a0d53e3f32185ccf6e34ecc8957c4a6197fe5627",
+      "curr": "a814fb011ae436bc66c3c30037424504cc0d3cbf",
+      "commit": {
+        "hash": "a814fb011ae436bc66c3c30037424504cc0d3cbf",
+        "short": "a814fb0",
+        "subject": "docs: update 66",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "a814fb011ae436bc66c3c30037424504cc0d3cbf",
+      "curr": "f87ac84336ac976be26751ccda92a097d0e6d3e2",
+      "commit": {
+        "hash": "f87ac84336ac976be26751ccda92a097d0e6d3e2",
+        "short": "f87ac84",
+        "subject": "swift: add call pair 67",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "f87ac84336ac976be26751ccda92a097d0e6d3e2",
+      "curr": "8a835c177ee547a3ea1eaec91b049b2921c5d683",
+      "commit": {
+        "hash": "8a835c177ee547a3ea1eaec91b049b2921c5d683",
+        "short": "8a835c1",
+        "subject": "swift: add call pair 68",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "8a835c177ee547a3ea1eaec91b049b2921c5d683",
+      "curr": "8512aafe25a2cdcb8e53fe66646b6c81eeb862cf",
+      "commit": {
+        "hash": "8512aafe25a2cdcb8e53fe66646b6c81eeb862cf",
+        "short": "8512aaf",
+        "subject": "swift: add call pair 69",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "8512aafe25a2cdcb8e53fe66646b6c81eeb862cf",
+      "curr": "aa219d0c5d49b9f1632f6a235fd92ebf78329f27",
+      "commit": {
+        "hash": "aa219d0c5d49b9f1632f6a235fd92ebf78329f27",
+        "short": "aa219d0",
+        "subject": "swift: add util_70",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "aa219d0c5d49b9f1632f6a235fd92ebf78329f27",
+      "curr": "4cbeb9b88f16c2e7b1bb121225673402198c4a63",
+      "commit": {
+        "hash": "4cbeb9b88f16c2e7b1bb121225673402198c4a63",
+        "short": "4cbeb9b",
+        "subject": "swift: add call pair 71",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "4cbeb9b88f16c2e7b1bb121225673402198c4a63",
+      "curr": "f061dd75c2f4d658a285da36003436b5b621e64a",
+      "commit": {
+        "hash": "f061dd75c2f4d658a285da36003436b5b621e64a",
+        "short": "f061dd7",
+        "subject": "docs: update 72",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "f061dd75c2f4d658a285da36003436b5b621e64a",
+      "curr": "32b1aeaffdb5c37959740e9c3247f7155b1d574d",
+      "commit": {
+        "hash": "32b1aeaffdb5c37959740e9c3247f7155b1d574d",
+        "short": "32b1aea",
+        "subject": "swift: add call pair 73",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "32b1aeaffdb5c37959740e9c3247f7155b1d574d",
+      "curr": "0c9f766ed4d53ecaab4ddfcc0fcc77ff49ce66d2",
+      "commit": {
+        "hash": "0c9f766ed4d53ecaab4ddfcc0fcc77ff49ce66d2",
+        "short": "0c9f766",
+        "subject": "swift: add call pair 74",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "0c9f766ed4d53ecaab4ddfcc0fcc77ff49ce66d2",
+      "curr": "9849ac2b033492f9e4ff342c0931703f2fceb534",
+      "commit": {
+        "hash": "9849ac2b033492f9e4ff342c0931703f2fceb534",
+        "short": "9849ac2",
+        "subject": "swift: add feature file 75",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Feature75.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "9849ac2b033492f9e4ff342c0931703f2fceb534",
+      "curr": "48a0d3fe256abe2e4437edda2b1dfe8f99bf00aa",
+      "commit": {
+        "hash": "48a0d3fe256abe2e4437edda2b1dfe8f99bf00aa",
+        "short": "48a0d3f",
+        "subject": "swift: add call pair 76",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "48a0d3fe256abe2e4437edda2b1dfe8f99bf00aa",
+      "curr": "3ba5594a76c3a13b7f422c56537b3b192b98fd6f",
+      "commit": {
+        "hash": "3ba5594a76c3a13b7f422c56537b3b192b98fd6f",
+        "short": "3ba5594",
+        "subject": "swift: add call pair 77",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:53+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/App.swift",
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "3ba5594a76c3a13b7f422c56537b3b192b98fd6f",
+      "curr": "8a1a7a8b64f2e447f792073dcc2633e336cb8615",
+      "commit": {
+        "hash": "8a1a7a8b64f2e447f792073dcc2633e336cb8615",
+        "short": "8a1a7a8",
+        "subject": "docs: update 78",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "8a1a7a8b64f2e447f792073dcc2633e336cb8615",
+      "curr": "a2987d607df7c0749faf544c28f2dee8d3172af7",
+      "commit": {
+        "hash": "a2987d607df7c0749faf544c28f2dee8d3172af7",
+        "short": "a2987d6",
+        "subject": "swift: add call pair 79",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "a2987d607df7c0749faf544c28f2dee8d3172af7",
+      "curr": "5c839f406c45569c18b02513d98f8cf604d03444",
+      "commit": {
+        "hash": "5c839f406c45569c18b02513d98f8cf604d03444",
+        "short": "5c839f4",
+        "subject": "swift: add util_80",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "5c839f406c45569c18b02513d98f8cf604d03444",
+      "curr": "de311d88fd625c299451eeae9d8f60ee29fdf13d",
+      "commit": {
+        "hash": "de311d88fd625c299451eeae9d8f60ee29fdf13d",
+        "short": "de311d8",
+        "subject": "swift: add call pair 81",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "de311d88fd625c299451eeae9d8f60ee29fdf13d",
+      "curr": "9e15c8899649fcac8c8fa3433a9695c829b2080c",
+      "commit": {
+        "hash": "9e15c8899649fcac8c8fa3433a9695c829b2080c",
+        "short": "9e15c88",
+        "subject": "swift: add call pair 82",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "9e15c8899649fcac8c8fa3433a9695c829b2080c",
+      "curr": "6cd3c86c9209f413bdd7429db8fcc97a3c7af47e",
+      "commit": {
+        "hash": "6cd3c86c9209f413bdd7429db8fcc97a3c7af47e",
+        "short": "6cd3c86",
+        "subject": "swift: add call pair 83",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "6cd3c86c9209f413bdd7429db8fcc97a3c7af47e",
+      "curr": "7775b72cc64a6778a0e98110e3cbb915cdc30e4f",
+      "commit": {
+        "hash": "7775b72cc64a6778a0e98110e3cbb915cdc30e4f",
+        "short": "7775b72",
+        "subject": "docs: update 84",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "7775b72cc64a6778a0e98110e3cbb915cdc30e4f",
+      "curr": "aaed0838defdf53077cb817d7e1d8b5cfe6aabfb",
+      "commit": {
+        "hash": "aaed0838defdf53077cb817d7e1d8b5cfe6aabfb",
+        "short": "aaed083",
+        "subject": "swift: add call pair 85",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "aaed0838defdf53077cb817d7e1d8b5cfe6aabfb",
+      "curr": "5c12fb7dd66dd63db9bd7b4b6d6ba66001e952ef",
+      "commit": {
+        "hash": "5c12fb7dd66dd63db9bd7b4b6d6ba66001e952ef",
+        "short": "5c12fb7",
+        "subject": "swift: add call pair 86",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "5c12fb7dd66dd63db9bd7b4b6d6ba66001e952ef",
+      "curr": "f903b2fd39bb71d3e90a1cbaf2c7eaa86be7f580",
+      "commit": {
+        "hash": "f903b2fd39bb71d3e90a1cbaf2c7eaa86be7f580",
+        "short": "f903b2f",
+        "subject": "swift: add call pair 87",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "f903b2fd39bb71d3e90a1cbaf2c7eaa86be7f580",
+      "curr": "a0119b1ba55b3970be39229e2c2eb5462b5f9fbe",
+      "commit": {
+        "hash": "a0119b1ba55b3970be39229e2c2eb5462b5f9fbe",
+        "short": "a0119b1",
+        "subject": "swift: add call pair 88",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "a0119b1ba55b3970be39229e2c2eb5462b5f9fbe",
+      "curr": "0d578c1b01ebde26ecd93bcae3f27c1e92da2772",
+      "commit": {
+        "hash": "0d578c1b01ebde26ecd93bcae3f27c1e92da2772",
+        "short": "0d578c1",
+        "subject": "swift: add call pair 89",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "0d578c1b01ebde26ecd93bcae3f27c1e92da2772",
+      "curr": "b270cfa7b940983f274137df4b93fc8cc3a98b93",
+      "commit": {
+        "hash": "b270cfa7b940983f274137df4b93fc8cc3a98b93",
+        "short": "b270cfa",
+        "subject": "docs: update 90",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "b270cfa7b940983f274137df4b93fc8cc3a98b93",
+      "curr": "1fa3cf75b05067b3a0104cda5d4c77b6bee8dcc7",
+      "commit": {
+        "hash": "1fa3cf75b05067b3a0104cda5d4c77b6bee8dcc7",
+        "short": "1fa3cf7",
+        "subject": "swift: add call pair 91",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/App.swift",
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "1fa3cf75b05067b3a0104cda5d4c77b6bee8dcc7",
+      "curr": "18b2db22137f30b40267a27cd8b9547588fad718",
+      "commit": {
+        "hash": "18b2db22137f30b40267a27cd8b9547588fad718",
+        "short": "18b2db2",
+        "subject": "swift: add call pair 92",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "18b2db22137f30b40267a27cd8b9547588fad718",
+      "curr": "e12830d2f14a91398f3f4e2039ef0bfd4a3595bf",
+      "commit": {
+        "hash": "e12830d2f14a91398f3f4e2039ef0bfd4a3595bf",
+        "short": "e12830d",
+        "subject": "swift: add call pair 93",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "e12830d2f14a91398f3f4e2039ef0bfd4a3595bf",
+      "curr": "f77200bf87a139fdace410f7f15ebf1b745e9154",
+      "commit": {
+        "hash": "f77200bf87a139fdace410f7f15ebf1b745e9154",
+        "short": "f77200b",
+        "subject": "swift: add call pair 94",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "f77200bf87a139fdace410f7f15ebf1b745e9154",
+      "curr": "30449af1c4a5ef6107c1857e4903a3c4f23a9e35",
+      "commit": {
+        "hash": "30449af1c4a5ef6107c1857e4903a3c4f23a9e35",
+        "short": "30449af",
+        "subject": "swift: add call pair 95",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "30449af1c4a5ef6107c1857e4903a3c4f23a9e35",
+      "curr": "539d1c09b09359e5b86d2b5ed7bd7601941f843e",
+      "commit": {
+        "hash": "539d1c09b09359e5b86d2b5ed7bd7601941f843e",
+        "short": "539d1c0",
+        "subject": "docs: update 96",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "539d1c09b09359e5b86d2b5ed7bd7601941f843e",
+      "curr": "af84072297169ffa1b25abc3ded3e703fe2b046d",
+      "commit": {
+        "hash": "af84072297169ffa1b25abc3ded3e703fe2b046d",
+        "short": "af84072",
+        "subject": "swift: add call pair 97",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "af84072297169ffa1b25abc3ded3e703fe2b046d",
+      "curr": "73909fd6ca886e2be08d3e11084ed9151856cf3e",
+      "commit": {
+        "hash": "73909fd6ca886e2be08d3e11084ed9151856cf3e",
+        "short": "73909fd",
+        "subject": "swift: add call pair 98",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/App.swift",
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "73909fd6ca886e2be08d3e11084ed9151856cf3e",
+      "curr": "915a0519a064e9773c2d93d83dfdc32f0489fd95",
+      "commit": {
+        "hash": "915a0519a064e9773c2d93d83dfdc32f0489fd95",
+        "short": "915a051",
+        "subject": "swift: add call pair 99",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "915a0519a064e9773c2d93d83dfdc32f0489fd95",
+      "curr": "15ad4ba883b705d204195b4443d2ffdd93dbe7d4",
+      "commit": {
+        "hash": "15ad4ba883b705d204195b4443d2ffdd93dbe7d4",
+        "short": "15ad4ba",
+        "subject": "swift: add util_100",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "15ad4ba883b705d204195b4443d2ffdd93dbe7d4",
+      "curr": "89473b3fc69a7df4d9100f429be3883a563b0bbd",
+      "commit": {
+        "hash": "89473b3fc69a7df4d9100f429be3883a563b0bbd",
+        "short": "89473b3",
+        "subject": "swift: add call pair 101",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "89473b3fc69a7df4d9100f429be3883a563b0bbd",
+      "curr": "cd740701f9317fe59743a81fc1dbb7e54384d9c1",
+      "commit": {
+        "hash": "cd740701f9317fe59743a81fc1dbb7e54384d9c1",
+        "short": "cd74070",
+        "subject": "docs: update 102",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "cd740701f9317fe59743a81fc1dbb7e54384d9c1",
+      "curr": "f0d51af596cdde3591b22330b66f13c72c63d064",
+      "commit": {
+        "hash": "f0d51af596cdde3591b22330b66f13c72c63d064",
+        "short": "f0d51af",
+        "subject": "swift: add call pair 103",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "f0d51af596cdde3591b22330b66f13c72c63d064",
+      "curr": "303162dd6c4b89c07fc144c4eee58784050a8339",
+      "commit": {
+        "hash": "303162dd6c4b89c07fc144c4eee58784050a8339",
+        "short": "303162d",
+        "subject": "swift: add call pair 104",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "303162dd6c4b89c07fc144c4eee58784050a8339",
+      "curr": "aee4332f000b1a2ccbce70a11da33c9a53aa0914",
+      "commit": {
+        "hash": "aee4332f000b1a2ccbce70a11da33c9a53aa0914",
+        "short": "aee4332",
+        "subject": "swift: add feature file 105",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Feature105.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "aee4332f000b1a2ccbce70a11da33c9a53aa0914",
+      "curr": "2286d20d74a3a6c4ae7f323a08ea523c100bbbda",
+      "commit": {
+        "hash": "2286d20d74a3a6c4ae7f323a08ea523c100bbbda",
+        "short": "2286d20",
+        "subject": "swift: add call pair 106",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "2286d20d74a3a6c4ae7f323a08ea523c100bbbda",
+      "curr": "27e0c63e61215d2a885c20db61ff2673b87dd0ed",
+      "commit": {
+        "hash": "27e0c63e61215d2a885c20db61ff2673b87dd0ed",
+        "short": "27e0c63",
+        "subject": "swift: add call pair 107",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "27e0c63e61215d2a885c20db61ff2673b87dd0ed",
+      "curr": "134c94b6838492c06dd3e943229c3b7e6cf168a9",
+      "commit": {
+        "hash": "134c94b6838492c06dd3e943229c3b7e6cf168a9",
+        "short": "134c94b",
+        "subject": "docs: update 108",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "134c94b6838492c06dd3e943229c3b7e6cf168a9",
+      "curr": "38ab0b6ee43e8b2fbbcb73c85d912f5d2b9810d2",
+      "commit": {
+        "hash": "38ab0b6ee43e8b2fbbcb73c85d912f5d2b9810d2",
+        "short": "38ab0b6",
+        "subject": "swift: add call pair 109",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "38ab0b6ee43e8b2fbbcb73c85d912f5d2b9810d2",
+      "curr": "92bb98821daa7e50145272ad95298e9c1ff75e55",
+      "commit": {
+        "hash": "92bb98821daa7e50145272ad95298e9c1ff75e55",
+        "short": "92bb988",
+        "subject": "swift: add util_110",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "92bb98821daa7e50145272ad95298e9c1ff75e55",
+      "curr": "975cf65f43c13886ef69d7a9784824e7b4f0699e",
+      "commit": {
+        "hash": "975cf65f43c13886ef69d7a9784824e7b4f0699e",
+        "short": "975cf65",
+        "subject": "swift: add call pair 111",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "975cf65f43c13886ef69d7a9784824e7b4f0699e",
+      "curr": "1288a28c0c19fe1970b23fa9108bbad38b779eaa",
+      "commit": {
+        "hash": "1288a28c0c19fe1970b23fa9108bbad38b779eaa",
+        "short": "1288a28",
+        "subject": "swift: add call pair 112",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/App.swift",
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "1288a28c0c19fe1970b23fa9108bbad38b779eaa",
+      "curr": "258dd1cd463b5b83bf981709c61b6e234692ec7e",
+      "commit": {
+        "hash": "258dd1cd463b5b83bf981709c61b6e234692ec7e",
+        "short": "258dd1c",
+        "subject": "swift: add call pair 113",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "258dd1cd463b5b83bf981709c61b6e234692ec7e",
+      "curr": "c3987b42dd5544e7ddaee8889d7241a56a5edb1c",
+      "commit": {
+        "hash": "c3987b42dd5544e7ddaee8889d7241a56a5edb1c",
+        "short": "c3987b4",
+        "subject": "docs: update 114",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "c3987b42dd5544e7ddaee8889d7241a56a5edb1c",
+      "curr": "86fa52789e97fbd3693afb7bc2334889a22307d9",
+      "commit": {
+        "hash": "86fa52789e97fbd3693afb7bc2334889a22307d9",
+        "short": "86fa527",
+        "subject": "swift: add call pair 115",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "86fa52789e97fbd3693afb7bc2334889a22307d9",
+      "curr": "421f689be4bff3ea16bb2a3b6aebb19129dab6c4",
+      "commit": {
+        "hash": "421f689be4bff3ea16bb2a3b6aebb19129dab6c4",
+        "short": "421f689",
+        "subject": "swift: add call pair 116",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "421f689be4bff3ea16bb2a3b6aebb19129dab6c4",
+      "curr": "4b3487e0323fa6c53420f35f48634fdbfebfdd7c",
+      "commit": {
+        "hash": "4b3487e0323fa6c53420f35f48634fdbfebfdd7c",
+        "short": "4b3487e",
+        "subject": "swift: add call pair 117",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "4b3487e0323fa6c53420f35f48634fdbfebfdd7c",
+      "curr": "d8e4aed5a66b7e69e0a896ba503311bcf57ff09b",
+      "commit": {
+        "hash": "d8e4aed5a66b7e69e0a896ba503311bcf57ff09b",
+        "short": "d8e4aed",
+        "subject": "swift: add call pair 118",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "d8e4aed5a66b7e69e0a896ba503311bcf57ff09b",
+      "curr": "be501ee5d7f63a9c994ec39e64e61b37ca6bb225",
+      "commit": {
+        "hash": "be501ee5d7f63a9c994ec39e64e61b37ca6bb225",
+        "short": "be501ee",
+        "subject": "swift: add call pair 119",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/App.swift",
+        "Sources/Engine.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 3,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "be501ee5d7f63a9c994ec39e64e61b37ca6bb225",
+      "curr": "15f2b3b4ce1eada4d8d1fea53c2e547f14cd85f4",
+      "commit": {
+        "hash": "15f2b3b4ce1eada4d8d1fea53c2e547f14cd85f4",
+        "short": "15f2b3b",
+        "subject": "docs: update 120",
+        "author": "FlowMap Bot",
+        "date": "2026-03-07T16:37:54+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    }
+  ]
+}

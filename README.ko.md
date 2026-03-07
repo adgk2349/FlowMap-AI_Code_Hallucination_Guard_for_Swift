@@ -1,3 +1,5 @@
+> **퍼블릭 베타 공지 (2026년 3월 8일):** FlowMap은 퍼블릭 베타 단계입니다. 라이선스 검증은 현재 로컬/개발용 프리뷰이며, 프로덕션 서버 강제 검증은 아직 구현되지 않았습니다.
+
 # FlowMap
 
 > Swift 코드의 구조와 호출 관계를 그래프로 분석하는 도구입니다. AI가 생성한 코드 변경을 검증할 때 특히 유용합니다.
@@ -5,8 +7,6 @@
 [![CI](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml)
 
 [English](README.md) · [日本語](README.ja.md)
-
-**상태: Public Beta**
 
 ## FlowMap이란?
 
@@ -87,6 +87,9 @@ swift build -c release
 cd ../..
 ```
 
+> 참고: 리플레이/시나리오 검증 스크립트는 `parsers/swift-ast/.build/debug/flowmap-swift-ast` 경로를 사용합니다.  
+> 해당 스크립트를 실행할 경우 debug 빌드도 1회 필요합니다: `cd parsers/swift-ast && swift build -c debug`.
+
 **4. VS Code 확장 컴파일**
 
 ```bash
@@ -103,6 +106,10 @@ cd ../..
 3. 새로 열린 VS Code 창에서 Swift 워크스페이스를 엽니다
 4. 커맨드 팔레트에서 **FlowMap: Analyze Workspace**를 실행합니다 (`Cmd+Shift+P`)
 5. **FlowMap Graph** 패널을 엽니다
+
+### VSIX 설치 버전 실행
+
+`.vsix`로 설치한 경우 `flowmap.binaryPath`를 빌드된 엔진 경로(예: `/path/to/FlowMap/target/debug/flowmap`)로 설정한 뒤 **FlowMap: Analyze Workspace**를 실행하세요.
 
 ## 사용 방법
 
@@ -161,16 +168,13 @@ node scripts/run_commit_replay.mjs \
 
 ## 라이선스
 
-FlowMap은 source-available 방식으로 제공됩니다.
+FlowMap은 현재 **퍼블릭 베타** 단계입니다.
 
-**Swift 지원**
-- 개인 및 비상업적 사용: 무료
-- 상업적 / 팀 / 기업 사용: 라이선스 필요
+최종 라이선스 조건(상업용 조건 포함)은 베타 종료 후 공지됩니다.
 
-**추가 언어**
-향후 추가 언어 지원은 별도 상용 플러그인 형태로 제공될 수 있습니다.
+그 전까지는 작성자가 모든 권리를 보유하며, 퍼블릭 베타 평가 목적 사용만 허용됩니다.
 
-상업용 라이선스 문의: adgk2349b@gmail.com
+상업적 사용 또는 재배포 관련 문의: adgk2349b@gmail.com
 
 ## 로드맵
 
