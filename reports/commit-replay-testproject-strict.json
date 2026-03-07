@@ -1,0 +1,93 @@
+{
+  "created_at": "2026-03-07T07:31:22.022Z",
+  "mode": "commit-replay",
+  "config": {
+    "repo": "/Users/seungminlee/Desktop/Development/FlowMap/TestProject",
+    "rev": "HEAD",
+    "count": 3,
+    "strict_swift": true,
+    "keep_temp": false,
+    "report_path": "/Users/seungminlee/Desktop/Development/FlowMap/reports/commit-replay-testproject-strict.json"
+  },
+  "binaries": {
+    "flowmap": "/Users/seungminlee/Desktop/Development/FlowMap/target/debug/flowmap",
+    "parser": "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/debug/flowmap-swift-ast"
+  },
+  "summary": {
+    "total_pairs": 2,
+    "pass_pairs": 2,
+    "warn_pairs": 0,
+    "failed_pairs": 0,
+    "error_pairs": 0,
+    "swift_pairs": 2,
+    "non_swift_pairs": 0,
+    "confusion": {
+      "tp": 2,
+      "tn": 0,
+      "fp": 0,
+      "fn": 0
+    },
+    "non_swift_fp_rate": 0,
+    "swift_detection_rate": 1,
+    "gate": {
+      "max_non_swift_fp_rate": 0,
+      "max_errors": 0,
+      "strict_swift_required": true
+    },
+    "gate_passed": true
+  },
+  "results": [
+    {
+      "prev": "d37d1038bbd7a4ca3c2ede40a3a4031d360cd217",
+      "curr": "0badbd0efac1c12763d79a7bc1cd3ef0d29f3c9e",
+      "commit": {
+        "hash": "0badbd0efac1c12763d79a7bc1cd3ef0d29f3c9e",
+        "short": "0badbd0",
+        "subject": "Add and modify",
+        "author": "adgk2349",
+        "date": "2026-03-07T13:54:51+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Demo.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 5,
+        "removed_nodes": 2,
+        "changed_nodes": 4,
+        "added_edges": 8,
+        "removed_edges": 4,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "0badbd0efac1c12763d79a7bc1cd3ef0d29f3c9e",
+      "curr": "b980404177c1516dadfffbf7a091b1949fbaeed8",
+      "commit": {
+        "hash": "b980404177c1516dadfffbf7a091b1949fbaeed8",
+        "short": "b980404",
+        "subject": "Fix typos",
+        "author": "adgk2349",
+        "date": "2026-03-07T14:23:04+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "Sources/Demo.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 1,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 2
+      }
+    }
+  ]
+}

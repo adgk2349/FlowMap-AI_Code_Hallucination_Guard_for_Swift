@@ -1,0 +1,501 @@
+{
+  "created_at": "2026-03-07T07:48:43.151Z",
+  "mode": "commit-replay",
+  "config": {
+    "repo": "/Users/seungminlee/Desktop/Development/FlowMap",
+    "rev": "HEAD",
+    "count": 20,
+    "strict_swift": true,
+    "keep_temp": false,
+    "report_path": "/Users/seungminlee/Desktop/Development/FlowMap/reports/replay-flowmap-20-strict.json"
+  },
+  "binaries": {
+    "flowmap": "/Users/seungminlee/Desktop/Development/FlowMap/target/debug/flowmap",
+    "parser": "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/debug/flowmap-swift-ast"
+  },
+  "summary": {
+    "total_pairs": 19,
+    "pass_pairs": 19,
+    "warn_pairs": 0,
+    "failed_pairs": 0,
+    "error_pairs": 0,
+    "swift_pairs": 2,
+    "non_swift_pairs": 17,
+    "confusion": {
+      "tp": 2,
+      "tn": 17,
+      "fp": 0,
+      "fn": 0
+    },
+    "non_swift_fp_rate": 0,
+    "swift_detection_rate": 1,
+    "gate": {
+      "max_non_swift_fp_rate": 0,
+      "max_errors": 0,
+      "strict_swift_required": true
+    },
+    "gate_passed": true
+  },
+  "results": [
+    {
+      "prev": "8c2a40bf6e3d5b61e8bef0a9de170d31210513f4",
+      "curr": "6d9c2e2d9e71987c65024e47b9294d38ffbdb233",
+      "commit": {
+        "hash": "6d9c2e2d9e71987c65024e47b9294d38ffbdb233",
+        "short": "6d9c2e2",
+        "subject": "PR8.6 (1/2): Spacing constants + strict file-detail aligned layout",
+        "author": "adgk2349",
+        "date": "2026-03-07T02:03:52+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "6d9c2e2d9e71987c65024e47b9294d38ffbdb233",
+      "curr": "b9729d291fff4835a3ac4a3308ef84f7bc448e36",
+      "commit": {
+        "hash": "b9729d291fff4835a3ac4a3308ef84f7bc448e36",
+        "short": "b9729d2",
+        "subject": "PR8.6 (2/2): Calls mode — COMPONENT_GAP + stronger cose spacing",
+        "author": "adgk2349",
+        "date": "2026-03-07T02:05:23+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "b9729d291fff4835a3ac4a3308ef84f7bc448e36",
+      "curr": "6e619f7d1c5d60ff5ef56f3ea4d18f2ff6c32cfb",
+      "commit": {
+        "hash": "6e619f7d1c5d60ff5ef56f3ea4d18f2ff6c32cfb",
+        "short": "6e619f7",
+        "subject": "PR8.7: Calls mode redesign — component panels with normalized aligned layout",
+        "author": "adgk2349",
+        "date": "2026-03-07T05:44:55+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "6e619f7d1c5d60ff5ef56f3ea4d18f2ff6c32cfb",
+      "curr": "f0b947dac70bb3705bee1947273627a278c6bd57",
+      "commit": {
+        "hash": "f0b947dac70bb3705bee1947273627a278c6bd57",
+        "short": "f0b947d",
+        "subject": "Merge pull request #11 from adgk2349/flowmap-pr8-7",
+        "author": "방구석_코드스미스",
+        "date": "2026-03-07T06:08:50+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "f0b947dac70bb3705bee1947273627a278c6bd57",
+      "curr": "d7d22e80514c57238a602615a10a469f28b2dc56",
+      "commit": {
+        "hash": "d7d22e80514c57238a602615a10a469f28b2dc56",
+        "short": "d7d22e8",
+        "subject": "PR8.8: Calls layout fix — compact vertical stacking instead of wide horizontal rows",
+        "author": "adgk2349",
+        "date": "2026-03-07T06:14:29+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "d7d22e80514c57238a602615a10a469f28b2dc56",
+      "curr": "49fd7315c2575300686b89f68761b4a12711850c",
+      "commit": {
+        "hash": "49fd7315c2575300686b89f68761b4a12711850c",
+        "short": "49fd731",
+        "subject": "PR8.9: Calls mode irregular dense packing (skyline bottom-left algorithm)",
+        "author": "adgk2349",
+        "date": "2026-03-07T06:35:11+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "49fd7315c2575300686b89f68761b4a12711850c",
+      "curr": "e7204df302d1ddce494c9a93096a94367687a511",
+      "commit": {
+        "hash": "e7204df302d1ddce494c9a93096a94367687a511",
+        "short": "e7204df",
+        "subject": "Merge pull request #12 from adgk2349/flowmap-pr8-9",
+        "author": "방구석_코드스미스",
+        "date": "2026-03-07T10:56:47+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "e7204df302d1ddce494c9a93096a94367687a511",
+      "curr": "1c99ae9107155b4ef2d57e10177a719d0fd73b09",
+      "commit": {
+        "hash": "1c99ae9107155b4ef2d57e10177a719d0fd73b09",
+        "short": "1c99ae9",
+        "subject": "PR8.9.1: Tighten calls packing density (smaller tile gaps + tighter fit)",
+        "author": "adgk2349",
+        "date": "2026-03-07T11:01:44+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "1c99ae9107155b4ef2d57e10177a719d0fd73b09",
+      "curr": "30c41b3e6f796ca60db7920f9e1e79bebbd7ab77",
+      "commit": {
+        "hash": "30c41b3e6f796ca60db7920f9e1e79bebbd7ab77",
+        "short": "30c41b3",
+        "subject": "Merge pull request #14 from adgk2349/flowmap-pr8-9-1",
+        "author": "방구석_코드스미스",
+        "date": "2026-03-07T11:41:30+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "30c41b3e6f796ca60db7920f9e1e79bebbd7ab77",
+      "curr": "a6ffa69dfea240f9975e97d9400c61b13df7f156",
+      "commit": {
+        "hash": "a6ffa69dfea240f9975e97d9400c61b13df7f156",
+        "short": "a6ffa69",
+        "subject": "PR9: Swift cross-file calls — workspace-wide symbol linking, conservative matching",
+        "author": "adgk2349",
+        "date": "2026-03-07T11:28:15+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "parsers/swift-ast/Sources/FlowMapSwiftAST/main.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 11,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "a6ffa69dfea240f9975e97d9400c61b13df7f156",
+      "curr": "f98d12a81d5d17d8e29cd6aff470efbdde4f62e3",
+      "commit": {
+        "hash": "f98d12a81d5d17d8e29cd6aff470efbdde4f62e3",
+        "short": "f98d12a",
+        "subject": "Merge pull request #13 from adgk2349/flowmap-pr9",
+        "author": "방구석_코드스미스",
+        "date": "2026-03-07T11:47:54+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "f98d12a81d5d17d8e29cd6aff470efbdde4f62e3",
+      "curr": "3e89fbfe3fede24aab4bc1aad4135b5a88432be8",
+      "commit": {
+        "hash": "3e89fbfe3fede24aab4bc1aad4135b5a88432be8",
+        "short": "3e89fbf",
+        "subject": "Apply code review findings & CI optimizations",
+        "author": "adgk2349",
+        "date": "2026-03-07T11:53:02+09:00"
+      },
+      "swift_changed": true,
+      "swift_files": [
+        "parsers/swift-ast/Sources/FlowMapSwiftAST/main.swift"
+      ],
+      "engine_changed": true,
+      "expected_changed": true,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 2,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "3e89fbfe3fede24aab4bc1aad4135b5a88432be8",
+      "curr": "f2e54406651eec4b505c339639e3959a0519e22c",
+      "commit": {
+        "hash": "f2e54406651eec4b505c339639e3959a0519e22c",
+        "short": "f2e5440",
+        "subject": "docs: add public READMEs, localize to ko/ja, hide internal docs",
+        "author": "adgk2349",
+        "date": "2026-03-07T12:10:46+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "f2e54406651eec4b505c339639e3959a0519e22c",
+      "curr": "c6b57851550dca5ec9b4e53e84e8fc4b4385c1f3",
+      "commit": {
+        "hash": "c6b57851550dca5ec9b4e53e84e8fc4b4385c1f3",
+        "short": "c6b5785",
+        "subject": "docs: polish public README set (en/ko/ja) for release",
+        "author": "adgk2349",
+        "date": "2026-03-07T12:19:15+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "c6b57851550dca5ec9b4e53e84e8fc4b4385c1f3",
+      "curr": "55c12993dc9206374212c9e34232eeec75287039",
+      "commit": {
+        "hash": "55c12993dc9206374212c9e34232eeec75287039",
+        "short": "55c1299",
+        "subject": "Merge pull request #15 from adgk2349/flowmap-pr9",
+        "author": "방구석_코드스미스",
+        "date": "2026-03-07T12:27:21+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "55c12993dc9206374212c9e34232eeec75287039",
+      "curr": "945fe158ddea4400c7a785b6736837c7e967329d",
+      "commit": {
+        "hash": "945fe158ddea4400c7a785b6736837c7e967329d",
+        "short": "945fe15",
+        "subject": "PR8.10: Fix file-detail blank view — debug selectors + force visible detail nodes",
+        "author": "adgk2349",
+        "date": "2026-03-07T12:57:18+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "945fe158ddea4400c7a785b6736837c7e967329d",
+      "curr": "7fbe572eebd94d6b951477054ff31c10cd020a35",
+      "commit": {
+        "hash": "7fbe572eebd94d6b951477054ff31c10cd020a35",
+        "short": "7fbe572",
+        "subject": "Merge pull request #16 from adgk2349/flowmap-pr8-10-file-detail-fix",
+        "author": "방구석_코드스미스",
+        "date": "2026-03-07T13:35:04+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "7fbe572eebd94d6b951477054ff31c10cd020a35",
+      "curr": "82659c290404532e3316387de5baac016356eecb",
+      "commit": {
+        "hash": "82659c290404532e3316387de5baac016356eecb",
+        "short": "82659c2",
+        "subject": "docs: Update screenshots with latest UI",
+        "author": "adgk2349",
+        "date": "2026-03-07T13:38:45+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    },
+    {
+      "prev": "82659c290404532e3316387de5baac016356eecb",
+      "curr": "b0d8a3abc4d1228faa5cc915d5ec50057f54f07d",
+      "commit": {
+        "hash": "b0d8a3abc4d1228faa5cc915d5ec50057f54f07d",
+        "short": "b0d8a3a",
+        "subject": "docs: Update contact information",
+        "author": "adgk2349",
+        "date": "2026-03-07T13:45:46+09:00"
+      },
+      "swift_changed": false,
+      "swift_files": [],
+      "engine_changed": false,
+      "expected_changed": false,
+      "status": "pass",
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      }
+    }
+  ]
+}
