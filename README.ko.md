@@ -114,6 +114,28 @@ cd ../..
    - **Calls** — 호출 군집과 함수 연결 흐름 추적
 4. 파일을 저장하면 자동으로 재분석됩니다
 
+## 검증 방식
+
+FlowMap은 실제 Git 커밋 쌍을 리플레이해서 diff 검출 방향이 맞는지 확인하는 자동 검증을 제공합니다.
+
+- 커밋 리플레이 러너: `scripts/run_commit_replay.mjs`
+- 시나리오 러너(합성 회귀 세트): `scripts/run_sample_scenarios.mjs`
+- 리플레이 요약 빌더: `scripts/build_replay_summary.mjs`
+
+예시:
+
+```bash
+node scripts/run_commit_replay.mjs \
+  --repo /path/to/swift-repo \
+  --count 100 \
+  --report reports/replay-100.json
+```
+
+현재 통합 검증 산출물:
+
+- `reports/replay-validation-bundle.md`
+- `reports/replay-validation-bundle.json`
+
 ## 라이선스
 
 FlowMap은 source-available 방식으로 제공됩니다.

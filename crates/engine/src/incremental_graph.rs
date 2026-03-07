@@ -1,5 +1,6 @@
 use crate::graph_builder::BuiltGraph;
 use crate::swift_bridge;
+use crate::swift_bridge::UnresolvedCallSite;
 use std::collections::HashSet;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -16,7 +17,7 @@ pub fn build_old_fragment(
     workspace_root: &Path,
     changed_files: &[PathBuf],
     binary: &str,
-) -> BuiltGraph {
+) -> (BuiltGraph, Vec<UnresolvedCallSite>) {
     use rayon::prelude::*;
 
     let parsed_graphs: Vec<swift_bridge::SwiftGraph> = changed_files
@@ -31,21 +32,54 @@ pub fn build_old_fragment(
                 return None;
             }
 
-            swift_bridge::parse_swift_file(binary, tmp.path())
+            let mut sg = swift_bridge::parse_swift_file(binary, tmp.path())?;
+
+            let tmp_name = tmp.path().file_name()?.to_string_lossy();
+            let real_name = file.file_name()?.to_string_lossy();
+            let tmp_path_str = tmp.path().to_string_lossy();
+            let real_path_str = file.to_string_lossy();
+
+            for node in &mut sg.nodes {
+                node.id = node.id.replace(&*tmp_name, &real_name);
+                if node.kind == "file" {
+                    node.name = node.name.replace(&*tmp_name, &real_name);
+                }
+                if let Some(uri) = &mut node.uri {
+                    *uri = uri.replace(&*tmp_path_str, &real_path_str);
+                }
+            }
+            for edge in &mut sg.edges {
+                edge.id = edge.id.replace(&*tmp_name, &real_name);
+                edge.source = edge.source.replace(&*tmp_name, &real_name);
+                edge.target = edge.target.replace(&*tmp_name, &real_name);
+            }
+            for site in &mut sg.call_sites {
+                site.caller_id = site.caller_id.replace(&*tmp_name, &real_name);
+                site.caller_file = site.caller_file.replace(&*tmp_path_str, &real_path_str);
+            }
+
+            Some(sg)
         })
         .collect();
 
     let mut graph = BuiltGraph::default();
-    for sg in parsed_graphs {
+    let mut sites = Vec::new();
+    for mut sg in parsed_graphs {
+        for site in std::mem::take(&mut sg.call_sites) {
+            sites.push(site);
+        }
         graph.merge(sg);
     }
 
-    graph
+    (graph, sites)
 }
 
 /// Parse the **current working-tree** version of each file in `changed_files`,
 /// building a graph fragment that represents the files *after* the edits.
-pub fn build_new_fragment(changed_files: &[PathBuf], binary: &str) -> BuiltGraph {
+pub fn build_new_fragment(
+    changed_files: &[PathBuf],
+    binary: &str,
+) -> (BuiltGraph, Vec<UnresolvedCallSite>) {
     use rayon::prelude::*;
 
     let parsed_graphs: Vec<swift_bridge::SwiftGraph> = changed_files
@@ -54,11 +88,15 @@ pub fn build_new_fragment(changed_files: &[PathBuf], binary: &str) -> BuiltGraph
         .collect();
 
     let mut graph = BuiltGraph::default();
-    for sg in parsed_graphs {
+    let mut sites = Vec::new();
+    for mut sg in parsed_graphs {
+        for site in std::mem::take(&mut sg.call_sites) {
+            sites.push(site);
+        }
         graph.merge(sg);
     }
 
-    graph
+    (graph, sites)
 }
 
 /// Apply an incremental update to `old_graph`: remove all nodes and edges that
@@ -133,7 +171,7 @@ mod tests {
 
         // Binary does not exist → should return empty graph, not panic
         let result = build_new_fragment(&[file], "non_existent_binary_xyz");
-        assert!(result.nodes.is_empty());
+        assert!(result.0.nodes.is_empty());
     }
 
     #[test]

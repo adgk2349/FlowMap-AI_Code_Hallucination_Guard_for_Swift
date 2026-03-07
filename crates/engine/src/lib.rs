@@ -12,7 +12,7 @@ use graph_diff::GraphDiff;
 use protocol::{RequestEnvelope, ResponseEnvelope};
 use serde_json::json;
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 const ENGINE_VERSION: &str = "0.1.0";
 
@@ -72,34 +72,79 @@ fn handle_analyze(req: &RequestEnvelope) -> ResponseEnvelope {
     let changed_files = git_diff::changed_swift_files(root);
 
     // ── 3. Compute graph diff: HEAD fragment vs current fragment ──────────
-    let diff = if changed_files.is_empty() {
+    let mut diff = if changed_files.is_empty() {
         GraphDiff::default()
     } else {
-        let old_fragment = incremental_graph::build_old_fragment(root, &changed_files, &binary);
-        let new_fragment = incremental_graph::build_new_fragment(&changed_files, &binary);
+        let (mut old_fragment, old_sites) =
+            incremental_graph::build_old_fragment(root, &changed_files, &binary);
+        let (mut new_fragment, new_sites) =
+            incremental_graph::build_new_fragment(&changed_files, &binary);
+
+        let old_context = build_resolution_context(&full_graph, &changed_files, &old_fragment);
+        let old_index = cross_file_resolver::SymbolIndex::build(&old_context);
+        let old_resolved = cross_file_resolver::resolve(&old_context, &old_sites, &old_index);
+        old_fragment.edges.extend(old_resolved);
+
+        let new_context = build_resolution_context(&full_graph, &changed_files, &new_fragment);
+        let new_index = cross_file_resolver::SymbolIndex::build(&new_context);
+        let new_resolved = cross_file_resolver::resolve(&new_context, &new_sites, &new_index);
+        new_fragment.edges.extend(new_resolved);
+
         graph_diff::diff_graphs(&old_fragment, &new_fragment)
     };
 
     // ── 4. Impact analysis ────────────────────────────────────────────────
     // Start nodes: added/changed nodes + any node in the full graph that
     // calls a removed node (its dependency was deleted → it is affected).
-    let removed_ids: HashSet<&str> = diff.removed_nodes.iter().map(|n| n.id.as_str()).collect();
+    let removed_ids: HashSet<String> = diff.removed_nodes.iter().map(|n| n.id.clone()).collect();
 
-    let mut start_ids: HashSet<&str> = diff
+    let mut start_ids: HashSet<String> = diff
         .added_nodes
         .iter()
         .chain(diff.changed_nodes.iter())
-        .map(|n| n.id.as_str())
+        .map(|n| n.id.clone())
         .collect();
 
+    // Preserve exactly what nodes changed intrinsically to exclude them from the orange 'impact' set
+    let mut primary_changed: HashSet<String> = start_ids.clone();
+
     for edge in &full_graph.edges {
-        if edge.kind == "calls" && removed_ids.contains(edge.to.as_str()) {
-            start_ids.insert(edge.from.as_str());
+        if edge.kind == "calls" && removed_ids.contains(&edge.to) {
+            start_ids.insert(edge.from.clone());
         }
     }
 
-    let start_refs: Vec<&str> = start_ids.into_iter().collect();
-    let impacted = impact_analysis::impacted_nodes(&full_graph, &start_refs);
+    // Also trace callers from the old graph: if an edge was broken because the
+    // target was removed, the caller is intrinsically impacted.
+    for edge in &diff.removed_edges {
+        if edge.kind == "calls" && removed_ids.contains(&edge.to) {
+            start_ids.insert(edge.from.clone());
+            primary_changed.insert(edge.from.clone());
+        }
+    }
+
+    // Any new call edges? The caller should be impacted too
+    for edge in &diff.added_edges {
+        if edge.kind == "calls" {
+            start_ids.insert(edge.from.clone());
+            primary_changed.insert(edge.from.clone());
+        }
+    }
+
+    // Add implicitly changed nodes to diff.changed_nodes so they get painted yellow
+    let existing_changed_ids: HashSet<String> =
+        diff.changed_nodes.iter().map(|n| n.id.clone()).collect();
+    for id in &primary_changed {
+        if !existing_changed_ids.contains(id) && !diff.added_nodes.iter().any(|n| &n.id == id) {
+            if let Some(node) = full_graph.nodes.iter().find(|n| n.id == *id) {
+                diff.changed_nodes.push(node.clone());
+            }
+        }
+    }
+
+    let start_refs: Vec<&str> = start_ids.iter().map(|s| s.as_str()).collect();
+    let primary_changed_vec: Vec<&str> = primary_changed.iter().map(|s| s.as_str()).collect();
+    let impacted = impact_analysis::impacted_nodes(&full_graph, &start_refs, &primary_changed_vec);
     let impact_ids: Vec<String> = impacted.into_iter().map(|n| n.id).collect();
 
     // ── 5. Serialize and respond ──────────────────────────────────────────
@@ -165,6 +210,55 @@ fn build_swift_graph(workspace_path: &str, binary: &str) -> BuiltGraph {
     global
 }
 
+/// Build a symbol-resolution context for one side of an incremental diff.
+///
+/// The context includes:
+/// - all nodes from unchanged files (current graph)
+/// - all nodes/edges from the target fragment (old or new side)
+///
+/// This avoids mixing old/new versions of changed files while still allowing
+/// cross-file resolution against unchanged workspace symbols.
+fn build_resolution_context(
+    full_graph: &BuiltGraph,
+    changed_files: &[PathBuf],
+    fragment: &BuiltGraph,
+) -> BuiltGraph {
+    let mut context = BuiltGraph::default();
+    let mut seen_ids: HashSet<String> = HashSet::new();
+
+    for node in &full_graph.nodes {
+        if node
+            .uri
+            .as_deref()
+            .is_some_and(|uri| is_changed_file_uri(uri, changed_files))
+        {
+            continue;
+        }
+        if seen_ids.insert(node.id.clone()) {
+            context.nodes.push(node.clone());
+        }
+    }
+
+    for node in &fragment.nodes {
+        if seen_ids.insert(node.id.clone()) {
+            context.nodes.push(node.clone());
+        }
+    }
+
+    // Deliberately use fragment edges only:
+    // resolver duplicate suppression should not hide edges just because they
+    // already exist in the full current workspace graph.
+    context.edges = fragment.edges.clone();
+    context
+}
+
+fn is_changed_file_uri(uri: &str, changed_files: &[PathBuf]) -> bool {
+    let uri_path = Path::new(uri);
+    changed_files.iter().any(|changed| {
+        uri_path == changed.as_path() || uri_path.ends_with(changed) || changed.ends_with(uri_path)
+    })
+}
+
 /// Locate the `flowmap-swift-ast` binary.
 ///
 /// 1. Same directory as the running `flowmap` binary (covers `target/debug/`).
@@ -199,6 +293,9 @@ fn which_in_path(name: &str) -> Option<std::path::PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::graph_builder::{BuiltEdge, BuiltNode};
+    use crate::swift_bridge::UnresolvedCallSite;
+    use std::path::PathBuf;
 
     fn make_req(cmd: &str) -> RequestEnvelope {
         RequestEnvelope {
@@ -263,5 +360,136 @@ mod tests {
         let resp = handle_request(&req);
         assert!(!resp.ok);
         assert_eq!(resp.error.unwrap().code, "UNKNOWN_COMMAND");
+    }
+
+    #[test]
+    fn test_is_changed_file_uri_handles_relative_absolute_mismatch() {
+        let changed_rel = vec![PathBuf::from("src/Changed.swift")];
+        assert!(is_changed_file_uri(
+            "/repo/workspace/src/Changed.swift",
+            &changed_rel
+        ));
+
+        let changed_abs = vec![PathBuf::from("/repo/workspace/src/Changed.swift")];
+        assert!(is_changed_file_uri("src/Changed.swift", &changed_abs));
+    }
+
+    #[test]
+    fn test_build_resolution_context_drops_changed_nodes_from_full_graph() {
+        let full_graph = BuiltGraph {
+            nodes: vec![
+                BuiltNode {
+                    id: "src/Changed.swift.NewCaller()".to_string(),
+                    kind: "func".to_string(),
+                    name: "newCaller".to_string(),
+                    uri: Some("src/Changed.swift".to_string()),
+                    line: Some(10),
+                },
+                BuiltNode {
+                    id: "src/Shared.swift.target()".to_string(),
+                    kind: "func".to_string(),
+                    name: "target".to_string(),
+                    uri: Some("src/Shared.swift".to_string()),
+                    line: Some(3),
+                },
+            ],
+            edges: vec![BuiltEdge {
+                id: "e1".to_string(),
+                from: "src/Changed.swift.NewCaller()".to_string(),
+                to: "src/Shared.swift.target()".to_string(),
+                kind: "calls".to_string(),
+            }],
+        };
+
+        let fragment = BuiltGraph {
+            nodes: vec![BuiltNode {
+                id: "src/Changed.swift.OldCaller()".to_string(),
+                kind: "func".to_string(),
+                name: "oldCaller".to_string(),
+                uri: Some("src/Changed.swift".to_string()),
+                line: Some(8),
+            }],
+            edges: vec![BuiltEdge {
+                id: "old_e1".to_string(),
+                from: "src/Changed.swift.OldCaller()".to_string(),
+                to: "src/Changed.swift.helper()".to_string(),
+                kind: "calls".to_string(),
+            }],
+        };
+
+        let context = build_resolution_context(
+            &full_graph,
+            &[PathBuf::from("src/Changed.swift")],
+            &fragment,
+        );
+
+        assert!(context
+            .nodes
+            .iter()
+            .all(|n| n.id != "src/Changed.swift.NewCaller()"));
+        assert!(context
+            .nodes
+            .iter()
+            .any(|n| n.id == "src/Changed.swift.OldCaller()"));
+        assert_eq!(context.edges.len(), 1);
+        assert_eq!(context.edges[0].id, "old_e1");
+    }
+
+    #[test]
+    fn test_resolve_not_suppressed_by_edges_outside_fragment() {
+        let full_graph = BuiltGraph {
+            nodes: vec![
+                BuiltNode {
+                    id: "src/Changed.swift.Caller()".to_string(),
+                    kind: "func".to_string(),
+                    name: "caller".to_string(),
+                    uri: Some("src/Changed.swift".to_string()),
+                    line: Some(1),
+                },
+                BuiltNode {
+                    id: "src/Shared.swift.target()".to_string(),
+                    kind: "func".to_string(),
+                    name: "target".to_string(),
+                    uri: Some("src/Shared.swift".to_string()),
+                    line: Some(2),
+                },
+            ],
+            edges: vec![BuiltEdge {
+                id: "existing_full_edge".to_string(),
+                from: "src/Changed.swift.Caller()".to_string(),
+                to: "src/Shared.swift.target()".to_string(),
+                kind: "calls".to_string(),
+            }],
+        };
+
+        let fragment = BuiltGraph {
+            nodes: vec![BuiltNode {
+                id: "src/Changed.swift.Caller()".to_string(),
+                kind: "func".to_string(),
+                name: "caller".to_string(),
+                uri: Some("src/Changed.swift".to_string()),
+                line: Some(1),
+            }],
+            edges: vec![],
+        };
+
+        let context = build_resolution_context(
+            &full_graph,
+            &[PathBuf::from("src/Changed.swift")],
+            &fragment,
+        );
+        let index = crate::cross_file_resolver::SymbolIndex::build(&context);
+        let sites = vec![UnresolvedCallSite {
+            caller_id: "src/Changed.swift.Caller()".to_string(),
+            callee_name: "target".to_string(),
+            callee_base: None,
+            caller_type: None,
+            caller_file: "src/Changed.swift".to_string(),
+        }];
+
+        let resolved = crate::cross_file_resolver::resolve(&context, &sites, &index);
+        assert_eq!(resolved.len(), 1);
+        assert_eq!(resolved[0].from, "src/Changed.swift.Caller()");
+        assert_eq!(resolved[0].to, "src/Shared.swift.target()");
     }
 }
