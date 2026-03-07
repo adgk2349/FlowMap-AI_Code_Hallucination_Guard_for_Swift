@@ -362,6 +362,7 @@
             label: truncateLabel(full, 22),
             fullLabel: full,
             kind: 'file',
+            rawFileNodeId: n.id, // stable raw-graph ID — passed into showFileDetail on click
             uri: n.uri ?? '',
             line: typeof n.line === 'number' ? n.line : 0,
             diffState: addedNodeIds.has(n.id)
@@ -747,7 +748,13 @@
         const target = eles ? eles.filter(':visible') : cy.nodes(':visible');
 
         if (target.length === 0) {
-          // Defensive fallback: if nothing is visible, force files-only view
+          // In file-detail mode: type/func nodes are the intended view — never fall back
+          // to files-only, because doing so would hide the very nodes we're showing.
+          if (state.mode === 'file-detail') {
+            console.warn('[FlowMapDebug] deferredFit: no visible targets in file-detail mode — skipping overview fallback');
+            return;
+          }
+          // Defensive fallback for overview/calls: nothing visible → force file-card view
           const files = cy.nodes('[kind = "file"]');
           if (files.length > 0) {
             cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
@@ -910,22 +917,62 @@
   }
 
   // ── buildDetailElements ───────────────────────────────────────────────────
-  // Builds the Cytoscape elements for a single file's type/func subtree.
-  // Type nodes are flat (top-level); func nodes are compound children of their
-  // type.  The file-level compound layer is intentionally absent — only the
-  // type→func hierarchy is preserved, which avoids compound-bbox collapse.
+  // Builds Cytoscape elements for a single file's type/func subtree directly
+  // from the raw analysis graph — never from the overview's virtual nodes.
+  //
+  // Structure:
+  //   • File context node  — flat card at the top (non-compound)
+  //   • Type nodes         — flat top-level cards (non-compound parents of funcs)
+  //   • Func nodes         — compound children of their type node
+  //   • Calls edges        — only between func nodes visible in this view
+  //
+  // The file-level compound layer is intentionally absent to avoid compound-
+  // bbox collapse when all children are hidden.
   function buildDetailElements(fileNodeId) {
     const detailElements = [];
 
-    // Collect type IDs whose parent is this file
-    const typeIds = [];
+    // ── File context node (Part 2: include selected file as context card) ──
+    const fileNode = (graph.nodes ?? []).find(function (n) { return n.id === fileNodeId; });
+    if (fileNode) {
+      const fFull = fileNode.name ?? fileNode.id;
+      detailElements.push({
+        data: {
+          id: fileNode.id,
+          label: truncateLabel(fFull, 24),
+          fullLabel: fFull,
+          kind: 'file',
+          rawFileNodeId: fileNode.id,
+          uri: fileNode.uri ?? '',
+          line: typeof fileNode.line === 'number' ? fileNode.line : 0,
+          diffState: addedNodeIds.has(fileNode.id)
+            ? 'added' : changedNodeIds.has(fileNode.id) ? 'changed' : 'unchanged',
+          impacted: impactIds.has(fileNode.id),
+          // no parent — file context is top-level, not a compound parent
+        },
+      });
+    }
+
+    // ── Collect all direct children of this file in the raw graph ──────────
+    const fileChildIds = [];
     Object.keys(parentMap).forEach(function (childId) {
-      if (parentMap[childId] === fileNodeId) { typeIds.push(childId); }
+      if (parentMap[childId] === fileNodeId) { fileChildIds.push(childId); }
     });
 
     const typeNodes = (graph.nodes ?? []).filter(function (n) {
-      return typeIds.indexOf(n.id) !== -1 && n.kind === 'type';
+      return fileChildIds.indexOf(n.id) !== -1 && n.kind === 'type';
     });
+    const freeNodes = (graph.nodes ?? []).filter(function (n) {
+      return fileChildIds.indexOf(n.id) !== -1 && n.kind === 'func';
+    });
+
+    console.log(
+      '[FlowMapDebug] buildDetailElements: file=' + fileNodeId +
+      ' direct children=' + fileChildIds.length +
+      ' (types=' + typeNodes.length + ' free-funcs=' + freeNodes.length + ')'
+    );
+
+    // ── Type nodes + their func compound children ──────────────────────────
+    const detailFuncIds = new Set();
 
     typeNodes.forEach(function (t) {
       const tFull = t.name ?? t.id;
@@ -968,31 +1015,67 @@
             impacted: impactIds.has(f.id),
           },
         });
+        detailFuncIds.add(f.id);
+      });
+    });
+
+    // ── Calls edges among visible funcs (Part 2: optional calls edges) ──────
+    // Include only edges whose both endpoints are funcs visible in this view.
+    // This allows call-edge highlighting when a func is tapped in detail mode.
+    const callsEdges = (graph.edges ?? []).filter(function (e) {
+      return e.kind === 'calls' &&
+        detailFuncIds.has(e.from) && detailFuncIds.has(e.to);
+    });
+    callsEdges.forEach(function (e) {
+      const key = e.from + '::' + e.to + '::' + e.kind;
+      detailElements.push({
+        data: {
+          id: e.id,
+          source: e.from,
+          target: e.to,
+          kind: 'calls',
+          diffState: addedEdgeKeys.has(key)
+            ? 'added' : removedEdgeKeys.has(key) ? 'removed' : 'unchanged',
+        },
       });
     });
 
     console.log(
       '[FlowMapDebug] buildDetailElements: file=' + fileNodeId +
       ' types=' + typeNodes.length +
+      ' funcs-under-types=' + detailFuncIds.size +
+      ' calls-edges=' + callsEdges.length +
       ' total-elements=' + detailElements.length
     );
     return detailElements;
   }
 
   // ── layoutDetailTypeNodes ─────────────────────────────────────────────────
-  // Stacks visible type nodes in a strict vertical column, with GROUP_GAP
-  // separating each block.  Replaces the grid layout in file-detail mode with
-  // a deterministic aligned arrangement:
-  //   type₀  (at y = 0)
+  // Positions the file context card (if present) at the top, then stacks
+  // visible type nodes below it in a strict vertical column:
+  //
+  //   file-context  (at y = 0)
+  //   ——— GROUP_GAP/2 ———
+  //   type₀         (at y = fileHeight + GROUP_GAP/2)
   //   ——— GROUP_GAP ———
-  //   type₁  (at y = type₀.height + GROUP_GAP)
+  //   type₁         (at y = type₀.bottom + GROUP_GAP)
   //   ...
-  // All type nodes share x = 0; deferredFit centres them in the viewport.
+  //
+  // All nodes share x = 0; deferredFit centres them in the viewport.
   function layoutDetailTypeNodes() {
     var typeNodes = cy.nodes('[kind = "type"]').not('.hidden-node');
     if (typeNodes.length === 0) { return; }
 
     var curY = 0;
+
+    // Position file context node above the type stack if present in detail view
+    var fileCtx = cy.nodes('[kind = "file"]');
+    if (fileCtx.length > 0) {
+      var fh = Math.max(32, fileCtx.height() || 32);
+      fileCtx.position({ x: 0, y: curY + fh / 2 });
+      curY += fh + Math.round(GROUP_GAP / 2);
+    }
+
     typeNodes.forEach(function (tn) {
       var th = Math.max(32, tn.height() || 32);
       tn.position({ x: 0, y: curY + th / 2 });
@@ -1001,12 +1084,30 @@
   }
 
   // ── showFileDetail ────────────────────────────────────────────────────────
-  // Drills into a single file: shows its type nodes as top-level flat cards.
-  // Func nodes start hidden; clicking a type expands/collapses its funcs.
-  // Press Grid to return to the all-files overview.
+  // Drills into a single file: shows its type nodes as top-level flat cards,
+  // with a file context card above them.  Func nodes start hidden; clicking a
+  // type expands/collapses its funcs.  Press Back/Overview to return.
+  //
+  // Rebuilt entirely from the raw analysis graph — does NOT depend on whatever
+  // nodes are currently in the Cytoscape instance (overview virtual nodes etc).
   function showFileDetail(fileNodeId) {
+    console.log(
+      '[FlowMapDebug] showFileDetail: entry fileNodeId=' + fileNodeId +
+      ' currentMode=' + state.mode +
+      ' graph.nodes=' + (graph.nodes ?? []).length
+    );
+
     const fileData = (graph.nodes ?? []).find(function (n) { return n.id === fileNodeId; });
-    if (!fileData) { return; }
+    if (!fileData) {
+      const fileIds = (graph.nodes ?? [])
+        .filter(function (n) { return n.kind === 'file'; })
+        .map(function (n) { return n.id; });
+      console.warn(
+        '[FlowMapDebug] showFileDetail: fileNodeId "' + fileNodeId +
+        '" not found in raw graph. Available file IDs: [' + fileIds.join(', ') + ']'
+      );
+      return;
+    }
 
     // Navigate to the file source in the editor
     if (fileData.uri) {
@@ -1017,10 +1118,22 @@
     const typeCount = detailElements.filter(function (e) {
       return e.data.kind === 'type' && !e.data.parent;
     }).length;
+    const funcCount = detailElements.filter(function (e) {
+      return e.data.kind === 'func';
+    }).length;
+    const edgeCount = detailElements.filter(function (e) {
+      return e.data.source !== undefined; // edge elements have source/target
+    }).length;
+
+    console.log(
+      '[FlowMapDebug] showFileDetail: detailElements — types=' + typeCount +
+      ' funcs=' + funcCount + ' edges=' + edgeCount +
+      ' total=' + detailElements.length
+    );
 
     if (typeCount === 0) {
-      // File has no type children — stay on file-card view (navigation still happened)
-      console.log('[FlowMap] showFileDetail: no types in ' + fileNodeId + ' — staying in files view');
+      // File has no type children — stay on overview (navigation to file still happened)
+      console.log('[FlowMapDebug] showFileDetail: no types in "' + fileNodeId + '" — staying in overview');
       return;
     }
 
@@ -1044,10 +1157,33 @@
     cy.elements().remove();
     cy.add(detailElements);
 
-    // Func nodes start hidden — expand on click
+    // Log element counts immediately after cy.add to confirm rendering pipeline state
+    const cyTypesAfterAdd = cy.nodes('[kind = "type"]');
+    const cyFuncsAfterAdd = cy.nodes('[kind = "func"]');
+    console.log(
+      '[FlowMapDebug] showFileDetail: after cy.add — total cy nodes=' + cy.nodes().length +
+      ' type nodes=' + cyTypesAfterAdd.length +
+      ' func nodes=' + cyFuncsAfterAdd.length +
+      ' visible types=' + cyTypesAfterAdd.not('.hidden-node').length
+    );
+
+    // Func nodes start hidden — expand on type click
     cy.nodes('[kind = "func"]').addClass('hidden-node');
 
-    // Strict vertical stack: type nodes positioned top-to-bottom with GROUP_GAP.
+    // ── Defensive guard (Part 3) ─────────────────────────────────────────────
+    // If type nodes were built but Cytoscape shows none without hidden-node,
+    // force-remove the class so they can render.  Guards against compound-node
+    // sizing edge cases where the class gets applied unexpectedly.
+    const visibleTypeCount = cy.nodes('[kind = "type"]').not('.hidden-node').length;
+    if (typeCount > 0 && visibleTypeCount === 0) {
+      console.warn(
+        '[FlowMapDebug] showFileDetail: defensive guard — ' + typeCount +
+        ' types built but 0 visible; forcing removeClass(hidden-node) on all type nodes'
+      );
+      cy.nodes('[kind = "type"]').removeClass('hidden-node');
+    }
+
+    // Strict vertical stack: file context → type nodes, top-to-bottom with GROUP_GAP.
     // Run BEFORE snapping funcs so hidden funcs land at each type's final position.
     layoutDetailTypeNodes();
 
@@ -1061,8 +1197,9 @@
       }
     });
 
-    deferredFit(cy.nodes('[kind = "type"]'), DETAIL_PADDING);
-    console.log('[FlowMap] showFileDetail: showing ' + typeCount + ' types for ' + fileNodeId);
+    // Fit to file context + type nodes so the full header section is visible
+    deferredFit(cy.nodes('[kind = "file"], [kind = "type"]'), DETAIL_PADDING);
+    console.log('[FlowMapDebug] showFileDetail: complete — showing ' + typeCount + ' types for "' + fileNodeId + '"');
   }
 
   // ── toggleFolderExpand ───────────────────────────────────────────────────
@@ -1432,7 +1569,14 @@
     if (state.mode === 'overview') {
       // File card: drill into file-detail mode
       if (kind === 'file') {
-        showFileDetail(node.id());
+        // Use the stored raw graph ID — not the display node id which may differ
+        const rawId = node.data('rawFileNodeId') || node.id();
+        console.log(
+          '[FlowMapDebug] file card clicked: nodeId=' + node.id() +
+          ' rawFileNodeId=' + rawId +
+          ' label=' + node.data('fullLabel')
+        );
+        showFileDetail(rawId);
         return; // navigation handled inside showFileDetail
       }
       // Folder: toggle collapse/expand of its file children
