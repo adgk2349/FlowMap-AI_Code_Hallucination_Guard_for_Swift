@@ -149,8 +149,8 @@ fn build_swift_graph(workspace_path: &str, binary: &str) -> BuiltGraph {
     // Collect all unresolved call sites before merging (merge consumes the graphs)
     let mut all_call_sites: Vec<swift_bridge::UnresolvedCallSite> = Vec::new();
     let mut global = BuiltGraph::default();
-    for sg in parsed_graphs {
-        all_call_sites.extend(sg.call_sites.clone());
+    for mut sg in parsed_graphs {
+        all_call_sites.extend(std::mem::take(&mut sg.call_sites));
         global.merge(sg);
     }
 

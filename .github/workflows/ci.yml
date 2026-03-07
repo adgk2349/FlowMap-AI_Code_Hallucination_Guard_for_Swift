@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, flowmap-pr1]
+    branches: [main, "flowmap-pr*"]
   pull_request:
     branches: [main]
 
@@ -17,6 +17,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Check formatting
         run: cargo fmt --check

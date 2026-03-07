@@ -174,6 +174,9 @@ final class FlowMapVisitor: SyntaxVisitor {
             // Capture base token: could be DeclReferenceExpr (simple name) or nil (implicit self)
             if let baseRef = member.base?.as(DeclReferenceExprSyntax.self) {
                 calleeBase = baseRef.baseName.text
+            } else {
+                // Prevent treating complex chains or implicit `.foo()` as bare calls in Rust engine
+                calleeBase = "<complex>"
             }
         } else if let ref = node.calledExpression.as(DeclReferenceExprSyntax.self) {
             calleeName = ref.baseName.text
