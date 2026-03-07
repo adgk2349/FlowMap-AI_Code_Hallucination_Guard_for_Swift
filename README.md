@@ -1,45 +1,42 @@
 # FlowMap
 
-> AST-based code structure and call-graph explorer for Swift, designed to help developers verify and understand real code paths — especially in AI-assisted workflows.
+> Swift code graph and impact analysis tool — understand and verify code structure, especially when reviewing AI-generated changes.
 
 [한국어](README.ko.md) · [日本語](README.ja.md)
 
 ## What is FlowMap?
 
-FlowMap is a developer tool that parses Swift code, builds a graph of files, types, functions, and calls, and visualizes that graph inside VS Code.
+FlowMap parses Swift code, builds a workspace-level graph of files, types, functions, and call relationships, and visualizes that graph inside VS Code.
 
-It is built for moments when you want to answer questions like:
+It answers questions like:
 
 - What actually calls this function?
-- What changes if I modify this file?
-- Did this AI-generated edit introduce a fake or broken dependency?
-- How is this project structured at a glance?
+- What breaks if I change this file?
+- Is this AI-generated code structurally sound, or just plausible-looking?
+- What is the overall shape of this project?
 
-FlowMap is not a compiler replacement. It is a practical, workspace-level analysis and visualization tool focused on readability, cautious call linking, and impact analysis.
+FlowMap is not a compiler replacement. It makes real code structure visible at the workspace level so you can verify relationships directly rather than inferring them.
 
-## Current capabilities
+## Who it is for
 
-- Swift AST parsing with SwiftSyntax
+- Developers using AI-assisted coding tools who want to verify what actually changed
+- Engineers reviewing unfamiliar Swift codebases
+- Anyone who wants a structural view of a Swift project without requiring a full build
+
+## Current features
+
+- Swift AST parsing via SwiftSyntax
 - File / type / function graph generation
 - Same-file and conservative cross-file call linking
-- Graph diff for changed code
+- Graph diff for changed files
 - Impact analysis over call edges
 - VS Code visualization with three modes:
   - **Overview** — project / folder / file structure
-  - **File Detail** — file-local type / function drill-down
-  - **Calls** — call-cluster exploration
+  - **File Detail** — type and function drill-down within a file
+  - **Calls** — call-cluster exploration across the workspace
 - Auto-analyze on save
-- Basic source-available licensing scaffold
-
-## Why it exists
-
-LLM-generated code often looks plausible before it is structurally correct.
-
-FlowMap was created to make code structure visible, so developers can inspect actual relationships instead of trusting surface-level code that merely looks right.
 
 ## Screenshots
-
-Add your screenshots here after making the repository public.
 
 ### Overview mode
 
@@ -53,117 +50,103 @@ Add your screenshots here after making the repository public.
 
 ![Calls mode](docs/screenshots/calls.png)
 
-## Demo GIF
-
-Add a short demo GIF here.
+## Demo
 
 ![FlowMap demo](docs/demo/flowmap-demo.gif)
-
-Suggested demo sequence:
-
-1. Open a Swift workspace
-2. Run **FlowMap: Analyze Workspace**
-3. Show Overview mode
-4. Click into File Detail
-5. Open Calls mode
-6. Edit a file and show changed / impact state
-
-## How it works
-
-FlowMap is split into three main layers:
-
-- **Swift parser**: extracts declarations and call-site information
-- **Rust engine**: builds graphs, resolves conservative cross-file calls, computes diffs and impact
-- **VS Code extension**: renders Overview / Detail / Calls modes and updates on analysis
-
-## Supported call resolution in the current version
-
-FlowMap currently performs conservative workspace-wide Swift call linking for:
-
-- `foo()`
-- `TypeName.method()`
-- `self.method()`
-
-Ambiguous matches are intentionally skipped instead of guessed.
 
 ## Installation
 
 ### Prerequisites
 
-- macOS recommended for the current Swift parser workflow
-- Rust toolchain
+- macOS (required for the Swift parser)
+- Rust toolchain ([rustup.rs](https://rustup.rs))
 - Swift toolchain / Xcode command line tools
-- Node.js
+- Node.js v20 or later
 - VS Code
 
 ### Build
 
-From the repository root:
+**1. Clone the repository**
+
+```bash
+git clone https://github.com/adgk2349/FlowMap.git
+cd FlowMap
+```
+
+**2. Build the Rust engine**
 
 ```bash
 cargo build
 ```
 
-From the VS Code extension directory:
+**3. Build the Swift parser**
 
 ```bash
+cd parsers/swift-ast
+swift build -c release
+cd ../..
+```
+
+**4. Compile the VS Code extension**
+
+```bash
+cd editor/vscode
 npm install
 npm run compile
+cd ../..
 ```
 
 ### Run in VS Code
 
-1. Open the VS Code extension folder in VS Code
+1. Open the `editor/vscode` folder in VS Code
 2. Press `F5` to launch the Extension Development Host
 3. In the new VS Code window, open a Swift workspace
-4. Run **FlowMap: Analyze Workspace**
-5. Open **FlowMap Graph**
+4. Run **FlowMap: Analyze Workspace** from the command palette (`Cmd+Shift+P`)
+5. Open the **FlowMap Graph** panel
+
+## Usage
+
+1. Open a Swift workspace in VS Code
+2. Run **FlowMap: Analyze Workspace** via the command palette
+3. Explore the graph:
+   - **Overview** — browse project structure at a glance
+   - **File Detail** — click into a file to inspect its types and functions
+   - **Calls** — trace call clusters and follow how functions connect
+4. Save a file to trigger automatic re-analysis
+
+## License
+
+FlowMap is source-available.
+
+**Swift support**
+- Personal and non-commercial use: free
+- Commercial, team, or company use: a license is required
+
+**Other languages**
+Additional language support may be provided as separate commercial plugins in the future.
+
+For commercial licensing inquiries, contact: *(add contact information here)*
 
 ## Roadmap
 
-- Better Swift resolution coverage
-- Cross-file resolution improvements for extensions and more edge cases
-- Additional language support as plugins
-- Better export / sharing options
-- Richer diff and impact views
-
-## Licensing
-
-FlowMap currently follows a source-available model.
-
-### Swift support
-
-- Personal / non-commercial use: free
-- Commercial / team / company use: license required
-
-### Other languages
-
-Planned additional language support may be released as separate commercial plugins.
-
-If you plan to use FlowMap commercially, add your contact details here.
+- Improved Swift call resolution coverage
+- Better handling of cross-file calls through extensions and protocols
+- Additional language support
+- Richer diff and impact visualization
+- Improved export and sharing options
 
 ## Contributing
 
 Issues and pull requests are welcome.
 
-Good contribution areas:
+Good areas to contribute:
 
 - Swift parsing edge cases
 - Call resolution improvements
-- Graph layout / visualization improvements
+- Graph layout and visualization
 - Documentation
 - VS Code UX polish
 
 ## Status
 
-FlowMap is actively evolving. The current public version should be treated as an ambitious early tool rather than a finished platform.
-
-## Repository assets to add
-
-After making the repo public, add these files:
-
-- `docs/screenshots/overview.png`
-- `docs/screenshots/file-detail.png`
-- `docs/screenshots/calls.png`
-- `docs/demo/flowmap-demo.gif`
-
+FlowMap is actively evolving. The current version is a functional early-stage tool, not yet a finished platform. Feedback and contributions are encouraged.

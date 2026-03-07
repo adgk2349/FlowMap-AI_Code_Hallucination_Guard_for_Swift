@@ -1,45 +1,42 @@
 # FlowMap
 
-> Swift 向けの AST ベース構造・呼び出しグラフ可視化ツールです。特に AI 支援コーディング環境で、実際のコード構造と依存関係を確認するために作られました。
+> Swift コードの構造と呼び出し関係をグラフ分析するツールです。AI が生成したコード変更の検証に特に役立ちます。
 
 [English](README.md) · [한국어](README.ko.md)
 
 ## FlowMap とは
 
-FlowMap は Swift コードを解析し、ファイル・型・関数・呼び出し関係をグラフとして構築し、VS Code 上で可視化する開発者向けツールです。
+FlowMap は Swift コードを解析し、ファイル・型・関数・呼び出し関係をワークスペース全体のグラフとして構築し、VS Code 上で視覚的に探索できる開発者ツールです。
 
 たとえば次のような疑問に答えるために使えます。
 
 - この関数は実際にどこから呼ばれているのか
 - このファイルを変更するとどこまで影響が広がるのか
-- AI が生成したコードは見た目だけ正しくて、実際の依存関係は壊れていないか
-- プロジェクト全体の構造を一目で把握できないか
+- AI が生成したコードは見た目上は正しそうだが、実際の構造は問題ないか
+- このプロジェクト全体はどのような構成になっているのか
 
-FlowMap はコンパイラの代替ではなく、**実用的なワークスペースレベルの解析・可視化ツール**です。
+FlowMap はコンパイラの代替ではありません。実際のコード構造をワークスペースレベルで見える化し、関係を直接確認できる実用的な解析ツールです。
+
+## こんな方に
+
+- AI 支援コーディングツールを使っていて、何が実際に変わったかを確認したい開発者
+- 慣れていない Swift コードベースをレビューするエンジニア
+- ビルドなしに Swift プロジェクトの全体構造を把握したい方
 
 ## 現在の機能
 
 - SwiftSyntax による Swift AST 解析
 - ファイル / 型 / 関数グラフ生成
-- 同一ファイル内呼び出し + 保守的な cross-file 呼び出しリンク
-- 変更グラフ(diff)解析
-- 呼び出しグラフに基づく影響範囲解析
-- VS Code 可視化モード
+- 同一ファイル内呼び出し + 保守的なワークスペース全体の cross-file 呼び出しリンク
+- 変更ファイル単位のグラフ diff
+- 呼び出しエッジに基づく影響範囲解析
+- VS Code 可視化 3 モード:
   - **Overview** — プロジェクト / フォルダ / ファイル構造
-  - **File Detail** — ファイル内部の型 / 関数探索
+  - **File Detail** — ファイル内の型・関数探索
   - **Calls** — 呼び出しクラスタ探索
-- 保存時の自動解析
-- 基本的な source-available ライセンス基盤
-
-## なぜ作ったのか
-
-LLM が生成したコードは、それっぽく見えても構造的に正しいとは限りません。
-
-FlowMap はコードの実際の関係を見える化し、単に「もっともらしいコード」ではなく、**本当に繋がっているコードかどうか**を確認しやすくするために作られました。
+- 保存時の自動再解析
 
 ## スクリーンショット
-
-リポジトリを public にしたあと、ここに実際の画像を追加してください。
 
 ### Overview モード
 
@@ -53,94 +50,90 @@ FlowMap はコードの実際の関係を見える化し、単に「もっとも
 
 ![Calls mode](docs/screenshots/calls.png)
 
-## デモ GIF
-
-短いデモ GIF をここに追加してください。
+## デモ
 
 ![FlowMap demo](docs/demo/flowmap-demo.gif)
 
-おすすめのデモ手順:
-
-1. Swift ワークスペースを開く
-2. **FlowMap: Analyze Workspace** を実行
-3. Overview モードを表示
-4. File Detail に入る
-5. Calls モードへ切り替える
-6. ファイル編集後に changed / impact 表示を見せる
-
-## 仕組み
-
-FlowMap は主に 3 層で構成されています。
-
-- **Swift パーサ**: 宣言情報と call-site 情報を抽出
-- **Rust エンジン**: グラフ生成、保守的な cross-file 呼び出し解決、diff / impact 計算
-- **VS Code 拡張**: Overview / Detail / Calls の表示と更新
-
-## 現バージョンの呼び出し解決範囲
-
-現在の FlowMap は次のような Swift 呼び出しを保守的に解決します。
-
-- `foo()`
-- `TypeName.method()`
-- `self.method()`
-
-候補が複数あって曖昧な場合は、推測せずにリンクを作りません。
-
 ## インストール
 
-### 前提
+### 前提条件
 
-- 現在の Swift パーサワークフローでは macOS 推奨
-- Rust toolchain
+- macOS（Swift パーサの実行に必要）
+- Rust toolchain（[rustup.rs](https://rustup.rs)）
 - Swift toolchain / Xcode command line tools
-- Node.js
+- Node.js v20 以上
 - VS Code
 
 ### ビルド
 
-リポジトリのルートで:
+**1. リポジトリをクローン**
+
+```bash
+git clone https://github.com/adgk2349/FlowMap.git
+cd FlowMap
+```
+
+**2. Rust エンジンをビルド**
 
 ```bash
 cargo build
 ```
 
-VS Code 拡張ディレクトリで:
+**3. Swift パーサをビルド**
 
 ```bash
+cd parsers/swift-ast
+swift build -c release
+cd ../..
+```
+
+**4. VS Code 拡張をコンパイル**
+
+```bash
+cd editor/vscode
 npm install
 npm run compile
+cd ../..
 ```
 
 ### VS Code で実行
 
-1. VS Code 拡張フォルダを VS Code で開く
+1. `editor/vscode` フォルダを VS Code で開く
 2. `F5` で Extension Development Host を起動
 3. 新しい VS Code ウィンドウで Swift ワークスペースを開く
-4. **FlowMap: Analyze Workspace** を実行
-5. **FlowMap Graph** を開く
+4. コマンドパレットから **FlowMap: Analyze Workspace** を実行する（`Cmd+Shift+P`）
+5. **FlowMap Graph** パネルを開く
 
-## ロードマップ
+## 使い方
 
-- Swift 解決精度の向上
-- extension などの cross-file ケース強化
-- 追加言語プラグイン対応
-- export / 共有機能の改善
-- diff / impact 表示の強化
+1. VS Code で Swift ワークスペースを開く
+2. コマンドパレットから **FlowMap: Analyze Workspace** を実行する
+3. グラフを探索する:
+   - **Overview** — プロジェクト全体の構造を俯瞰
+   - **File Detail** — ファイルをクリックして型・関数を詳しく探索
+   - **Calls** — 呼び出しクラスタと関数のつながりを追跡
+4. ファイルを保存すると自動的に再解析される
 
 ## ライセンス
 
-FlowMap は現在 source-available モデルを採用しています。
+FlowMap は source-available モデルで提供されています。
 
-### Swift サポート
-
-- 個人 / 非商用利用: 無料
+**Swift サポート**
+- 個人・非商用利用: 無料
 - 商用 / チーム / 企業利用: ライセンスが必要
 
-### 他言語
-
+**他言語対応**
 今後の追加言語サポートは、別売りの商用プラグインとして提供される可能性があります。
 
-商用利用の問い合わせ先はここに追記してください。
+商用利用のお問い合わせ: *(連絡先をここに追記してください)*
+
+## ロードマップ
+
+- Swift 呼び出し解決の精度向上
+- extension やプロトコルを含む cross-file ケースの強化
+- 追加言語サポート
+- diff / impact 可視化の改善
+- export / 共有機能の強化
 
 ## コントリビューション
 
@@ -156,14 +149,4 @@ Issue と Pull Request を歓迎します。
 
 ## ステータス
 
-FlowMap は現在も継続的に進化中です。現時点の公開版は完成済みプラットフォームというより、非常に意欲的に発展中の初期ツールと捉えるのが適切です。
-
-## 公開後に追加するファイル
-
-リポジトリを public にした後、次のファイルを追加してください。
-
-- `docs/screenshots/overview.png`
-- `docs/screenshots/file-detail.png`
-- `docs/screenshots/calls.png`
-- `docs/demo/flowmap-demo.gif`
-
+FlowMap は継続的に進化しています。現バージョンは完成済みプラットフォームではなく、初期段階の実用ツールです。フィードバックと貢献を歓迎します。
