@@ -19,9 +19,20 @@ struct ASTEdge: Codable {
     let kind: String  // "contains" | "calls"
 }
 
+/// An unresolved call site emitted when same-file resolution fails.
+/// The Rust engine will attempt cross-file resolution using the workspace symbol index.
+struct ASTCallSite: Codable {
+    let callerId: String    // node ID of the calling function
+    let calleeName: String  // bare function name (e.g. "connect")
+    let calleeBase: String? // base expression before the dot, if any (e.g. "NetworkManager", "self")
+    let callerType: String? // enclosing type name at call site, if any (e.g. "ViewController")
+    let callerFile: String  // URI of the source file containing the call
+}
+
 struct ASTGraph: Codable {
     var nodes: [ASTNode]
     var edges: [ASTEdge]
+    var callSites: [ASTCallSite]
 }
 
 // MARK: - SyntaxVisitor
@@ -52,6 +63,8 @@ final class FlowMapVisitor: SyntaxVisitor {
         let callerId: String
         let calleeName: String
         let preferredScope: String  // typeStack.last ?? fileNodeId at the call site
+        let calleeBase: String?     // base expression before the dot (nil for bare calls)
+        let callerType: String?     // innermost enclosing type name at call site
     }
     private var pendingCalls: [PendingCall] = []
 
@@ -149,17 +162,28 @@ final class FlowMapVisitor: SyntaxVisitor {
     override func visit(_ node: FunctionCallExprSyntax) -> SyntaxVisitorContinueKind {
         guard let callerId = funcStack.last else { return .visitChildren }
 
-        // Extract the bare callee name from simple call forms:
-        //   foo(...)          → DeclReferenceExprSyntax
-        //   self.foo(...)     → MemberAccessExprSyntax
-        //   Type.foo(...)     → MemberAccessExprSyntax
+        // Extract the bare callee name and optional base from simple call forms:
+        //   foo(...)            → DeclReferenceExprSyntax  (base: nil)
+        //   self.foo(...)       → MemberAccessExprSyntax   (base: "self")
+        //   Type.foo(...)       → MemberAccessExprSyntax   (base: "Type")
+        //   obj.method(...)     → MemberAccessExprSyntax   (base: "obj")
         let calleeName: String?
+        var calleeBase: String? = nil
         if let member = node.calledExpression.as(MemberAccessExprSyntax.self) {
             calleeName = member.declName.baseName.text
+            // Capture base token: could be DeclReferenceExpr (simple name) or nil (implicit self)
+            if let baseRef = member.base?.as(DeclReferenceExprSyntax.self) {
+                calleeBase = baseRef.baseName.text
+            }
         } else if let ref = node.calledExpression.as(DeclReferenceExprSyntax.self) {
             calleeName = ref.baseName.text
         } else {
             calleeName = nil
+        }
+
+        // Derive the caller's enclosing type name from typeStack (last component of the type ID)
+        let callerTypeName: String? = typeStack.last.map { typeId in
+            typeId.components(separatedBy: ".").last ?? typeId
         }
 
         if let callee = calleeName {
@@ -167,7 +191,9 @@ final class FlowMapVisitor: SyntaxVisitor {
                 edgeId: nextEdgeId(),
                 callerId: callerId,
                 calleeName: callee,
-                preferredScope: typeStack.last ?? fileNodeId
+                preferredScope: typeStack.last ?? fileNodeId,
+                calleeBase: calleeBase,
+                callerType: callerTypeName
             ))
         }
         return .visitChildren
@@ -183,23 +209,37 @@ final class FlowMapVisitor: SyntaxVisitor {
     ///
     /// Because `funcsByScope` is fully populated before this method is called,
     /// forward references (calls to functions declared later in the file) are
-    /// resolved correctly. Unresolvable calls (e.g. stdlib or cross-file) are
-    /// silently dropped.
-    func resolveCalls() -> [ASTEdge] {
-        var result: [ASTEdge] = []
+    /// resolved correctly.
+    ///
+    /// Calls that cannot be resolved within this file are emitted as `ASTCallSite`
+    /// entries instead of silently dropped, allowing the Rust engine to attempt
+    /// cross-file resolution using the workspace-wide symbol index.
+    func resolveCalls() -> ([ASTEdge], [ASTCallSite]) {
+        var resolvedEdges: [ASTEdge] = []
+        var unresolvedSites: [ASTCallSite] = []
         for call in pendingCalls {
             // Prefer same-type scope, then fall back to file scope
             let candidates = funcsByScope[call.preferredScope]?[call.calleeName]
                 ?? funcsByScope[fileNodeId]?[call.calleeName]
-            guard let targetId = candidates?.first else { continue }
-            result.append(ASTEdge(
-                id: call.edgeId,
-                source: call.callerId,
-                target: targetId,
-                kind: "calls"
-            ))
+            if let targetId = candidates?.first {
+                resolvedEdges.append(ASTEdge(
+                    id: call.edgeId,
+                    source: call.callerId,
+                    target: targetId,
+                    kind: "calls"
+                ))
+            } else {
+                // Emit as an unresolved call site for cross-file resolution
+                unresolvedSites.append(ASTCallSite(
+                    callerId: call.callerId,
+                    calleeName: call.calleeName,
+                    calleeBase: call.calleeBase,
+                    callerType: call.callerType,
+                    callerFile: filePath
+                ))
+            }
         }
-        return result
+        return (resolvedEdges, unresolvedSites)
     }
 }
 
@@ -219,10 +259,10 @@ func parseFile(at path: String) throws -> ASTGraph {
     visitor.walk(sourceFile)
 
     // Post-walk: resolve call edges using the fully-populated funcsByScope map.
-    // All resolved targets are guaranteed to reference declared node IDs, so
-    // no further filtering is needed.
-    let callEdges = visitor.resolveCalls()
-    return ASTGraph(nodes: visitor.nodes, edges: visitor.edges + callEdges)
+    // Resolved edges reference declared node IDs within this file.
+    // Unresolved call sites are emitted for cross-file resolution by the Rust engine.
+    let (callEdges, callSites) = visitor.resolveCalls()
+    return ASTGraph(nodes: visitor.nodes, edges: visitor.edges + callEdges, callSites: callSites)
 }
 
 // MARK: - Entry point

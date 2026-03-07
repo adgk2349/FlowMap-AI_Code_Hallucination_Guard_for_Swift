@@ -1,3 +1,4 @@
+mod cross_file_resolver;
 mod git_diff;
 mod graph_builder;
 mod graph_diff;
@@ -120,7 +121,8 @@ fn handle_analyze(req: &RequestEnvelope) -> ResponseEnvelope {
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 /// Scan `workspace_path` for Swift files, parse each with `flowmap-swift-ast`,
-/// and merge the per-file graphs into a single workspace graph.
+/// merge the per-file graphs into a single workspace graph, and then perform
+/// cross-file call resolution using the workspace-wide symbol index.
 fn build_swift_graph(workspace_path: &str, binary: &str) -> BuiltGraph {
     let root = Path::new(workspace_path);
     let swift_files = scanner::find_swift_files(root);
@@ -144,10 +146,22 @@ fn build_swift_graph(workspace_path: &str, binary: &str) -> BuiltGraph {
         .filter_map(|file| swift_bridge::parse_swift_file(binary, file))
         .collect();
 
+    // Collect all unresolved call sites before merging (merge consumes the graphs)
+    let mut all_call_sites: Vec<swift_bridge::UnresolvedCallSite> = Vec::new();
     let mut global = BuiltGraph::default();
     for sg in parsed_graphs {
+        all_call_sites.extend(sg.call_sites.clone());
         global.merge(sg);
     }
+
+    // Cross-file resolution: build a symbol index from the merged graph, then
+    // resolve each unresolved call site and append the new edges.
+    if !all_call_sites.is_empty() {
+        let index = cross_file_resolver::SymbolIndex::build(&global);
+        let cross_edges = cross_file_resolver::resolve(&global, &all_call_sites, &index);
+        global.edges.extend(cross_edges);
+    }
+
     global
 }
 
