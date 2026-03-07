@@ -42,19 +42,15 @@ FlowMap은 컴파일러 대체제가 아닙니다. 실제 코드 관계를 눈�
 
 ### Overview 모드
 
-![Overview mode](docs/screenshots/overview.png)
+![Overview mode](docs/screenshots/overview.jpg)
 
 ### File Detail 모드
 
-![File detail mode](docs/screenshots/file-detail.png)
+![File detail mode](docs/screenshots/file-detail.jpg)
 
 ### Calls 모드
 
-![Calls mode](docs/screenshots/calls.png)
-
-## 데모
-
-![FlowMap demo](docs/demo/flowmap-demo.gif)
+![Calls mode](docs/screenshots/calls.jpg)
 
 ## 설치
 
