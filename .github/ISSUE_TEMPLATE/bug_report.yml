@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a reproducible defect in FlowMap.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please provide a minimal reproduction so we can fix it quickly.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken?
+      placeholder: FlowMap does not show changed nodes when saving Swift files.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Provide exact steps from a clean workspace.
+      placeholder: |
+        1. Open workspace ...
+        2. Save file ...
+        3. Run FlowMap: Analyze Workspace ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: Changed node should be highlighted as yellow.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: No diff highlight appears.
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Xcode/Swift version, VS Code version, extension version.
+      placeholder: macOS 14.7, Swift 6.0, VS Code 1.98, FlowMap commit abc123
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Include console logs, screenshots, or replay output if relevant.
+      placeholder: Paste logs here.
+    validations:
+      required: false
+

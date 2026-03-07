@@ -2,6 +2,8 @@
 
 > Swift code graph and impact analysis tool — understand and verify code structure, especially when reviewing AI-generated changes.
 
+[![CI](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml)
+
 [한국어](README.ko.md) · [日本語](README.ja.md)
 
 ## What is FlowMap?
@@ -136,6 +138,14 @@ Current bundled validation output:
 - `reports/replay-validation-bundle.md`
 - `reports/replay-validation-bundle.json`
 
+Latest bundled metrics (`reports/replay-validation-bundle.md`):
+
+- Total commit pairs: 209
+- TP / TN / FP / FN: 106 / 97 / 0 / 6
+- Non-Swift FP Rate: 0%
+- Swift Detection Rate: 94.64%
+- Overall Match Rate: 97.13%
+
 ## License
 
 FlowMap is source-available.
@@ -160,6 +170,10 @@ For commercial licensing inquiries, contact: adgk2349b@gmail.com
 ## Contributing
 
 Issues and pull requests are welcome.
+
+- Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Starter tasks: [docs/good-first-issues.md](docs/good-first-issues.md)
+- Use the Issue/PR templates in `.github/`
 
 Good areas to contribute:
 
