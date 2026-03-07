@@ -6,6 +6,8 @@
 
 [한국어](README.ko.md) · [日本語](README.ja.md)
 
+**Status: Public Beta**
+
 ## What is FlowMap?
 
 FlowMap parses Swift code, builds a workspace-level graph of files, types, functions, and call relationships, and visualizes that graph inside VS Code.
@@ -119,6 +121,7 @@ FlowMap includes automated replay validation that replays real Git commit pairs 
 - Commit replay runner: `scripts/run_commit_replay.mjs`
 - Scenario runner (synthetic regression set): `scripts/run_sample_scenarios.mjs`
 - Replay summary builder: `scripts/build_replay_summary.mjs`
+- Detailed validation builder: `scripts/build_validation_detail.mjs`
 
 Example:
 
@@ -133,6 +136,9 @@ Current bundled validation output:
 
 - `reports/replay-validation-bundle.md`
 - `reports/replay-validation-bundle.json`
+- `reports/sample-scenarios-report.json`
+- `reports/public-beta-validation-detail.md`
+- `reports/public-beta-validation-detail.json`
 
 Latest bundled metrics (`reports/replay-validation-bundle.md`):
 
@@ -141,6 +147,17 @@ Latest bundled metrics (`reports/replay-validation-bundle.md`):
 - Non-Swift FP Rate: 0%
 - Swift Detection Rate: 94.64%
 - Overall Match Rate: 97.13%
+
+Latest scenario regression (`reports/sample-scenarios-report.json`):
+
+- Scenario count: 60
+- Passed / Failed: 60 / 0
+- FP / FN total: 0 / 0
+
+Detailed public beta validation (`reports/public-beta-validation-detail.md`):
+
+- Non-pass replay cases listed with commit-level detail
+- Public beta gate: PASS
 
 ## License
 
@@ -181,4 +198,8 @@ Good areas to contribute:
 
 ## Status
 
-FlowMap is actively evolving. The current version is a functional early-stage tool, not yet a finished platform. Feedback and contributions are encouraged.
+FlowMap is now in **Public Beta**.
+
+- Core graph/diff pipeline is stable enough for external testing.
+- Validation artifacts are published under `reports/` for transparent review.
+- Some edge cases in Swift call resolution still exist and are tracked as ongoing improvements.

@@ -1,0 +1,986 @@
+{
+  "created_at": "2026-03-07T19:29:18.530Z",
+  "tool": "FlowMap sample scenario runner",
+  "workspace": "/Users/seungminlee/Desktop/Development/FlowMap",
+  "binaries": {
+    "flowmap": "/Users/seungminlee/Desktop/Development/FlowMap/target/debug/flowmap",
+    "parser": "/Users/seungminlee/Desktop/Development/FlowMap/parsers/swift-ast/.build/debug/flowmap-swift-ast"
+  },
+  "summary": {
+    "scenario_count": 60,
+    "passed": 60,
+    "failed": 0,
+    "pass_rate": 1,
+    "fp_total": 0,
+    "fn_total": 0,
+    "gate": {
+      "min_pass_rate": 1,
+      "max_failed_scenarios": 0,
+      "max_fp_total": 0,
+      "max_fn_total": 0
+    },
+    "gate_passed": true
+  },
+  "results": [
+    {
+      "id": "S01",
+      "name": "Clean workspace should have zero diff",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S02",
+      "name": "Add new utility file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S03",
+      "name": "Add new type file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 3,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S04",
+      "name": "Delete model file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 3,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 2,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S05",
+      "name": "Delete service file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 5,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 5,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S06",
+      "name": "String literal change should not change graph",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S07",
+      "name": "Trailing comment should not change graph",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S08",
+      "name": "Rename service method",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 1,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 2,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S09",
+      "name": "Add helper method to view model",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S10",
+      "name": "Remove method from view controller",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 1,
+        "changed_nodes": 2,
+        "added_edges": 0,
+        "removed_edges": 2,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S11",
+      "name": "Add extra call in viewDidLoad",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 3,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S12",
+      "name": "Remove existing call in viewDidLoad",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 2,
+        "added_edges": 0,
+        "removed_edges": 1,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S13",
+      "name": "Change call target fetchData -> refreshData",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S14",
+      "name": "Add protocol requirement",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S15",
+      "name": "Remove protocol requirement",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 1,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 1,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S16",
+      "name": "Change protocol signature",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 1,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 1,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S17",
+      "name": "Add nested model type",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S18",
+      "name": "Rename controller type",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 5,
+        "removed_nodes": 5,
+        "changed_nodes": 0,
+        "added_edges": 6,
+        "removed_edges": 6,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S19",
+      "name": "Move setupUI from controller to view model",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 1,
+        "changed_nodes": 2,
+        "added_edges": 1,
+        "removed_edges": 2,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S20",
+      "name": "Add uppercase singleton-chain call",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 1,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S21",
+      "name": "Add duplicate call edge (should stay zero diff)",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S22",
+      "name": "Line shift should produce changed nodes",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 4,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S23",
+      "name": "Add new view model file and call it",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 3,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S24",
+      "name": "Delete controller file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 6,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 6,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S25",
+      "name": "Replace known call with unknown symbol",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S26",
+      "name": "Add file with unresolved call",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S27",
+      "name": "Rename file path (delete+add semantics)",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 5,
+        "removed_nodes": 5,
+        "changed_nodes": 0,
+        "added_edges": 5,
+        "removed_edges": 5,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S28",
+      "name": "Change service method signature",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 1,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 1,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S29",
+      "name": "Add nested state enum to controller",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 4,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S30",
+      "name": "Add one file and delete one file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 3,
+        "removed_nodes": 3,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 2,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S31",
+      "name": "Add utility file with two free functions",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 3,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S32",
+      "name": "Add core feature flag type file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S33",
+      "name": "Delete app file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 3,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 2,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S34",
+      "name": "Delete protocols file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 5,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 4,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S35",
+      "name": "Rename view model file path",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 5,
+        "removed_nodes": 5,
+        "changed_nodes": 0,
+        "added_edges": 5,
+        "removed_edges": 5,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S36",
+      "name": "Rename model type name",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 2,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 2,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S37",
+      "name": "Add helper method to service",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 1,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 1
+      },
+      "failures": []
+    },
+    {
+      "id": "S38",
+      "name": "Inline authenticate and remove method",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 1,
+        "changed_nodes": 1,
+        "added_edges": 0,
+        "removed_edges": 2,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S39",
+      "name": "Add top-level helper and call it from service",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 2,
+        "added_edges": 2,
+        "removed_edges": 0,
+        "impact": 1
+      },
+      "failures": []
+    },
+    {
+      "id": "S40",
+      "name": "Add top-level factory function to model file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S41",
+      "name": "EOF comment in controller should not change graph",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S42",
+      "name": "Insert blank line near top of view model",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 4,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S43",
+      "name": "Add enum-only file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S44",
+      "name": "Rewrite service file with identical content",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S45",
+      "name": "Add second protocol requirement",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S46",
+      "name": "Remove refreshData method in view model",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 1,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 2,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S47",
+      "name": "Add nested enum inside service type",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 3,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S48",
+      "name": "Change init parameter label in controller",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S49",
+      "name": "Rename service type",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 4,
+        "removed_nodes": 4,
+        "changed_nodes": 0,
+        "added_edges": 5,
+        "removed_edges": 5,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S50",
+      "name": "Add nested-folder helper file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 3,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S51",
+      "name": "Replace model file with new model",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 2,
+        "removed_nodes": 3,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 2,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S52",
+      "name": "Service string literal update only",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S53",
+      "name": "Add logDisconnect method and call",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 2,
+        "added_edges": 2,
+        "removed_edges": 0,
+        "impact": 1
+      },
+      "failures": []
+    },
+    {
+      "id": "S54",
+      "name": "Remove bare call in refreshData",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 0,
+        "removed_edges": 1,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S55",
+      "name": "Change bare call fetchData to debugLog",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 1,
+        "added_edges": 2,
+        "removed_edges": 1,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S56",
+      "name": "Add uppercase singleton chain call in view model",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 0,
+        "removed_nodes": 0,
+        "changed_nodes": 2,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S57",
+      "name": "Rename controller file path",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 6,
+        "removed_nodes": 6,
+        "changed_nodes": 0,
+        "added_edges": 6,
+        "removed_edges": 6,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S58",
+      "name": "Replace app file with alternate app file",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 3,
+        "removed_nodes": 3,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 2,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S59",
+      "name": "Add extra protocol in core",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 1,
+        "removed_nodes": 0,
+        "changed_nodes": 0,
+        "added_edges": 1,
+        "removed_edges": 0,
+        "impact": 0
+      },
+      "failures": []
+    },
+    {
+      "id": "S60",
+      "name": "Add file and change service signature together",
+      "pass": true,
+      "fp": 0,
+      "fn": 0,
+      "counts": {
+        "added_nodes": 3,
+        "removed_nodes": 1,
+        "changed_nodes": 0,
+        "added_edges": 2,
+        "removed_edges": 1,
+        "impact": 0
+      },
+      "failures": []
+    }
+  ]
+}
