@@ -1,0 +1,79 @@
+{
+  "created_at": "2026-03-07T08:09:16.408Z",
+  "total_reports": 3,
+  "total_pairs": 209,
+  "total_swift_pairs": 112,
+  "total_non_swift_pairs": 97,
+  "confusion": {
+    "tp": 106,
+    "tn": 97,
+    "fp": 0,
+    "fn": 6
+  },
+  "metrics": {
+    "non_swift_fp_rate": 0,
+    "swift_detection_rate": 0.9464,
+    "overall_match_rate": 0.9713
+  },
+  "totals": {
+    "failed_pairs": 0,
+    "warn_pairs": 6,
+    "error_pairs": 0
+  },
+  "rows": [
+    {
+      "report": "replay-heavy-swift-full-strict.json",
+      "repo": "flowmap-heavy-swift-repo",
+      "strict_swift": true,
+      "pairs": 120,
+      "swift_pairs": 100,
+      "non_swift_pairs": 20,
+      "tp": 100,
+      "tn": 20,
+      "fp": 0,
+      "fn": 0,
+      "non_swift_fp_rate": 0,
+      "swift_detection_rate": 1,
+      "gate_passed": true,
+      "failed_pairs": 0,
+      "warn_pairs": 0,
+      "error_pairs": 0
+    },
+    {
+      "report": "replay-flowmap-75.json",
+      "repo": "FlowMap",
+      "strict_swift": false,
+      "pairs": 74,
+      "swift_pairs": 4,
+      "non_swift_pairs": 70,
+      "tp": 4,
+      "tn": 70,
+      "fp": 0,
+      "fn": 0,
+      "non_swift_fp_rate": 0,
+      "swift_detection_rate": 1,
+      "gate_passed": true,
+      "failed_pairs": 0,
+      "warn_pairs": 0,
+      "error_pairs": 0
+    },
+    {
+      "report": "replay-kdecoder.json",
+      "repo": "KDecoder",
+      "strict_swift": false,
+      "pairs": 15,
+      "swift_pairs": 8,
+      "non_swift_pairs": 7,
+      "tp": 2,
+      "tn": 7,
+      "fp": 0,
+      "fn": 6,
+      "non_swift_fp_rate": 0,
+      "swift_detection_rate": 0.25,
+      "gate_passed": true,
+      "failed_pairs": 0,
+      "warn_pairs": 6,
+      "error_pairs": 0
+    }
+  ]
+}

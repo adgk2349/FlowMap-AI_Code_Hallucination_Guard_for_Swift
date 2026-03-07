@@ -28,7 +28,7 @@ pub struct BuiltEdge {
 
 /// The complete workspace-level dependency graph produced by merging
 /// per-file `SwiftGraph`s.
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, Clone, Serialize)]
 pub struct BuiltGraph {
     pub nodes: Vec<BuiltNode>,
     pub edges: Vec<BuiltEdge>,

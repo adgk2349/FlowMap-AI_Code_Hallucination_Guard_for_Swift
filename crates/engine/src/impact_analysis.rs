@@ -16,14 +16,19 @@ use std::collections::{HashMap, HashSet, VecDeque};
 /// A → B → C
 /// impacted_nodes(graph, ["A"]) == [B, C]
 /// ```
-pub fn impacted_nodes(graph: &BuiltGraph, start_node_ids: &[&str]) -> Vec<BuiltNode> {
-    // Build adjacency map: from → [to] over "calls" edges only
+pub fn impacted_nodes(
+    graph: &BuiltGraph,
+    start_node_ids: &[&str],
+    exclude_node_ids: &[&str],
+) -> Vec<BuiltNode> {
+    // Build adjacency map: to → [from] over "calls" edges only.
+    // Changing a node impacts its callers, so we must traverse edges BACKWARDS.
     let mut adj: HashMap<&str, Vec<&str>> = HashMap::new();
     for edge in &graph.edges {
         if edge.kind == "calls" {
-            adj.entry(edge.from.as_str())
+            adj.entry(edge.to.as_str())
                 .or_default()
-                .push(edge.to.as_str());
+                .push(edge.from.as_str());
         }
     }
 
@@ -55,11 +60,12 @@ pub fn impacted_nodes(graph: &BuiltGraph, start_node_ids: &[&str]) -> Vec<BuiltN
         }
     }
 
-    // Exclude the start nodes themselves — only downstream dependants
+    let excludes: HashSet<&str> = exclude_node_ids.iter().copied().collect();
+    // Exclude the nodes explicitly requested to be excluded — only downstream dependants
     visited
         .into_iter()
-        .filter(|id| !starts.contains(id))
-        .filter_map(|id| node_map.get(id).map(|&n| n.clone()))
+        .filter(|id| !excludes.contains(id))
+        .filter_map(|id| node_map.get(id).copied().cloned())
         .collect()
 }
 
@@ -110,28 +116,34 @@ mod tests {
 
     #[test]
     fn test_linear_propagation() {
-        // A → B → C: changing A must impact B and C
+        // A → B → C: changing C impacts B and A (Callers are impacted)
         let g = build(
             vec![node("A"), node("B"), node("C")],
             vec![calls("A", "B"), calls("B", "C")],
         );
-        assert_eq!(sorted_ids(impacted_nodes(&g, &["A"])), vec!["B", "C"]);
+        assert_eq!(
+            sorted_ids(impacted_nodes(&g, &["C"], &["C"])),
+            vec!["A", "B"]
+        );
     }
 
     #[test]
     fn test_branching_propagation() {
-        // A → B, A → C
+        // B → A, C → A (B and C call A)
         let g = build(
             vec![node("A"), node("B"), node("C")],
-            vec![calls("A", "B"), calls("A", "C")],
+            vec![calls("B", "A"), calls("C", "A")],
         );
-        assert_eq!(sorted_ids(impacted_nodes(&g, &["A"])), vec!["B", "C"]);
+        assert_eq!(
+            sorted_ids(impacted_nodes(&g, &["A"], &["A"])),
+            vec!["B", "C"]
+        );
     }
 
     #[test]
-    fn test_no_outgoing_edges() {
+    fn test_no_incoming_edges() {
         let g = build(vec![node("A"), node("B")], vec![]);
-        assert!(impacted_nodes(&g, &["A"]).is_empty());
+        assert!(impacted_nodes(&g, &["A"], &["A"]).is_empty());
     }
 
     #[test]
@@ -141,25 +153,26 @@ mod tests {
             vec![node("A"), node("B")],
             vec![calls("A", "B"), calls("B", "A")],
         );
-        // Only B is downstream of A (A is the start and excluded from result)
-        assert_eq!(sorted_ids(impacted_nodes(&g, &["A"])), vec!["B"]);
+        // B and A call each other. B is impacted by A, A is impacted by B.
+        assert_eq!(sorted_ids(impacted_nodes(&g, &["A"], &["A"])), vec!["B"]);
     }
 
     #[test]
     fn test_only_calls_edges_followed() {
         // "contains" edge should NOT be traversed
+        // A contains B. Changing B should not impact A through contains.
         let g = build(vec![node("A"), node("B")], vec![contains_edge("A", "B")]);
-        assert!(impacted_nodes(&g, &["A"]).is_empty());
+        assert!(impacted_nodes(&g, &["B"], &["B"]).is_empty());
     }
 
     #[test]
     fn test_multiple_start_nodes() {
-        // Start from both A and D; B and C reachable from A; E reachable from D
+        // B -> A, C -> B, E -> D
         let g = build(
             vec![node("A"), node("B"), node("C"), node("D"), node("E")],
-            vec![calls("A", "B"), calls("B", "C"), calls("D", "E")],
+            vec![calls("B", "A"), calls("C", "B"), calls("E", "D")],
         );
-        let mut ids = sorted_ids(impacted_nodes(&g, &["A", "D"]));
+        let mut ids = sorted_ids(impacted_nodes(&g, &["A", "D"], &["A", "D"]));
         ids.sort();
         assert_eq!(ids, vec!["B", "C", "E"]);
     }
@@ -167,6 +180,6 @@ mod tests {
     #[test]
     fn test_unknown_start_node_returns_empty() {
         let g = build(vec![node("A")], vec![]);
-        assert!(impacted_nodes(&g, &["Z"]).is_empty());
+        assert!(impacted_nodes(&g, &["Z"], &["Z"]).is_empty());
     }
 }

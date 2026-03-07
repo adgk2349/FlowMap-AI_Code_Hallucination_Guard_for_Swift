@@ -174,6 +174,13 @@ final class FlowMapVisitor: SyntaxVisitor {
             // Capture base token: could be DeclReferenceExpr (simple name) or nil (implicit self)
             if let baseRef = member.base?.as(DeclReferenceExprSyntax.self) {
                 calleeBase = baseRef.baseName.text
+            } else if let nestedMember = member.base?.as(MemberAccessExprSyntax.self),
+                      let baseRef = nestedMember.base?.as(DeclReferenceExprSyntax.self),
+                      baseRef.baseName.text.first.map({ $0.isUppercase }) == true {
+                // Handle singleton/nested chains like `NetworkManager.shared.connect()`.
+                // Lowercase roots (e.g. self.manager.connect(), service.api.call())
+                // stay unresolved to avoid false same-type resolution in Rust.
+                calleeBase = baseRef.baseName.text
             } else {
                 // Prevent treating complex chains or implicit `.foo()` as bare calls in Rust engine
                 calleeBase = "<complex>"

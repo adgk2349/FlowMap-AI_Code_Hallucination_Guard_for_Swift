@@ -1,34 +1,65 @@
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// Run `git diff --name-only HEAD` in `workspace_root` and return the
-/// absolute paths of changed `*.swift` files that still exist on disk.
+/// Return absolute paths of changed Swift files in `workspace_root`.
 ///
-/// Returns an empty vec when:
-/// - `workspace_root` is not inside a git repository
-/// - the repository has no commits yet
-/// - no Swift files have changed relative to HEAD
-/// - git is not installed
+/// Sources:
+/// - tracked changes vs `HEAD` (modified/renamed/deleted)
+/// - untracked Swift files (new files not yet committed)
+///
+/// Deleted files are intentionally kept in the result so callers can
+/// reconstruct the old fragment from `HEAD` and emit removed nodes/edges.
 pub fn changed_swift_files(workspace_root: &Path) -> Vec<PathBuf> {
-    let output = match Command::new("git")
-        .args(["diff", "--name-only", "HEAD"])
-        .current_dir(workspace_root)
-        .output()
-    {
-        Ok(o) => o,
-        Err(_) => return Vec::new(),
-    };
+    let mut rel_paths: BTreeSet<PathBuf> = BTreeSet::new();
 
-    if !output.status.success() {
-        return Vec::new();
+    // Tracked deltas compared to HEAD.
+    // If HEAD does not exist yet, this command fails; that's okay because we
+    // still collect untracked files below.
+    if let Ok(lines) = git_lines(
+        workspace_root,
+        &["diff", "--name-only", "HEAD", "--", "*.swift"],
+    ) {
+        rel_paths.extend(lines.into_iter().map(PathBuf::from));
     }
 
-    String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .filter(|l| l.ends_with(".swift"))
-        .map(|l| workspace_root.join(l))
-        .filter(|p| p.exists()) // skip deleted files (removed from disk)
+    // Newly created, untracked Swift files.
+    if let Ok(lines) = git_lines(
+        workspace_root,
+        &[
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            "*.swift",
+        ],
+    ) {
+        rel_paths.extend(lines.into_iter().map(PathBuf::from));
+    }
+
+    rel_paths
+        .into_iter()
+        .map(|rel| workspace_root.join(rel))
         .collect()
+}
+
+fn git_lines(workspace_root: &Path, args: &[&str]) -> Result<Vec<String>, ()> {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(workspace_root)
+        .output()
+        .map_err(|_| ())?;
+
+    if !output.status.success() {
+        return Err(());
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+        .map(|l| l.to_string())
+        .collect())
 }
 
 /// Fetch the content of `file_path` at `HEAD` via `git show HEAD:<relpath>`.
@@ -57,7 +88,18 @@ pub fn head_content(workspace_root: &Path, file_path: &Path) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use std::process::Command;
     use tempfile::TempDir;
+
+    fn git_ok(root: &Path, args: &[&str]) {
+        let status = Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .status()
+            .expect("failed to run git");
+        assert!(status.success(), "git {:?} failed", args);
+    }
 
     #[test]
     fn test_changed_swift_files_non_git_dir() {
@@ -65,6 +107,49 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let result = changed_swift_files(tmp.path());
         assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_changed_swift_files_includes_untracked_modified_deleted() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+
+        git_ok(root, &["init"]);
+        git_ok(root, &["config", "user.email", "flowmap-test@example.com"]);
+        git_ok(root, &["config", "user.name", "FlowMap Test"]);
+
+        let modified = root.join("Modified.swift");
+        let deleted = root.join("Deleted.swift");
+        let untracked = root.join("Untracked.swift");
+
+        fs::write(&modified, "func a() {}\n").unwrap();
+        fs::write(&deleted, "func b() {}\n").unwrap();
+        git_ok(root, &["add", "."]);
+        git_ok(root, &["commit", "-m", "init"]);
+
+        fs::write(&modified, "func a() { print(1) }\n").unwrap();
+        fs::remove_file(&deleted).unwrap();
+        fs::write(&untracked, "func c() {}\n").unwrap();
+        fs::write(root.join("README.md"), "ignore\n").unwrap();
+
+        let result = changed_swift_files(root);
+        assert!(result.contains(&modified));
+        assert!(result.contains(&deleted));
+        assert!(result.contains(&untracked));
+        assert!(!result.contains(&root.join("README.md")));
+    }
+
+    #[test]
+    fn test_changed_swift_files_in_repo_without_head_includes_untracked_swift() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+
+        git_ok(root, &["init"]);
+        let file = root.join("BrandNew.swift");
+        fs::write(&file, "func brandNew() {}\n").unwrap();
+
+        let result = changed_swift_files(root);
+        assert!(result.contains(&file));
     }
 
     #[test]

@@ -121,6 +121,37 @@
         containsIds.add(e.id);
       }
     });
+
+    // Bubble up impact to all ancestor nodes (types, files)
+    var newImpacts = [];
+    impactIds.forEach(function (id) {
+      var p = parentMap[id];
+      while (p) {
+        if (!impactIds.has(p)) {
+          newImpacts.push(p);
+        }
+        p = parentMap[p];
+      }
+    });
+    newImpacts.forEach(function (id) { impactIds.add(id); });
+
+    // Bubble up diff states to ancestors so files show as changed/added/removed
+    var newChanged = [];
+    var allDiff = [];
+    addedNodeIds.forEach(function(i) { allDiff.push(i); });
+    removedNodeIds.forEach(function(i) { allDiff.push(i); });
+    changedNodeIds.forEach(function(i) { allDiff.push(i); });
+    
+    allDiff.forEach(function (id) {
+      var p = parentMap[id];
+      while (p) {
+        if (!changedNodeIds.has(p) && !addedNodeIds.has(p) && !removedNodeIds.has(p)) {
+          newChanged.push(p);
+        }
+        p = parentMap[p];
+      }
+    });
+    newChanged.forEach(function (id) { changedNodeIds.add(id); });
   }
 
   /**
@@ -630,6 +661,17 @@
           padding: '20px',
         },
       },
+      // Contains edge for detail view hierarchy
+      {
+        selector: 'edge[kind = "contains"]',
+        style: {
+          width: 1.5,
+          'line-color': 'rgba(100, 100, 100, 0.4)',
+          'target-arrow-color': 'rgba(100, 100, 100, 0.4)',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+        },
+      },
       // ── Base edge ──────────────────────────────────────────────────────
       {
         selector: 'edge',
@@ -899,8 +941,10 @@
 
     // Apply per-node folder tint colors to file nodes (visual grouping by dir)
     cy.nodes('[kind = "file"]').forEach(function (n) {
-      var tint = getFolderTint(n.data('uri'));
-      if (tint) { n.style('background-color', tint); }
+      if (n.data('diffState') === 'unchanged') {
+        var tint = getFolderTint(n.data('uri'));
+        if (tint) { n.style('background-color', tint); }
+      }
     });
 
     state.mode = 'overview';
@@ -971,8 +1015,36 @@
       ' (types=' + typeNodes.length + ' free-funcs=' + freeNodes.length + ')'
     );
 
-    // ── Type nodes + their func compound children ──────────────────────────
+    // ── Type nodes + their func compound children + free funcs ─────────────
     const detailFuncIds = new Set();
+
+    freeNodes.forEach(function (f) {
+      const fFull = f.name ?? f.id;
+      detailElements.push({
+        data: {
+          id: f.id,
+          label: truncateLabel(fFull, 18),
+          fullLabel: fFull,
+          kind: 'func',
+          uri: f.uri ?? '',
+          line: typeof f.line === 'number' ? f.line : 0,
+          // free function is top-level
+          diffState: addedNodeIds.has(f.id)
+            ? 'added' : changedNodeIds.has(f.id) ? 'changed' : 'unchanged',
+          impacted: impactIds.has(f.id),
+        },
+      });
+      detailFuncIds.add(f.id);
+      
+      detailElements.push({
+        data: {
+          id: 'contains_' + fileNodeId + '_' + f.id,
+          source: fileNodeId,
+          target: f.id,
+          kind: 'contains'
+        }
+      });
+    });
 
     typeNodes.forEach(function (t) {
       const tFull = t.name ?? t.id;
@@ -1009,13 +1081,31 @@
             kind: 'func',
             uri: f.uri ?? '',
             line: typeof f.line === 'number' ? f.line : 0,
-            parent: t.id, // func is a compound child of its type
+            // no compound parent in Cytoscape - using structural edges
             diffState: addedNodeIds.has(f.id)
               ? 'added' : changedNodeIds.has(f.id) ? 'changed' : 'unchanged',
             impacted: impactIds.has(f.id),
           },
         });
         detailFuncIds.add(f.id);
+        
+        detailElements.push({
+          data: {
+            id: 'contains_' + t.id + '_' + f.id,
+            source: t.id,
+            target: f.id,
+            kind: 'contains'
+          }
+        });
+      });
+      
+      detailElements.push({
+        data: {
+          id: 'contains_' + fileNodeId + '_' + t.id,
+          source: fileNodeId,
+          target: t.id,
+          kind: 'contains'
+        }
       });
     });
 
@@ -1050,37 +1140,16 @@
     return detailElements;
   }
 
-  // ── layoutDetailTypeNodes ─────────────────────────────────────────────────
-  // Positions the file context card (if present) at the top, then stacks
-  // visible type nodes below it in a strict vertical column:
-  //
-  //   file-context  (at y = 0)
-  //   ——— GROUP_GAP/2 ———
-  //   type₀         (at y = fileHeight + GROUP_GAP/2)
-  //   ——— GROUP_GAP ———
-  //   type₁         (at y = type₀.bottom + GROUP_GAP)
-  //   ...
-  //
-  // All nodes share x = 0; deferredFit centres them in the viewport.
+  // Layout uses breadthfirst to build a proper tree structure
   function layoutDetailTypeNodes() {
-    var typeNodes = cy.nodes('[kind = "type"]').not('.hidden-node');
-    if (typeNodes.length === 0) { return; }
-
-    var curY = 0;
-
-    // Position file context node above the type stack if present in detail view
-    var fileCtx = cy.nodes('[kind = "file"]');
-    if (fileCtx.length > 0) {
-      var fh = Math.max(32, fileCtx.height() || 32);
-      fileCtx.position({ x: 0, y: curY + fh / 2 });
-      curY += fh + Math.round(GROUP_GAP / 2);
-    }
-
-    typeNodes.forEach(function (tn) {
-      var th = Math.max(32, tn.height() || 32);
-      tn.position({ x: 0, y: curY + th / 2 });
-      curY += th + GROUP_GAP;
-    });
+    cy.layout({
+      name: 'breadthfirst',
+      directed: true,
+      spacingFactor: 1.5,
+      fit: true,
+      padding: 60,
+      roots: cy.nodes('[kind = "file"]')
+    }).run();
   }
 
   // ── showFileDetail ────────────────────────────────────────────────────────
@@ -1118,6 +1187,9 @@
     const typeCount = detailElements.filter(function (e) {
       return e.data.kind === 'type' && !e.data.parent;
     }).length;
+    const freeFuncCount = detailElements.filter(function (e) {
+      return e.data.kind === 'func' && !e.data.parent;
+    }).length;
     const funcCount = detailElements.filter(function (e) {
       return e.data.kind === 'func';
     }).length;
@@ -1131,9 +1203,9 @@
       ' total=' + detailElements.length
     );
 
-    if (typeCount === 0) {
-      // File has no type children — stay on overview (navigation to file still happened)
-      console.log('[FlowMapDebug] showFileDetail: no types in "' + fileNodeId + '" — staying in overview');
+    if (typeCount === 0 && freeFuncCount === 0) {
+      // File has no type or free func children — stay on overview
+      console.log('[FlowMapDebug] showFileDetail: no children in "' + fileNodeId + '" — staying in overview');
       return;
     }
 
@@ -1157,49 +1229,9 @@
     cy.elements().remove();
     cy.add(detailElements);
 
-    // Log element counts immediately after cy.add to confirm rendering pipeline state
-    const cyTypesAfterAdd = cy.nodes('[kind = "type"]');
-    const cyFuncsAfterAdd = cy.nodes('[kind = "func"]');
-    console.log(
-      '[FlowMapDebug] showFileDetail: after cy.add — total cy nodes=' + cy.nodes().length +
-      ' type nodes=' + cyTypesAfterAdd.length +
-      ' func nodes=' + cyFuncsAfterAdd.length +
-      ' visible types=' + cyTypesAfterAdd.not('.hidden-node').length
-    );
-
-    // Func nodes start hidden — expand on type click
-    cy.nodes('[kind = "func"]').addClass('hidden-node');
-
-    // ── Defensive guard (Part 3) ─────────────────────────────────────────────
-    // If type nodes were built but Cytoscape shows none without hidden-node,
-    // force-remove the class so they can render.  Guards against compound-node
-    // sizing edge cases where the class gets applied unexpectedly.
-    const visibleTypeCount = cy.nodes('[kind = "type"]').not('.hidden-node').length;
-    if (typeCount > 0 && visibleTypeCount === 0) {
-      console.warn(
-        '[FlowMapDebug] showFileDetail: defensive guard — ' + typeCount +
-        ' types built but 0 visible; forcing removeClass(hidden-node) on all type nodes'
-      );
-      cy.nodes('[kind = "type"]').removeClass('hidden-node');
-    }
-
-    // Strict vertical stack: file context → type nodes, top-to-bottom with GROUP_GAP.
-    // Run BEFORE snapping funcs so hidden funcs land at each type's final position.
+    // Layout with cytoscape breadthfirst tree layout instead of custom positioning
     layoutDetailTypeNodes();
 
-    // Snap hidden funcs to their type parent's (now-positioned) centre.
-    // Prevents compound bbox inflation when funcs are later revealed.
-    cy.nodes('[kind = "func"]').forEach(function (n) {
-      var par = n.parent();
-      if (par && par.length > 0) {
-        var pp = par.position();
-        if (pp && typeof pp.x === 'number') { n.position({ x: pp.x, y: pp.y }); }
-      }
-    });
-
-    // Fit to file context + type nodes so the full header section is visible
-    deferredFit(cy.nodes('[kind = "file"], [kind = "type"]'), DETAIL_PADDING);
-    console.log('[FlowMapDebug] showFileDetail: complete — showing ' + typeCount + ' types for "' + fileNodeId + '"');
   }
 
   // ── toggleFolderExpand ───────────────────────────────────────────────────
@@ -1523,39 +1555,55 @@
   // ═══════════════════════════════════════════════════════════════════════════
   function toggleExpand(nodeId) {
     const node = cy.getElementById(nodeId);
+    if (!node || node.length === 0) { return; }
     const kind = node.data('kind');
 
-    if (kind === 'file') {
-      const typeChildren = node.children('[kind = "type"]');
-      const anyVisible = typeChildren.not('.hidden-node').length > 0;
+    if (state.mode === 'file-detail') {
+      if (kind !== 'type') { return; }
+      const funcChildren = cy.edges('[kind = "contains"]').filter(function (e) {
+        return e.source().id() === node.id();
+      }).targets();
+      const anyVisible = funcChildren.not('.hidden-node').length > 0;
 
       if (anyVisible) {
-        typeChildren.forEach(function (t) {
-          t.children('[kind = "func"]').addClass('hidden-node');
-          t.addClass('hidden-node');
-        });
-        syncCallsEdges();
+        funcChildren.addClass('hidden-node');
       } else {
-        typeChildren.removeClass('hidden-node');
-        if (typeChildren.length > 0) {
+        funcChildren.removeClass('hidden-node');
+      }
+      layoutDetailTypeNodes();
+      syncCallsEdges();
+      return;
+    }
+
+    if (state.mode !== 'calls') { return; }
+
+    if (kind === 'file') {
+      const directChildren = node.children();
+      const anyVisible = directChildren.not('.hidden-node').length > 0;
+
+      if (anyVisible) {
+        node.descendants().addClass('hidden-node');
+        directChildren.addClass('hidden-node');
+      } else {
+        directChildren.removeClass('hidden-node');
+        if (directChildren.length > 0) {
           layoutChildrenOf(node);
         }
-        syncCallsEdges();
       }
+      syncCallsEdges();
     } else if (kind === 'type') {
       const funcChildren = node.children('[kind = "func"]');
       const anyVisible = funcChildren.not('.hidden-node').length > 0;
 
       if (anyVisible) {
         funcChildren.addClass('hidden-node');
-        syncCallsEdges();
       } else {
         funcChildren.removeClass('hidden-node');
         if (funcChildren.length > 0) {
           layoutChildrenOf(node);
         }
-        syncCallsEdges();
       }
+      syncCallsEdges();
     }
   }
 

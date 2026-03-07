@@ -114,6 +114,28 @@ cd ../..
    - **Calls** — 呼び出しクラスタと関数のつながりを追跡
 4. ファイルを保存すると自動的に再解析される
 
+## 検証方法
+
+FlowMap には、実際の Git コミットペアをリプレイし、graph diff の検出方向が期待どおりかを確認する自動検証が含まれています。
+
+- コミットリプレイ runner: `scripts/run_commit_replay.mjs`
+- シナリオ runner（合成回帰セット）: `scripts/run_sample_scenarios.mjs`
+- リプレイ要約 builder: `scripts/build_replay_summary.mjs`
+
+例:
+
+```bash
+node scripts/run_commit_replay.mjs \
+  --repo /path/to/swift-repo \
+  --count 100 \
+  --report reports/replay-100.json
+```
+
+現在の統合検証アウトプット:
+
+- `reports/replay-validation-bundle.md`
+- `reports/replay-validation-bundle.json`
+
 ## ライセンス
 
 FlowMap は source-available モデルで提供されています。

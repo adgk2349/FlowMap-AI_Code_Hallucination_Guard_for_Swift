@@ -114,6 +114,28 @@ cd ../..
    - **Calls** — trace call clusters and follow how functions connect
 4. Save a file to trigger automatic re-analysis
 
+## Validation
+
+FlowMap includes automated replay validation that replays real Git commit pairs and checks whether graph diff changes are detected in the expected direction.
+
+- Commit replay runner: `scripts/run_commit_replay.mjs`
+- Scenario runner (synthetic regression set): `scripts/run_sample_scenarios.mjs`
+- Replay summary builder: `scripts/build_replay_summary.mjs`
+
+Example:
+
+```bash
+node scripts/run_commit_replay.mjs \
+  --repo /path/to/swift-repo \
+  --count 100 \
+  --report reports/replay-100.json
+```
+
+Current bundled validation output:
+
+- `reports/replay-validation-bundle.md`
+- `reports/replay-validation-bundle.json`
+
 ## License
 
 FlowMap is source-available.
