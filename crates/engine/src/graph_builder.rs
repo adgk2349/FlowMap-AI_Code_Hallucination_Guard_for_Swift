@@ -81,7 +81,11 @@ mod tests {
     use crate::swift_bridge::{SwiftEdge, SwiftNode};
 
     fn make_graph(nodes: Vec<SwiftNode>, edges: Vec<SwiftEdge>) -> SwiftGraph {
-        SwiftGraph { nodes, edges }
+        SwiftGraph {
+            nodes,
+            edges,
+            call_sites: vec![],
+        }
     }
 
     #[test]
