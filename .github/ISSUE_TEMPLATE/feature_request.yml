@@ -1,0 +1,48 @@
+name: Feature request
+description: Suggest an improvement for FlowMap.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the user problem first, then propose a solution.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What pain point are you trying to solve?
+      placeholder: It is hard to detect risky graph diffs at a glance.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should change?
+      placeholder: Add risk score badge for diff mode.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: Keep current legend only, add external script, etc.
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Define testable outcomes.
+      placeholder: |
+        - [ ] Badge appears in diff mode
+        - [ ] Risk score updates on save
+        - [ ] Unit tests added
+    validations:
+      required: true
+

@@ -2,6 +2,8 @@
 
 > Swift 코드의 구조와 호출 관계를 그래프로 분석하는 도구입니다. AI가 생성한 코드 변경을 검증할 때 특히 유용합니다.
 
+[![CI](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml)
+
 [English](README.md) · [日本語](README.ja.md)
 
 ## FlowMap이란?
@@ -136,6 +138,14 @@ node scripts/run_commit_replay.mjs \
 - `reports/replay-validation-bundle.md`
 - `reports/replay-validation-bundle.json`
 
+최신 통합 지표(`reports/replay-validation-bundle.md`):
+
+- 전체 커밋 페어: 209
+- TP / TN / FP / FN: 106 / 97 / 0 / 6
+- Non-Swift FP Rate: 0%
+- Swift Detection Rate: 94.64%
+- Overall Match Rate: 97.13%
+
 ## 라이선스
 
 FlowMap은 source-available 방식으로 제공됩니다.
@@ -160,6 +170,10 @@ FlowMap은 source-available 방식으로 제공됩니다.
 ## 기여
 
 이슈와 PR은 환영합니다.
+
+- 기여 가이드: [CONTRIBUTING.md](CONTRIBUTING.md)
+- 시작용 작업 목록: [docs/good-first-issues.md](docs/good-first-issues.md)
+- 이슈/PR 작성 시 `.github` 템플릿을 사용해주세요
 
 기여하기 좋은 영역:
 
