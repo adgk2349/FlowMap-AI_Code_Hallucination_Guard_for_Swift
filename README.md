@@ -125,7 +125,7 @@ FlowMap is source-available.
 **Other languages**
 Additional language support may be provided as separate commercial plugins in the future.
 
-For commercial licensing inquiries, contact: *(add contact information here)*
+For commercial licensing inquiries, contact: adgk2349b@gmail.com
 
 ## Roadmap
 
