@@ -1,11 +1,11 @@
 use crate::graph_builder::{BuiltGraph, BuiltNode};
 use std::collections::{HashMap, HashSet, VecDeque};
 
-/// Return all nodes reachable from `start_node_ids` by following `calls` edges
-/// in `graph` (forward BFS reachability).
+/// Return caller-side impact reachable from `start_node_ids` by following
+/// `calls` edges in reverse direction.
 ///
-/// The start nodes themselves are **excluded** from the result — only their
-/// transitive dependants are returned.
+/// Traversal follows `callee -> caller`, because when a callee changes its
+/// callers are impacted.
 ///
 /// Only `calls` edges are traversed; `contains` edges (which express parent/
 /// child containment) are intentionally ignored so that structural hierarchy
@@ -14,7 +14,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 /// # Example
 /// ```text
 /// A → B → C
-/// impacted_nodes(graph, ["A"]) == [B, C]
+/// impacted_nodes(graph, ["C"], ["C"]) == [B, A]
 /// ```
 pub fn impacted_nodes(
     graph: &BuiltGraph,
