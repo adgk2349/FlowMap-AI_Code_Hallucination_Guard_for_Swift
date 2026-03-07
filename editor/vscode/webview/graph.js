@@ -409,7 +409,7 @@
   const DETAIL_PADDING =  40; // outer viewport padding after detail/calls layout
   const PANEL_MIN_W    = 280; // minimum panel slot width  per component (calls mode)
   const PANEL_MIN_H    = 180; // minimum panel slot height per component (calls mode)
-  const TILE_GAP       =  20; // minimum gap between component tiles     (calls mode)
+  const TILE_GAP       =  10; // minimum gap between component tiles     (calls mode)
 
   // ── Parse embedded payload ───────────────────────────────────────────────
   const raw = document.getElementById('graph-data').textContent ?? '{}';
@@ -1811,7 +1811,7 @@
       skyRaise(bestX, tw, bestY + th);
     });
 
-    deferredFit(cy.nodes(), DETAIL_PADDING);
+    deferredFit(cy.nodes(), 16);
   }
 
   // Toolbar
