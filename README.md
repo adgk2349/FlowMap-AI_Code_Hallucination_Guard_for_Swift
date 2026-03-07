@@ -42,19 +42,15 @@ FlowMap is not a compiler replacement. It makes real code structure visible at t
 
 ### Overview mode
 
-![Overview mode](docs/screenshots/overview.png)
+![Overview mode](docs/screenshots/overview.jpg)
 
 ### File detail mode
 
-![File detail mode](docs/screenshots/file-detail.png)
+![File detail mode](docs/screenshots/file-detail.jpg)
 
 ### Calls mode
 
-![Calls mode](docs/screenshots/calls.png)
-
-## Demo
-
-![FlowMap demo](docs/demo/flowmap-demo.gif)
+![Calls mode](docs/screenshots/calls.jpg)
 
 ## Installation
 

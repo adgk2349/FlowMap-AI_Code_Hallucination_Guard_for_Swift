@@ -42,19 +42,15 @@ FlowMap はコンパイラの代替ではありません。実際のコード構
 
 ### Overview モード
 
-![Overview mode](docs/screenshots/overview.png)
+![Overview mode](docs/screenshots/overview.jpg)
 
 ### File Detail モード
 
-![File detail mode](docs/screenshots/file-detail.png)
+![File detail mode](docs/screenshots/file-detail.jpg)
 
 ### Calls モード
 
-![Calls mode](docs/screenshots/calls.png)
-
-## デモ
-
-![FlowMap demo](docs/demo/flowmap-demo.gif)
+![Calls mode](docs/screenshots/calls.jpg)
 
 ## インストール
 
