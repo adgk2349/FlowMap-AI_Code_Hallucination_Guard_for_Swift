@@ -4,7 +4,7 @@
 
 > Swift code graph and impact analysis tool — understand and verify code structure, especially when reviewing AI-generated changes.
 
-[![CI](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml)
+[![CI](https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift/actions/workflows/ci.yml)
 
 [한국어](README.ko.md) · [日本語](README.ja.md)
 
@@ -20,6 +20,16 @@ It answers questions like:
 - What is the overall shape of this project?
 
 FlowMap is not a compiler replacement. It makes real code structure visible at the workspace level so you can verify relationships directly rather than inferring them.
+
+## Why JavaScript is the largest language share
+
+GitHub language percentages reflect implementation layers, not analysis target language.
+
+- JavaScript/TypeScript: VS Code extension host + graph webview UI
+- Rust: core graph engine and diff/impact processing
+- Swift: SwiftSyntax-based AST parser used as the frontend parser
+
+FlowMap still targets Swift codebases; the JS-heavy ratio comes from editor/runtime integration.
 
 ## Who it is for
 
@@ -40,6 +50,19 @@ FlowMap is not a compiler replacement. It makes real code structure visible at t
   - **Calls** — call-cluster exploration across the workspace
 - Auto-analyze on save
 
+## Cross-file call-linking boundaries (current beta)
+
+FlowMap intentionally resolves cross-file calls conservatively to reduce false links. This means some dynamic/indirect patterns are represented at interface level rather than concrete implementation level.
+
+- Protocol-typed call sites may stay on protocol requirement edges.
+  - Example: `let svc: NetworkServiceProtocol = LiveService(); svc.fetchData()`
+- Extension methods across files are linked when receiver/type context is explicit, but constrained extension dispatch can remain partial.
+  - Example: extension methods with additional `where` constraints.
+- Generic constraint calls may resolve to the generic/protocol boundary instead of a single concrete type.
+  - Example: `func run<T: Worker>(_ t: T) { t.work() }`
+
+This behavior is expected in current public beta and is being expanded incrementally.
+
 ## Screenshots
 
 ### Overview mode
@@ -58,18 +81,20 @@ FlowMap is not a compiler replacement. It makes real code structure visible at t
 
 ### Prerequisites
 
-- macOS (required for the Swift parser)
+- macOS only (required for the Swift parser)
 - Rust toolchain ([rustup.rs](https://rustup.rs))
 - Swift toolchain / Xcode command line tools
 - Node.js v20 or later
 - VS Code
+
+> Platform note: Linux/Windows are not supported yet because the current Swift parser build/runtime path depends on macOS Swift toolchain assumptions.
 
 ### Build
 
 **1. Clone the repository**
 
 ```bash
-git clone https://github.com/adgk2349/FlowMap.git
+git clone https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift.git FlowMap
 cd FlowMap
 ```
 

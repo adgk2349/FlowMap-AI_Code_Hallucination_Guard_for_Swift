@@ -4,7 +4,7 @@
 
 > Swift 코드의 구조와 호출 관계를 그래프로 분석하는 도구입니다. AI가 생성한 코드 변경을 검증할 때 특히 유용합니다.
 
-[![CI](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap/actions/workflows/ci.yml)
+[![CI](https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift/actions/workflows/ci.yml)
 
 [English](README.md) · [日本語](README.ja.md)
 
@@ -20,6 +20,16 @@ FlowMap은 Swift 코드를 파싱해 파일, 타입, 함수, 호출 관계를 �
 - 이 프로젝트의 전체 모양이 어떻게 생겼는가?
 
 FlowMap은 컴파일러 대체제가 아닙니다. 실제 코드 관계를 눈으로 볼 수 있게 해주는 실용적인 워크스페이스 수준 분석 도구입니다.
+
+## 왜 JavaScript 비중이 가장 큰가요?
+
+GitHub 언어 비율은 "분석 대상 언어"가 아니라 "구현 계층 비율"을 반영합니다.
+
+- JavaScript/TypeScript: VS Code 확장 호스트 + 그래프 웹뷰 UI
+- Rust: 핵심 그래프 엔진, diff/impact 처리
+- Swift: SwiftSyntax 기반 AST 파서
+
+즉 FlowMap의 분석 대상은 Swift가 맞고, JS 비중이 큰 이유는 에디터/UI 통합 코드가 포함되기 때문입니다.
 
 ## 이런 분께 유용합니다
 
@@ -40,6 +50,18 @@ FlowMap은 컴파일러 대체제가 아닙니다. 실제 코드 관계를 눈�
   - **Calls** — 호출 군집 탐색
 - 저장 시 자동 재분석
 
+## Cross-file 호출 연결 한계 (현재 베타)
+
+FlowMap은 false link를 줄이기 위해 cross-file 호출을 보수적으로 연결합니다. 그래서 일부 동적/간접 패턴은 구체 구현 대신 인터페이스 경계 수준으로 표시될 수 있습니다.
+
+- 프로토콜 타입 변수 호출은 프로토콜 requirement 엣지로 남을 수 있습니다.
+  - 예: `let svc: NetworkServiceProtocol = LiveService(); svc.fetchData()`
+- 파일이 다른 extension 메서드는 수신 타입 문맥이 명확하면 연결되지만, `where` 제약이 있는 extension dispatch는 부분 연결이 남을 수 있습니다.
+- 제네릭 제약 호출은 단일 concrete 타입 대신 제네릭/프로토콜 경계로 해석될 수 있습니다.
+  - 예: `func run<T: Worker>(_ t: T) { t.work() }`
+
+이 동작은 현재 퍼블릭 베타에서 의도된 보수적 동작이며, 점진적으로 확장 중입니다.
+
 ## 스크린샷
 
 ### Overview 모드
@@ -58,18 +80,20 @@ FlowMap은 컴파일러 대체제가 아닙니다. 실제 코드 관계를 눈�
 
 ### 준비물
 
-- macOS (Swift 파서 실행에 필요)
+- macOS 전용 (Swift 파서 실행에 필요)
 - Rust toolchain ([rustup.rs](https://rustup.rs))
 - Swift toolchain / Xcode command line tools
 - Node.js v20 이상
 - VS Code
+
+> 플랫폼 안내: 현재 Swift 파서 빌드/실행 경로가 macOS Swift toolchain 가정에 의존하므로 Linux/Windows는 아직 지원하지 않습니다.
 
 ### 빌드
 
 **1. 레포 클론**
 
 ```bash
-git clone https://github.com/adgk2349/FlowMap.git
+git clone https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift.git FlowMap
 cd FlowMap
 ```
 

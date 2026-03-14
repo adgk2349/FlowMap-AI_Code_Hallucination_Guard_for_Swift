@@ -17,7 +17,7 @@ This document is optimized for first-time contributors. If you are looking for a
 
 Prerequisites:
 
-- macOS
+- macOS only (current Swift parser build/runtime path is macOS-dependent)
 - Rust toolchain
 - Swift toolchain / Xcode command line tools
 - Node.js 20+
@@ -29,6 +29,18 @@ cargo build
 cd parsers/swift-ast && swift build -c release && cd ../..
 cd editor/vscode && npm ci && npm run compile && cd ../..
 ```
+
+## Contribution Rights (Public Beta)
+
+FlowMap is currently public beta and all rights are reserved by the author for the beta period.
+
+By submitting a pull request, patch, or issue attachment with code/content, you confirm:
+
+- You have the legal right to submit that contribution.
+- You grant the maintainer a non-exclusive, worldwide, royalty-free license to use, modify, and redistribute your contribution as part of this repository during public beta.
+- You do not submit third-party code/assets with incompatible terms.
+
+Final outbound licensing terms for the project will be announced after the public beta period.
 
 ## Required Checks Before PR
 
@@ -87,4 +99,3 @@ Bundled validation reports live under `reports/`. If you update benchmark/replay
 - what dataset/repo was used
 - command used
 - summary metrics (TP/TN/FP/FN, detection rate)
-
