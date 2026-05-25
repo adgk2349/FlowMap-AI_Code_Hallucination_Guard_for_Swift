@@ -93,6 +93,13 @@ function applyAnalysisData(a) {
     }
   });
 
+  // Build parent mapping for removed nodes from removed contains edges
+  (diff.removed_edges ?? []).forEach(function (e) {
+    if (e.kind === 'contains') {
+      parentMap[e.to] = e.from;
+    }
+  });
+
   // Bubble up impact to all ancestor nodes (types, files)
   var newImpacts = [];
   impactIds.forEach(function (id) {
@@ -156,17 +163,19 @@ function buildCyElements() {
       return !(graph.nodes ?? []).some(function (gn) { return gn.id === n.id; });
     })
     .map(function (n) {
-      return {
-        data: {
-          id: n.id,
-          label: (n.name ?? n.id) + ' ✕',
-          kind: n.kind ?? 'func',
-          uri: n.uri ?? '',
-          line: typeof n.line === 'number' ? n.line : 0,
-          diffState: 'removed',
-          impacted: false,
-        },
+      const data = {
+        id: n.id,
+        label: (n.name ?? n.id) + ' ✕',
+        kind: n.kind ?? 'func',
+        uri: n.uri ?? '',
+        line: typeof n.line === 'number' ? n.line : 0,
+        diffState: 'removed',
+        impacted: false,
       };
+      if (parentMap[n.id]) {
+        data.parent = parentMap[n.id];
+      }
+      return { data: data };
     });
 
   // Non-contains edges → cytoscape edges

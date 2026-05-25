@@ -253,9 +253,23 @@ fn build_resolution_context(
 }
 
 fn is_changed_file_uri(uri: &str, changed_files: &[PathBuf]) -> bool {
-    let uri_path = Path::new(uri);
+    let uri_clean = uri.strip_prefix("file://").unwrap_or(uri);
+    let uri_path = Path::new(uri_clean);
+
     changed_files.iter().any(|changed| {
-        uri_path == changed.as_path() || uri_path.ends_with(changed) || changed.ends_with(uri_path)
+        let changed_clean = changed.to_string_lossy();
+        let changed_clean = changed_clean.strip_prefix("file://").unwrap_or(&changed_clean);
+        let changed_path = Path::new(changed_clean);
+
+        if uri_path == changed_path {
+            return true;
+        }
+
+        match (uri_path.is_absolute(), changed_path.is_absolute()) {
+            (true, false) => uri_path.ends_with(changed_path),
+            (false, true) => changed_path.ends_with(uri_path),
+            _ => false,
+        }
     })
 }
 

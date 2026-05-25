@@ -109,14 +109,14 @@
   // ── Spacing constants (PR8.6) ─────────────────────────────────────────────
   // Hard minimum gaps used by all detail and calls layout code.
   // No layout may place nodes closer than these values.
-  const GROUP_GAP      = 140; // vertical gap between type-group blocks (file-detail)
-  const CARD_GAP_X     =  56; // horizontal gap between func/type cards in a row
-  const CARD_GAP_Y     =  28; // vertical gap between card rows
-  const COMPONENT_GAP  = 180; // gap between component bounding boxes (calls mode)
-  const DETAIL_PADDING =  40; // outer viewport padding after detail/calls layout
-  const PANEL_MIN_W    = 280; // minimum panel slot width  per component (calls mode)
-  const PANEL_MIN_H    = 180; // minimum panel slot height per component (calls mode)
-  const TILE_GAP       =  10; // minimum gap between component tiles     (calls mode)
+  const GROUP_GAP      = 180; // vertical gap between type-group blocks (file-detail)
+  const CARD_GAP_X     =  90; // horizontal gap between func/type cards in a row
+  const CARD_GAP_Y     =  48; // vertical gap between card rows
+  const COMPONENT_GAP  = 220; // gap between component bounding boxes (calls mode)
+  const DETAIL_PADDING =  60; // outer viewport padding after detail/calls layout
+  const PANEL_MIN_W    = 320; // minimum panel slot width  per component (calls mode)
+  const PANEL_MIN_H    = 220; // minimum panel slot height per component (calls mode)
+  const TILE_GAP       =  90; // minimum gap between component tiles     (calls mode)
 
   // ── Parse embedded payload ───────────────────────────────────────────────
   const raw = document.getElementById('graph-data').textContent ?? '{}';
@@ -143,19 +143,23 @@
         selector: 'node',
         style: {
           label: 'data(label)',
-          color: '#c0c8d8',
+          color: '#e2e8f0',
           'text-valign': 'center',
           'text-halign': 'center',
-          'font-size': '11px',
+          'font-size': '10px',
+          'font-family': 'Inter, system-ui, -apple-system, sans-serif',
           width: 'label',
           height: 'label',
-          padding: '8px',
+          padding: '10px',
           shape: 'roundrectangle',
-          'background-color': 'rgba(180, 120, 55, 0.42)',
+          'background-color': 'rgba(30, 41, 59, 0.7)',
           'background-opacity': 1,
           'border-width': 1,
-          'border-color': 'rgba(255, 255, 255, 0.09)',
+          'border-color': 'rgba(255, 255, 255, 0.08)',
           'border-opacity': 1,
+          'transition-property': 'background-color, border-color, border-width, opacity',
+          'transition-duration': '0.3s',
+          'transition-timing-function': 'ease-in-out',
         },
       },
       // ── Hidden elements (overview initial view) ─────────────────────────
@@ -163,33 +167,33 @@
       { selector: 'edge.hidden-edge', style: { display: 'none' } },
       // ── Kind-based colours ──────────────────────────────────────────────
       // File cards: polished pill — centered label, generous horizontal padding,
-      // soft border, neutral blue-gray base (folder tint overrides bg in JS).
+      // soft border, base navy-blue.
       {
         selector: 'node[kind = "file"]',
         style: {
-          'background-color': 'rgba(52, 72, 105, 0.52)',
+          'background-color': 'rgba(30, 58, 138, 0.35)',
           'background-opacity': 1,
-          'font-size': '12px',
+          'font-size': '11px',
           'font-weight': '600',
-          color: '#bccce0',
+          color: '#cbd5e1',
           'text-valign': 'center',
           'text-halign': 'center',
           'text-margin-y': '0px',
-          'border-color': 'rgba(255, 255, 255, 0.11)',
+          'border-color': 'rgba(96, 165, 250, 0.25)',
           'border-opacity': 1,
           'border-width': 1,
-          padding: '10px',
-          'min-width': 100,
-          'min-height': 28,
+          padding: '12px',
+          'min-width': 110,
+          'min-height': 32,
         },
       },
       // Hover glow: added via mouseover event, removed on mouseout
       {
         selector: 'node[kind = "file"].file-hover',
         style: {
-          'border-color': 'rgba(77, 163, 255, 0.45)',
+          'border-color': 'rgba(96, 165, 250, 0.7)',
           'border-width': 1.5,
-          color: '#d0e0ff',
+          color: '#f8fafc',
         },
       },
       // ── Overview mindmap nodes ──────────────────────────────────────────
@@ -198,20 +202,20 @@
         selector: 'node[kind = "root"]',
         style: {
           shape: 'ellipse',
-          'background-color': 'rgba(28, 45, 85, 0.90)',
+          'background-color': 'rgba(15, 23, 42, 0.95)',
           'background-opacity': 1,
-          'border-color': 'rgba(90, 140, 230, 0.42)',
+          'border-color': 'rgba(56, 189, 248, 0.5)',
           'border-width': 2,
           'border-opacity': 1,
-          color: '#c0d0f5',
-          'font-size': '14px',
+          color: '#f8fafc',
+          'font-size': '13px',
           'font-weight': '700',
           'text-valign': 'center',
           'text-halign': 'center',
-          width: 80,
-          height: 80,
+          width: 86,
+          height: 86,
           'text-wrap': 'ellipsis',
-          'text-max-width': '68px',
+          'text-max-width': '74px',
         },
       },
       // Folder nodes: medium cards, distinct from file pills
@@ -219,20 +223,20 @@
         selector: 'node[kind = "folder"]',
         style: {
           shape: 'roundrectangle',
-          'background-color': 'rgba(35, 46, 72, 0.82)',
+          'background-color': 'rgba(15, 23, 42, 0.85)',
           'background-opacity': 1,
-          'border-color': 'rgba(80, 110, 195, 0.30)',
+          'border-color': 'rgba(148, 163, 184, 0.15)',
           'border-width': 1.5,
           'border-opacity': 1,
-          color: '#90a8cc',
-          'font-size': '11px',
+          color: '#94a3b8',
+          'font-size': '10px',
           'font-weight': '600',
           'text-valign': 'center',
           'text-halign': 'center',
           'text-margin-y': '0px',
-          padding: '10px',
-          'min-width': 72,
-          'min-height': 28,
+          padding: '12px',
+          'min-width': 80,
+          'min-height': 30,
         },
       },
       // Folder collapsed: dashed border + muted text
@@ -240,28 +244,26 @@
         selector: 'node[kind = "folder"].folder-collapsed',
         style: {
           'border-style': 'dashed',
-          'border-color': 'rgba(80, 110, 195, 0.18)',
-          color: '#607090',
+          'border-color': 'rgba(148, 163, 184, 0.3)',
+          color: '#64748b',
         },
       },
       // Folder hover glow (via mouseover/mouseout events)
       {
         selector: 'node[kind = "folder"].folder-hover',
         style: {
-          'border-color': 'rgba(90, 140, 230, 0.50)',
+          'border-color': 'rgba(56, 189, 248, 0.6)',
           'border-width': 2,
-          color: '#b0c8e8',
+          color: '#e2e8f0',
         },
       },
       // ── Branch edges (overview hierarchy only) ──────────────────────────
-      // Thin, subtle arrows: project→folder, folder→file.
-      // Not call edges — exist only in overview mode.
       {
         selector: 'edge[kind = "branch"]',
         style: {
           width: 1,
-          'line-color': 'rgba(75, 105, 165, 0.22)',
-          'target-arrow-color': 'rgba(75, 105, 165, 0.22)',
+          'line-color': 'rgba(148, 163, 184, 0.15)',
+          'target-arrow-color': 'rgba(148, 163, 184, 0.15)',
           'target-arrow-shape': 'triangle',
           'curve-style': 'straight',
           opacity: 0.90,
@@ -270,11 +272,11 @@
       {
         selector: 'node[kind = "type"]',
         style: {
-          'background-color': 'rgba(38, 108, 76, 0.44)',
+          'background-color': 'rgba(6, 78, 59, 0.4)',
           'background-opacity': 1,
-          'font-size': '11px',
-          color: '#a8d0b8',
-          'border-color': 'rgba(255, 255, 255, 0.09)',
+          'font-size': '10px',
+          color: '#a7f3d0',
+          'border-color': 'rgba(52, 211, 153, 0.25)',
           'border-opacity': 1,
           'border-width': 1,
         },
@@ -282,11 +284,11 @@
       {
         selector: 'node[kind = "func"]',
         style: {
-          'background-color': 'rgba(175, 110, 45, 0.44)',
+          'background-color': 'rgba(120, 53, 4, 0.4)',
           'background-opacity': 1,
-          'font-size': '10px',
-          color: '#d0b890',
-          'border-color': 'rgba(255, 255, 255, 0.09)',
+          'font-size': '9px',
+          color: '#fde68a',
+          'border-color': 'rgba(251, 191, 36, 0.25)',
           'border-opacity': 1,
           'border-width': 1,
         },
@@ -294,15 +296,21 @@
       // ── Diff-state overrides ────────────────────────────────────────────
       {
         selector: 'node[diffState = "added"]',
-        style: { 'background-color': 'rgba(22, 62, 22, 0.90)', 'background-opacity': 1 },
+        style: { 
+          'background-color': 'rgba(16, 185, 129, 0.25)', 
+          'border-color': 'rgba(52, 211, 153, 0.6)',
+          color: '#a7f3d0',
+          'background-opacity': 1 
+        },
       },
       {
         selector: 'node[diffState = "removed"]',
         style: {
-          'background-color': 'rgba(62, 20, 20, 0.90)',
+          'background-color': 'rgba(239, 68, 68, 0.25)',
           'background-opacity': 1,
           'border-style': 'dashed',
-          'border-color': 'rgba(190, 50, 50, 0.80)',
+          'border-color': 'rgba(248, 113, 113, 0.6)',
+          color: '#fca5a5',
           'border-width': 1.5,
           'border-opacity': 1,
           opacity: 0.70,
@@ -310,13 +318,18 @@
       },
       {
         selector: 'node[diffState = "changed"]',
-        style: { 'background-color': 'rgba(62, 58, 18, 0.90)', 'background-opacity': 1 },
+        style: { 
+          'background-color': 'rgba(245, 158, 11, 0.25)', 
+          'border-color': 'rgba(251, 191, 36, 0.6)',
+          color: '#fde68a',
+          'background-opacity': 1 
+        },
       },
       // ── Impacted node: warm orange outline ──────────────────────────────
       {
         selector: 'node[?impacted]',
         style: {
-          'border-color': 'rgba(215, 115, 50, 0.90)',
+          'border-color': '#f97316',
           'border-width': 2.5,
           'border-style': 'solid',
           'border-opacity': 1,
@@ -326,25 +339,26 @@
       {
         selector: ':parent',
         style: {
-          'background-opacity': 0.12,
+          'background-opacity': 0.08,
           'border-width': 1,
           'border-color': '#ffffff',
-          'border-opacity': 0.1,
+          'border-opacity': 0.08,
           'text-valign': 'top',
           'text-halign': 'center',
           'text-margin-y': '8px',
-          padding: '20px',
+          padding: '24px',
         },
       },
       // Contains edge for detail view hierarchy
       {
         selector: 'edge[kind = "contains"]',
         style: {
-          width: 1.5,
-          'line-color': 'rgba(100, 100, 100, 0.4)',
-          'target-arrow-color': 'rgba(100, 100, 100, 0.4)',
+          width: 1,
+          'line-color': 'rgba(255, 255, 255, 0.12)',
+          'target-arrow-color': 'rgba(255, 255, 255, 0.12)',
           'target-arrow-shape': 'triangle',
           'curve-style': 'bezier',
+          'line-style': 'dashed',
         },
       },
       // ── Base edge ──────────────────────────────────────────────────────
@@ -352,19 +366,21 @@
         selector: 'edge',
         style: {
           width: 1.5,
-          'line-color': '#e07b39',
-          'target-arrow-color': '#e07b39',
-          'target-arrow-shape': 'triangle',
+          'line-color': '#f97316',
+          'target-arrow-color': '#f97316',
+          'target-arrow-shape': 'triangle-backcurve',
           'curve-style': 'bezier',
           opacity: 0.7,
+          'transition-property': 'line-color, target-arrow-color, width, opacity',
+          'transition-duration': '0.3s',
         },
       },
       // ── Diff-state edge overrides ───────────────────────────────────────
       {
         selector: 'edge[diffState = "added"]',
         style: {
-          'line-color': '#33cc33',
-          'target-arrow-color': '#33cc33',
+          'line-color': '#10b981',
+          'target-arrow-color': '#10b981',
           'line-style': 'dashed',
           opacity: 0.85,
         },
@@ -372,8 +388,8 @@
       {
         selector: 'edge[diffState = "removed"]',
         style: {
-          'line-color': '#cc3333',
-          'target-arrow-color': '#cc3333',
+          'line-color': '#ef4444',
+          'target-arrow-color': '#ef4444',
           'line-style': 'dashed',
           opacity: 0.6,
         },
@@ -381,25 +397,25 @@
       // ── Muted unchanged ─────────────────────────────────────────────────
       {
         selector: 'node.muted-bg',
-        style: { opacity: 0.4, color: '#777777' },
+        style: { opacity: 0.4, color: '#64748b' },
       },
       // ── Search highlight ────────────────────────────────────────────────
       {
         selector: 'node.search-highlight',
         style: {
-          'border-color': 'rgba(77, 163, 255, 0.90)',
+          'border-color': '#38bdf8',
           'border-width': 2,
           'border-style': 'solid',
           'border-opacity': 1,
-          color: '#d8ecff',
+          color: '#f0f9ff',
         },
       },
       // ── Highlight state (click) ─────────────────────────────────────────
       {
         selector: 'node.highlighted',
         style: {
-          'border-color': '#ffdd00',
-          'border-width': 4,
+          'border-color': '#0ea5e9',
+          'border-width': 3,
           'border-style': 'solid',
           'border-opacity': 1,
         },
@@ -411,8 +427,8 @@
       {
         selector: 'edge.highlighted',
         style: {
-          'line-color': '#ffdd00',
-          'target-arrow-color': '#ffdd00',
+          'line-color': '#0ea5e9',
+          'target-arrow-color': '#0ea5e9',
           opacity: 1,
           width: 2.5,
         },
@@ -422,7 +438,7 @@
         selector: 'node:selected',
         style: {
           'border-width': 3,
-          'border-color': '#e07b39',
+          'border-color': '#f97316',
           'border-opacity': 1,
         },
       },
@@ -666,6 +682,9 @@
 
   // Register interaction and toolbar/message handlers from graph.events.js
   registerFlowMapEvents();
+
+  // Start the dynamic floating and collision repulsion loop
+  startFloatingAnimation();
 
 
 
