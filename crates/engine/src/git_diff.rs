@@ -21,6 +21,11 @@ pub fn changed_swift_files(workspace_root: &Path) -> Vec<PathBuf> {
         &["diff", "--name-only", "HEAD", "--", "*.swift"],
     ) {
         rel_paths.extend(lines.into_iter().map(PathBuf::from));
+    } else {
+        // Fallback for commit-less repositories: get staged files from the index.
+        if let Ok(lines) = git_lines(workspace_root, &["ls-files", "--", "*.swift"]) {
+            rel_paths.extend(lines.into_iter().map(PathBuf::from));
+        }
     }
 
     // Newly created, untracked Swift files.
@@ -168,5 +173,22 @@ mod tests {
         // strip_prefix will fail → None
         let result = head_content(tmp.path(), &file);
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_changed_swift_files_in_repo_without_head_includes_staged_swift() {
+        let tmp = TempDir::new().unwrap();
+        let root = tmp.path();
+
+        git_ok(root, &["init"]);
+        git_ok(root, &["config", "user.email", "flowmap-test@example.com"]);
+        git_ok(root, &["config", "user.name", "FlowMap Test"]);
+
+        let file = root.join("StagedNew.swift");
+        fs::write(&file, "func stagedNew() {}\n").unwrap();
+        git_ok(root, &["add", "StagedNew.swift"]);
+
+        let result = changed_swift_files(root);
+        assert!(result.contains(&file));
     }
 }

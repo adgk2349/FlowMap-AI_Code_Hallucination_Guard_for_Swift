@@ -326,13 +326,16 @@ function buildDetailElements(fileNodeId) {
 
 // Layout uses breadthfirst to build a proper tree structure
 function layoutDetailTypeNodes() {
-  cy.layout({
+  cy.elements().filter('node, edge[kind = "contains"]').layout({
     name: 'breadthfirst',
     directed: true,
     spacingFactor: 1.5,
     fit: true,
     padding: 60,
-    roots: cy.nodes('[kind = "file"]')
+    roots: cy.nodes('[kind = "file"]'),
+    animate: true,
+    animationDuration: 500,
+    animationEasing: 'ease-in-out-cubic'
   }).run();
 }
 
