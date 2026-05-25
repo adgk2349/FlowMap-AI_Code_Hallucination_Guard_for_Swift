@@ -23,10 +23,7 @@ pub fn changed_swift_files(workspace_root: &Path) -> Vec<PathBuf> {
         rel_paths.extend(lines.into_iter().map(PathBuf::from));
     } else {
         // Fallback for commit-less repositories: get staged files from the index.
-        if let Ok(lines) = git_lines(
-            workspace_root,
-            &["ls-files", "--", "*.swift"],
-        ) {
+        if let Ok(lines) = git_lines(workspace_root, &["ls-files", "--", "*.swift"]) {
             rel_paths.extend(lines.into_iter().map(PathBuf::from));
         }
     }

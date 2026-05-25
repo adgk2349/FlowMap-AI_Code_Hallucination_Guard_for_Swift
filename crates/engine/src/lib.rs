@@ -258,7 +258,9 @@ fn is_changed_file_uri(uri: &str, changed_files: &[PathBuf]) -> bool {
 
     changed_files.iter().any(|changed| {
         let changed_clean = changed.to_string_lossy();
-        let changed_clean = changed_clean.strip_prefix("file://").unwrap_or(&changed_clean);
+        let changed_clean = changed_clean
+            .strip_prefix("file://")
+            .unwrap_or(&changed_clean);
         let changed_path = Path::new(changed_clean);
 
         if uri_path == changed_path {
