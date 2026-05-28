@@ -5,6 +5,7 @@
 > Swift コードの構造と呼び出し関係をグラフ分析するツールです。AI が生成したコード変更の検証に特に役立ちます。
 
 [![CI](https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift/actions/workflows/ci.yml)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/SeungMinLee.flowmap-ai-swift-guard?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=SeungMinLee.flowmap-ai-swift-guard)
 
 [English](README.md) · [한국어](README.ko.md)
 

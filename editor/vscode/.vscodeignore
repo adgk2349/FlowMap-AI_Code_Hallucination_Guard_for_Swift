@@ -3,6 +3,7 @@
 
 !package.json
 !LICENSE
+!README.md
 !out/**
 !webview/**
 !node_modules/cytoscape/**

@@ -1,11 +1,16 @@
 {
-  "name": "flowmap",
-  "displayName": "FlowMap",
-  "description": "Call-graph visualization for AI-generated Swift code",
-  "version": "0.1.0",
+  "name": "flowmap-ai-swift-guard",
+  "publisher": "SeungMinLee",
+  "displayName": "FlowMap Hallucination Guard for Swift",
+  "description": "Detect risky AI-generated Swift changes with graph diff and impact analysis",
+  "version": "0.1.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift.git"
+  },
+  "homepage": "https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift",
+  "bugs": {
+    "url": "https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift/issues"
   },
   "engines": {
     "vscode": "^1.85.0"
