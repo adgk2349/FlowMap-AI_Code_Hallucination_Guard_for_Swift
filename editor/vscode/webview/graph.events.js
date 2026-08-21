@@ -49,10 +49,8 @@ function registerFlowMapEvents() {
       }
   
     } else {
-      // Calls mode: full compound graph — file/type toggle; func highlights calls.
-      if (kind === 'file' || kind === 'type') {
-        toggleExpand(node.id());
-      } else if (kind === 'func') {
+      // Calls mode: full compound graph — func highlights calls.
+      if (kind === 'func') {
         const callEdges = node.outgoers('edge').filter('[kind = "calls"]');
         const callTargets = callEdges.targets();
         if (callEdges.length > 0) {
@@ -90,6 +88,54 @@ function registerFlowMapEvents() {
   });
   cy.on('mouseout', 'node[kind = "folder"]', function (evt) {
     evt.target.removeClass('folder-hover');
+  });
+
+  // ── Drag clamp for leaf nodes inside parent file boxes ───────────────────
+  cy.on('drag', 'node', function (evt) {
+    const node = evt.target;
+    if (node.isParent()) return;
+
+    // If any parent ancestor is grabbed (meaning the user is dragging the parent window),
+    // do NOT clamp child positions as it interferes with Cytoscape's internal drag engine and causes erratic drifts
+    let ancestorGrabbed = false;
+    let p = node.parent();
+    while (p && p.length > 0) {
+      if (p.grabbed()) {
+        ancestorGrabbed = true;
+        break;
+      }
+      p = p.parent();
+    }
+    if (ancestorGrabbed) return;
+
+    const fileBox = fileAncestorOf(node);
+    if (fileBox && fileBox.length > 0 && state.mode !== 'overview') {
+      const W = fileBox.outerWidth() || fileBox.width() || 100;
+      const H = fileBox.outerHeight() || fileBox.height() || 60;
+      const pPos = fileBox.position();
+      const w = node.outerWidth() || node.width() || 80;
+      const h = node.outerHeight() || node.height() || 28;
+
+      const padLeft = 8;
+      const padRight = 8;
+      const padTop = 24 + 8;
+      const padBottom = 8;
+
+      const minX = pPos.x - W/2 + w/2 + padLeft;
+      const maxX = pPos.x + W/2 - w/2 - padRight;
+      const minY = pPos.y - H/2 + h/2 + padTop;
+      const maxY = pPos.y + H/2 - h/2 - padBottom;
+
+      const pos = node.position();
+      let cx = pos.x;
+      let cy = pos.y;
+      if (cx < minX) cx = minX;
+      if (cx > maxX) cx = maxX;
+      if (cy < minY) cy = minY;
+      if (cy > maxY) cy = maxY;
+
+      node.position({ x: cx, y: cy });
+    }
   });
   
   // ── Tooltip: show full label when the display label was truncated ────────
@@ -196,6 +242,13 @@ function registerFlowMapEvents() {
     if (fitBtn) {
       fitBtn.addEventListener('click', function () {
         deferredFit(cy.nodes(), 80);
+      });
+    }
+
+    const forceBtn = document.getElementById('btn-force');
+    if (forceBtn) {
+      forceBtn.addEventListener('click', function () {
+        runPhysicsLayout();
       });
     }
   
@@ -305,7 +358,112 @@ function registerFlowMapEvents() {
       });
     }
   })();
-  
+
+  // ── Drag-to-resize compound file boxes ─────────────────────────────
+  let resizeNode = null;
+  let resizeStartPos = null;
+  let startMinWidth = 0;
+  let startMinHeight = 0;
+
+  cy.on('mousedown', 'node[kind = "file"]', function (evt) {
+    const node = evt.target;
+    if (state.mode === 'overview') return;
+
+    const mousePos = evt.position;
+    const bb = node.boundingBox();
+
+    const cornerX = bb.x2;
+    const cornerY = bb.y2;
+    const dist = Math.sqrt((mousePos.x - cornerX) * (mousePos.x - cornerX) + (mousePos.y - cornerY) * (mousePos.y - cornerY));
+
+    if (dist < 24) {
+      resizeNode = node;
+      resizeStartPos = { x: mousePos.x, y: mousePos.y };
+      startMinWidth = node.outerWidth();
+      startMinHeight = node.outerHeight();
+
+      cy.boxSelectionEnabled(false);
+      cy.userPanningEnabled(false);
+      node.ungrabify();
+      
+      pauseFloatingAnimation();
+      
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+  });
+
+  cy.on('mousemove', function (evt) {
+    if (resizeNode) {
+      const mousePos = evt.position;
+      const dx = mousePos.x - resizeStartPos.x;
+      const dy = mousePos.y - resizeStartPos.y;
+
+      const newWidth = Math.max(100, startMinWidth + dx);
+      const newHeight = Math.max(60, startMinHeight + dy);
+
+      resizeNode.style({
+        'min-width': newWidth,
+        'min-height': newHeight
+      });
+    } else {
+      const mousePos = evt.position;
+      let nearCorner = false;
+
+      if (state.mode !== 'overview') {
+        const fileNodes = cy.nodes('[kind = "file"]:visible');
+        for (let i = 0; i < fileNodes.length; i++) {
+          const node = fileNodes[i];
+          const bb = node.boundingBox();
+          const dist = Math.sqrt((mousePos.x - bb.x2) * (mousePos.x - bb.x2) + (mousePos.y - bb.y2) * (mousePos.y - bb.y2));
+          if (dist < 20) {
+            nearCorner = true;
+            break;
+          }
+        }
+      }
+
+      const container = document.getElementById('cy');
+      if (container) {
+        if (nearCorner) {
+          container.style.cursor = 'se-resize';
+        } else {
+          if (container.style.cursor === 'se-resize') {
+            container.style.cursor = '';
+          }
+        }
+      }
+    }
+  });
+
+  cy.on('mouseup', function (evt) {
+    if (resizeNode) {
+      cy.boxSelectionEnabled(true);
+      cy.userPanningEnabled(true);
+      resizeNode.grabify();
+
+      resetBasePositions();
+      resumeFloatingAnimation();
+
+      resizeNode = null;
+      resizeStartPos = null;
+    }
+  });
+
+  window.addEventListener('mouseup', function () {
+    if (resizeNode) {
+      cy.boxSelectionEnabled(true);
+      cy.userPanningEnabled(true);
+      resizeNode.grabify();
+
+      resetBasePositions();
+      resumeFloatingAnimation();
+
+      resizeNode = null;
+      resizeStartPos = null;
+    }
+  });
+
   // ═══════════════════════════════════════════════════════════════════════════
   // Message handler
   // ═══════════════════════════════════════════════════════════════════════════

@@ -67,15 +67,15 @@ FlowMap은 false link를 줄이기 위해 cross-file 호출을 보수적으로 �
 
 ### Overview 모드
 
-![Overview mode](docs/screenshots/overview.jpg)
+![Overview mode](editor/vscode/resources/screenshot_overview.png)
 
 ### File Detail 모드
 
-![File detail mode](docs/screenshots/file-detail.jpg)
+![File detail mode](editor/vscode/resources/screenshot_detail.png)
 
 ### Calls 모드
 
-![Calls mode](docs/screenshots/calls.jpg)
+![Calls mode](editor/vscode/resources/screenshot_calls.png)
 
 ## 설치
 

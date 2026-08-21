@@ -67,15 +67,15 @@ FlowMap は誤リンクを抑えるため、cross-file 呼び出し解決を保�
 
 ### Overview モード
 
-![Overview mode](docs/screenshots/overview.jpg)
+![Overview mode](editor/vscode/resources/screenshot_overview.png)
 
 ### File Detail モード
 
-![File detail mode](docs/screenshots/file-detail.jpg)
+![File detail mode](editor/vscode/resources/screenshot_detail.png)
 
 ### Calls モード
 
-![Calls mode](docs/screenshots/calls.jpg)
+![Calls mode](editor/vscode/resources/screenshot_calls.png)
 
 ## インストール
 

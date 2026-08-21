@@ -68,15 +68,15 @@ This behavior is expected in current public beta and is being expanded increment
 
 ### Overview mode
 
-![Overview mode](docs/screenshots/overview.jpg)
+![Overview mode](editor/vscode/resources/screenshot_overview.png)
 
 ### File detail mode
 
-![File detail mode](docs/screenshots/file-detail.jpg)
+![File detail mode](editor/vscode/resources/screenshot_detail.png)
 
 ### Calls mode
 
-![Calls mode](docs/screenshots/calls.jpg)
+![Calls mode](editor/vscode/resources/screenshot_calls.png)
 
 ## Installation
 

@@ -22,14 +22,48 @@ function deferredFit(eles, padding) {
         if (files.length > 0) {
           cy.nodes('[kind = "type"], [kind = "func"]').addClass('hidden-node');
           cy.nodes('[kind = "file"]').removeClass('hidden-node');
-          cy.fit(files, 120);
+          const leafFiles = files.filter(function (n) { return !n.isParent(); });
+          if (leafFiles.length > 0) {
+            cy.fit(leafFiles, 120);
+          } else {
+            cy.fit(files, 120);
+          }
         }
         return;
       }
 
-      cy.fit(target, pad);
+      // Filter target to visible leaf nodes (non-parents) for absolute numerical stability
+      const leafTarget = target.filter(function (n) { return !n.isParent(); });
+      if (leafTarget.length > 0) {
+        cy.fit(leafTarget, pad);
+      } else {
+        cy.fit(target, pad);
+      }
     });
   });
+}
+
+// ── pauseFloatingAnimation / resumeFloatingAnimation ────────────────────
+function pauseFloatingAnimation() {
+  if (floatAnimationId) {
+    cancelAnimationFrame(floatAnimationId);
+    floatAnimationId = null;
+  }
+}
+
+function resumeFloatingAnimation() {
+  startFloatingAnimation();
+}
+
+function fileAncestorOf(node) {
+  var cur = node;
+  while (cur && cur.length > 0) {
+    if (cur.data('kind') === 'file') { return cur; }
+    var par = cur.data('parent');
+    if (!par) { return null; }
+    cur = cy.getElementById(par);
+  }
+  return null;
 }
 
 // ── animateNodes ─────────────────────────────────────────────────────────
@@ -44,6 +78,8 @@ function animateNodes(targets, duration, callback) {
     return;
   }
 
+  pauseFloatingAnimation();
+
   targets.forEach(function (t) {
     t.node.animate({
       position: t.position
@@ -55,6 +91,7 @@ function animateNodes(targets, duration, callback) {
         if (completed === targets.length) {
           resetBasePositions();
           if (callback) callback();
+          resumeFloatingAnimation();
         }
       }
     });
@@ -66,7 +103,18 @@ function animateNodes(targets, duration, callback) {
 function resetBasePositions() {
   resetHiddenPositions();
   cy.nodes().forEach(function (node) {
-    node.scratch('base_pos', { x: node.position('x'), y: node.position('y') });
+    const pos = { x: node.position('x'), y: node.position('y') };
+    node.scratch('base_pos', { x: pos.x, y: pos.y });
+    node.scratch('orig_pos', { x: pos.x, y: pos.y });
+    node.scratch('vel', { x: 0, y: 0 });
+  });
+  cy.edges().forEach(function (edge) {
+    const s = edge.source();
+    const t = edge.target();
+    const p1 = s.position();
+    const p2 = t.position();
+    const dist = Math.sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y)) || 80;
+    edge.scratch('orig_length', Math.min(dist, 120));
   });
 }
 
@@ -82,90 +130,289 @@ function startFloatingAnimation() {
   
   cy.on('free', 'node', function (evt) {
     const node = evt.target;
-    node.scratch('base_pos', { x: node.position('x'), y: node.position('y') });
+    if (!node.isParent()) {
+      const pos = { x: node.position('x'), y: node.position('y') };
+      node.scratch('base_pos', { x: pos.x, y: pos.y });
+      node.scratch('orig_pos', { x: pos.x, y: pos.y });
+      node.scratch('vel', { x: 0, y: 0 });
+    } else {
+      // If a parent node was dragged, reset all its leaf descendants' base, orig, and velocity positions
+      node.descendants().filter(function(n) { return !n.isParent(); }).forEach(function (child) {
+        const pos = { x: child.position('x'), y: child.position('y') };
+        child.scratch('base_pos', { x: pos.x, y: pos.y });
+        child.scratch('orig_pos', { x: pos.x, y: pos.y });
+        child.scratch('vel', { x: 0, y: 0 });
+      });
+    }
   });
+
+  function isRelated(n1, n2) {
+    let cur = n2;
+    while (cur && cur.length > 0) {
+      if (cur.id() === n1.id()) return true;
+      cur = cur.parent();
+    }
+    cur = n1;
+    while (cur && cur.length > 0) {
+      if (cur.id() === n2.id()) return true;
+      cur = cur.parent();
+    }
+    return false;
+  }
+
+  function fileAncestorOf(node) {
+    let cur = node;
+    while (cur && cur.length > 0) {
+      if (cur.data('kind') === 'file') return cur;
+      let par = cur.parent();
+      if (!par || par.length === 0) return null;
+      cur = par;
+    }
+    return null;
+  }
 
   const startTime = Date.now();
 
   function step() {
     const elapsed = (Date.now() - startTime) / 1000;
     
-    // Ensure all visible nodes have base_pos
-    cy.nodes(':visible').forEach(function (node) {
+    // Ensure all visible leaf nodes have base_pos and orig_pos
+    const leafNodes = cy.nodes(':visible').filter(function (n) { return !n.isParent(); });
+    leafNodes.forEach(function (node) {
       if (!node.scratch('base_pos')) {
-        node.scratch('base_pos', { x: node.position('x'), y: node.position('y') });
+        const pos = { x: node.position('x'), y: node.position('y') };
+        node.scratch('base_pos', { x: pos.x, y: pos.y });
+        node.scratch('orig_pos', { x: pos.x, y: pos.y });
       }
     });
 
-    // Mutual repulsion logic to prevent overlap
-    const nodes = cy.nodes(':visible');
+    const visibleNodes = cy.nodes(':visible');
     const forces = {};
-    nodes.forEach(function (n) { forces[n.id()] = { x: 0, y: 0 }; });
+    leafNodes.forEach(function (n) { forces[n.id()] = { x: 0, y: 0 }; });
 
-    // Calculate repulsion (nodes push each other away if closer than 150px center-to-center)
-    const minDistance = 150;
-    const forceFactor = 0.08;
-
-    for (let i = 0; i < nodes.length; i++) {
-      const n1 = nodes[i];
-      if (n1.grabbed()) continue;
-      const p1 = n1.position();
-
-      for (let j = i + 1; j < nodes.length; j++) {
-        const n2 = nodes[j];
-        const p2 = n2.position();
-
-        const dx = p1.x - p2.x;
-        const dy = p1.y - p2.y;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-
-        if (dist < minDistance) {
-          const overlap = minDistance - dist;
-          const rx = (dx / dist) * overlap * forceFactor;
-          const ry = (dy / dist) * overlap * forceFactor;
-
-          if (!n1.grabbed()) {
-            forces[n1.id()].x += rx;
-            forces[n1.id()].y += ry;
+    function getBasePos(node) {
+      if (node.isParent()) {
+        const leaves = node.descendants().filter(function (n) { return !n.isParent(); });
+        if (leaves.length > 0) {
+          let sumX = 0, sumY = 0, count = 0;
+          leaves.forEach(function (leaf) {
+            const bp = leaf.scratch('base_pos');
+            if (bp) {
+              sumX += bp.x;
+              sumY += bp.y;
+              count++;
+            }
+          });
+          if (count > 0) {
+            return { x: sumX / count, y: sumY / count };
           }
-          if (!n2.grabbed()) {
-            forces[n2.id()].x -= rx;
-            forces[n2.id()].y -= ry;
+        }
+      }
+      const bp = node.scratch('base_pos');
+      if (bp) return bp;
+      return { x: node.position('x'), y: node.position('y') };
+    }
+
+    function distributeForce(node, fx, fy) {
+      if (node.isParent()) {
+        node.descendants().filter(function(n) { return !n.isParent(); }).forEach(function (child) {
+          if (!child.grabbed() && forces[child.id()]) {
+            forces[child.id()].x += fx;
+            forces[child.id()].y += fy;
           }
+        });
+      } else {
+        if (!node.grabbed() && forces[node.id()]) {
+          forces[node.id()].x += fx;
+          forces[node.id()].y += fy;
         }
       }
     }
 
-    // Apply repulsion to base position, then add gentle floating wave offset
-    nodes.forEach(function (node) {
+    // Calculate AABB rectangular overlap repulsion forces using base coordinates (prevents float wave feedback)
+    for (let i = 0; i < visibleNodes.length; i++) {
+      const n1 = visibleNodes[i];
+      if (n1.grabbed()) continue;
+      const p1 = getBasePos(n1);
+
+      for (let j = i + 1; j < visibleNodes.length; j++) {
+        const n2 = visibleNodes[j];
+        if (n2.grabbed()) continue;
+        const p2 = getBasePos(n2);
+
+        // Skip parent-child self repulsion
+        if (isRelated(n1, n2)) continue;
+
+        const f1 = fileAncestorOf(n1);
+        const f2 = fileAncestorOf(n2);
+
+        // If they belong to different files, only let the file boxes (parents) repel each other
+        if (f1 && f2 && f1.id() !== f2.id()) {
+          const isFile1 = n1.data('kind') === 'file';
+          const isFile2 = n2.data('kind') === 'file';
+          if (isFile1 && isFile2) {
+            // Keep going, let file nodes repel in Overview mode (where they are leaf/childless nodes)
+          } else {
+            if (!n1.isParent() || !n2.isParent()) {
+              continue;
+            }
+          }
+        }
+
+        const w1 = n1.outerWidth() || n1.width() || 80;
+        const h1 = n1.outerHeight() || n1.height() || 28;
+        const w2 = n2.outerWidth() || n2.width() || 80;
+        const h2 = n2.outerHeight() || n2.height() || 28;
+
+        const dx = p1.x - p2.x;
+        const dy = p1.y - p2.y;
+
+        // Safety gap of 16px to prevent overlaps
+        const gap = 16;
+        const overlapX = (w1 + w2) / 2 + gap - Math.abs(dx);
+        const overlapY = (h1 + h2) / 2 + gap - Math.abs(dy);
+
+        if (overlapX > 0 && overlapY > 0) {
+          const signX = dx >= 0 ? 1 : -1;
+          const signY = dy >= 0 ? 1 : -1;
+
+          let rx = 0, ry = 0;
+          // Resolve only along the minimum overlap axis to prevent diagonal sliding instabilities
+          if (overlapX < overlapY) {
+            rx = signX * overlapX * 0.25;
+          } else {
+            ry = signY * overlapY * 0.25;
+          }
+
+          distributeForce(n1, rx, ry);
+          distributeForce(n2, -rx, -ry);
+        }
+      }
+    }
+    // Ensure all visible edges have orig_length
+    const visibleEdges = cy.edges(':visible');
+    visibleEdges.forEach(function (edge) {
+      if (!edge.scratch('orig_length')) {
+        const s = edge.source();
+        const t = edge.target();
+        const p1 = getBasePos(s);
+        const p2 = getBasePos(t);
+        const dist = Math.sqrt((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y)) || 80;
+        edge.scratch('orig_length', Math.min(dist, 120));
+      }
+    });
+
+    // Calculate spring attraction forces along edges (net effect) using base coordinates
+    visibleEdges.forEach(function (edge) {
+      const s = edge.source();
+      const t = edge.target();
+      if (!s.visible() || !t.visible()) return;
+
+      const p1 = getBasePos(s);
+      const p2 = getBasePos(t);
+      const dx = p1.x - p2.x;
+      const dy = p1.y - p2.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+      const origLength = edge.scratch('orig_length') || 80;
+
+      // Pull them together if they exceed their original distance
+      if (dist > origLength) {
+        const stretch = dist - origLength;
+        const ax = (dx / dist) * stretch * 0.04; // spring constant for edge
+        const ay = (dy / dist) * stretch * 0.04;
+
+        distributeForce(s, -ax, -ay);
+        distributeForce(t, ax, ay);
+      }
+    });
+
+    // Apply repulsion and spring attraction to base position of leaf nodes, then add gentle floating wave offset
+    leafNodes.forEach(function (node) {
       if (node.grabbed()) return;
+
+      // Allow dragging parent (e.g. title bar) to move the window along with all child cards:
+      // If any parent ancestor is currently grabbed, sync base_pos to current coordinates and skip forces
+      let ancestorGrabbed = false;
+      let p = node.parent();
+      while (p && p.length > 0) {
+        if (p.grabbed()) {
+          ancestorGrabbed = true;
+          break;
+        }
+        p = p.parent();
+      }
+      if (ancestorGrabbed) {
+        node.scratch('base_pos', { x: node.position('x'), y: node.position('y') });
+        node.scratch('orig_pos', { x: node.position('x'), y: node.position('y') });
+        node.scratch('vel', { x: 0, y: 0 });
+        return;
+      }
 
       const id = node.id();
       const base = node.scratch('base_pos');
+      const orig = node.scratch('orig_pos');
       if (!base) return;
 
       const f = forces[id];
-      base.x += f.x;
-      base.y += f.y;
 
-      // Hash node ID for deterministic unique wave parameters
-      let hash = 0;
-      for (let i = 0; i < id.length; i++) {
-        hash = (hash * 31 + id.charCodeAt(i)) & 0xffff;
+      // Add a gentle restoring spring force to orig_pos if it drifts past a 12px deadband
+      if (orig) {
+        const dx_orig = orig.x - base.x;
+        const dy_orig = orig.y - base.y;
+        const dist_orig = Math.sqrt(dx_orig * dx_orig + dy_orig * dy_orig) || 1;
+
+        const deadband = 12; // 12px free-floating deadband to prevent micro-vibrations
+        if (dist_orig > deadband) {
+          const k = 0.05; // spring constant
+          const pull = dist_orig - deadband;
+          f.x += (dx_orig / dist_orig) * pull * k;
+          f.y += (dy_orig / dist_orig) * pull * k;
+        }
       }
 
-      // Small gentle float (amplitude 3-5px)
-      const speedX = 0.6 + (hash % 5) * 0.12;
-      const speedY = 0.7 + (hash % 7) * 0.15;
-      const ampX = 3 + (hash % 3) * 1.0;
-      const ampY = 4 + (hash % 4) * 1.5;
+      // Retrieve or initialize velocity
+      if (!node.scratch('vel')) {
+        node.scratch('vel', { x: 0, y: 0 });
+      }
+      const vel = node.scratch('vel');
 
-      const waveX = Math.sin(elapsed * speedX + hash) * ampX;
-      const waveY = Math.cos(elapsed * speedY + hash) * ampY;
+      // Update velocity with friction damping (0.65 drag to absorb oscillation)
+      vel.x = vel.x * 0.65 + f.x;
+      vel.y = vel.y * 0.65 + f.y;
+
+      // Update base position
+      base.x += vel.x;
+      base.y += vel.y;
+
+      // Real window containment boundary clamping (keep nodes inside file box limits)
+      const fileBox = fileAncestorOf(node);
+      if (fileBox && fileBox.length > 0 && state.mode !== 'overview') {
+        const W = fileBox.outerWidth() || fileBox.width() || 100;
+        const H = fileBox.outerHeight() || fileBox.height() || 60;
+        const pPos = getBasePos(fileBox);
+        const w = node.outerWidth() || node.width() || 80;
+        const h = node.outerHeight() || node.height() || 28;
+
+        const padLeft = 8;
+        const padRight = 8;
+        const padTop = 24 + 8; // header padding + safety margin
+        const padBottom = 8;
+
+        const minX = pPos.x - W/2 + w/2 + padLeft;
+        const maxX = pPos.x + W/2 - w/2 - padRight;
+        const minY = pPos.y - H/2 + h/2 + padTop;
+        const maxY = pPos.y + H/2 - h/2 - padBottom;
+
+        if (base.x < minX) base.x = minX;
+        if (base.x > maxX) base.x = maxX;
+        if (base.y < minY) base.y = minY;
+        if (base.y > maxY) base.y = maxY;
+      }
 
       node.position({
-        x: base.x + waveX,
-        y: base.y + waveY
+        x: base.x,
+        y: base.y
       });
     });
 
@@ -203,6 +450,8 @@ function runGridLayout() {
   }
   if (emptyEl) { emptyEl.style.display = 'none'; }
 
+  pauseFloatingAnimation();
+
   files.layout({
     name: 'grid',
     padding: 80,
@@ -214,6 +463,7 @@ function runGridLayout() {
     fit: true,
     stop: function () {
       resetBasePositions();
+      resumeFloatingAnimation();
     }
   }).run();
 }
@@ -231,8 +481,8 @@ function runOverviewLayout() {
   var nFolders = folderNodes.length;
   if (nFolders === 0) { deferredFit(cy.nodes(), 60); return; }
 
-  // Folder ring: radius grows with folder count (spacious default)
-  var FOLDER_R = Math.max(340, nFolders * 110);
+  // Folder ring: radius grows with folder count (compact)
+  var FOLDER_R = Math.max(120, nFolders * 50);
 
   folderNodes.forEach(function (folder, i) {
     var angle = (2 * Math.PI * i / nFolders) - Math.PI / 2;
@@ -247,8 +497,8 @@ function runOverviewLayout() {
     var nFiles = files.length;
     if (nFiles === 0) { return; }
 
-    // File ring: radius scales with file count (spacious defaults)
-    var FILE_R = Math.max(200, nFiles * 65);
+    // File ring: radius scales with file count (compact)
+    var FILE_R = Math.max(80, nFiles * 25);
     var spread = nFiles === 1 ? 0 : Math.min(Math.PI * 0.75, (nFiles - 1) * 0.38);
 
     files.forEach(function (file, j) {
@@ -275,7 +525,12 @@ function collectChildTargets(parentNode, px, py, ph, targets) {
   if (visibleChildren.length === 0) { return; }
 
   var n = visibleChildren.length;
-  var nCols = n <= 3 ? 1 : 2;
+  var nCols = 1;
+  if (n > 6) {
+    nCols = 3;
+  } else if (n > 3) {
+    nCols = 2;
+  }
 
   var childW = 80, childH = 28;
   visibleChildren.forEach(function (c) {
@@ -336,7 +591,14 @@ function syncCallsEdges() {
 function layoutComponentBFS(compNodes) {
   var funcNodes = compNodes.filter('[kind = "func"]');
   var positionsMap = {};
-  if (funcNodes.length === 0) { return { posMap: positionsMap, nodeW: 80, nodeH: 28 }; }
+  if (funcNodes.length === 0) {
+    // Position the file/type nodes directly so they don't stay at (0,0) and overlap
+    var otherNodes = compNodes.filter('[kind = "file"], [kind = "type"]');
+    otherNodes.forEach(function (n) {
+      positionsMap[n.id()] = { x: 0, y: 0 };
+    });
+    return { posMap: positionsMap, nodeW: 160, nodeH: 48 };
+  }
 
   var callees = {};
   var inDeg   = {};
@@ -371,29 +633,61 @@ function layoutComponentBFS(compNodes) {
     if (!visited[n.id()]) { orderedIds.push(n.id()); }
   });
 
-  // Spacious vertical stacking: narrow over wide.
-  var total = orderedIds.length;
-  var nCols = total > 8 ? 2 : 1;
-  var GAP_Y = 40;                 // spacious vertical gap
-  var GAP_X = 80;                 // spacious horizontal gap
+  // Group by parent type container
+  var parentMap = {};
+  var parents = [];
+  orderedIds.forEach(function (id) {
+    var n = cy.getElementById(id);
+    var p = n.parent();
+    var pid = (p && p.length > 0) ? p.id() : '_none_';
+    if (!parentMap[pid]) {
+      parentMap[pid] = [];
+      parents.push(pid);
+    }
+    parentMap[pid].push(id);
+  });
+
+  var currentY = 0;
+  var GAP_Y = 20;
+  var GAP_X = 28;
+
+  parents.forEach(function (pid) {
+    var gIds = parentMap[pid];
+    var gTotal = gIds.length;
+    var gCols = 1;
+    if (gTotal > 6) { gCols = 3; }
+    else if (gTotal > 3) { gCols = 2; }
+
+    var gNodeW = 80, gNodeH = 28;
+    gIds.forEach(function (id) {
+      var n = cy.getElementById(id);
+      gNodeW = Math.max(gNodeW, n.width() || 80);
+      gNodeH = Math.max(gNodeH, n.height() || 28);
+    });
+
+    var blockW = gCols * gNodeW + (gCols - 1) * GAP_X;
+    var startX = -blockW / 2 + gNodeW / 2;
+
+    currentY += 15;
+
+    gIds.forEach(function (id, idx) {
+      var c = idx % gCols;
+      var r = Math.floor(idx / gCols);
+      positionsMap[id] = {
+        x: startX + c * (gNodeW + GAP_X),
+        y: currentY + r * (gNodeH + GAP_Y) + gNodeH / 2
+      };
+    });
+
+    var rows = Math.ceil(gTotal / gCols);
+    currentY += rows * (gNodeH + GAP_Y) + 20;
+  });
 
   var nodeW = 80, nodeH = 28;
   orderedIds.forEach(function (id) {
     var n = cy.getElementById(id);
     nodeW = Math.max(nodeW, n.width()  || 80);
     nodeH = Math.max(nodeH, n.height() || 28);
-  });
-
-  var blockW = nCols * nodeW + (nCols - 1) * GAP_X;
-  var startX = -blockW / 2 + nodeW / 2;
-
-  orderedIds.forEach(function (id, i) {
-    var c = i % nCols;
-    var r = Math.floor(i / nCols);
-    positionsMap[id] = {
-      x: startX + c * (nodeW + GAP_X),
-      y: r * (nodeH + GAP_Y) + nodeH / 2,
-    };
   });
 
   return { posMap: positionsMap, nodeW: nodeW, nodeH: nodeH };
@@ -421,16 +715,7 @@ function runSpacedCallsLayout() {
     if (px !== py) { uf[px] = py; }
   }
 
-  function fileAncestorOf(node) {
-    var cur = node;
-    while (cur && cur.length > 0) {
-      if (cur.data('kind') === 'file') { return cur; }
-      var par = cur.data('parent');
-      if (!par) { return null; }
-      cur = cy.getElementById(par);
-    }
-    return null;
-  }
+  
 
   cy.edges('[kind = "calls"]:visible').forEach(function (e) {
     var sf = fileAncestorOf(e.source());
@@ -484,7 +769,18 @@ function runSpacedCallsLayout() {
 
     if (!hasNodes) { return; }
 
-    var bb = { x1: x1, y1: y1, x2: x2, y2: y2, w: x2 - x1, h: y2 - y1 };
+    // Add generous padding to the tile's bounding box to account for 
+    // compound file/type boxes padding, borders, and margins.
+    var paddingX = 40; // compact horizontal safety margin
+    var paddingY = 30; // compact vertical safety margin
+    var bb = { 
+      x1: x1 - paddingX, 
+      y1: y1 - paddingY, 
+      x2: x2 + paddingX, 
+      y2: y2 + paddingY, 
+      w: (x2 - x1) + paddingX * 2, 
+      h: (y2 - y1) + paddingY * 2 
+    };
     maxTileW   = Math.max(maxTileW, bb.w);
     totalArea += (bb.w + TILE_GAP) * (bb.h + TILE_GAP);
     tiles.push({ compNodes: compNodes, posMap: posMap, bb: bb });
@@ -575,4 +871,31 @@ function runSpacedCallsLayout() {
   animateNodes(targets, 500, function () {
     deferredFit(cy.nodes(), DETAIL_PADDING);
   });
+}
+
+// ── runPhysicsLayout ─────────────────────────────────────────────────────
+// Runs Cytoscape's built-in physics-based force-directed COSE layout.
+function runPhysicsLayout() {
+  const visibleNodes = cy.nodes(':visible');
+  if (visibleNodes.length === 0) return;
+
+  pauseFloatingAnimation();
+
+  cy.layout({
+    name: 'cose',
+    animate: true,
+    animationDuration: 800,
+    randomize: false,
+    fit: true,
+    padding: 80,
+    nodeRepulsion: function(node) { return 1200; },
+    idealEdgeLength: function(edge) { return 40; },
+    edgeElasticity: function(edge) { return 20; },
+    nestingFactor: 1.2,
+    gravity: 0.35,
+    stop: function () {
+      resetBasePositions();
+      resumeFloatingAnimation();
+    }
+  }).run();
 }

@@ -3,7 +3,8 @@
   "publisher": "SeungMinLee",
   "displayName": "FlowMap Hallucination Guard for Swift",
   "description": "Detect risky AI-generated Swift changes with graph diff and impact analysis",
-  "version": "0.1.2",
+  "version": "0.1.3",
+  "icon": "resources/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift.git"
@@ -71,6 +72,27 @@
         "title": "FlowMap: Pro Feature Preview"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "flowmap.analyzeWorkspace",
+          "when": "resourceLangId == swift",
+          "group": "navigation"
+        },
+        {
+          "command": "flowmap.showGraphDiff",
+          "when": "resourceLangId == swift",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "flowmap.analyzeWorkspace",
+          "when": "explorerResourceIsFolder || resourceExtname == .swift",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "title": "FlowMap",
       "properties": {

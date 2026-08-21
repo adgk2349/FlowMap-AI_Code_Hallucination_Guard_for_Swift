@@ -138,23 +138,29 @@ function applyAnalysisData(a) {
  */
 function buildCyElements() {
   const cyNodes = (graph.nodes ?? []).map(function (n) {
+    const diffState = addedNodeIds.has(n.id)
+      ? 'added'
+      : changedNodeIds.has(n.id)
+        ? 'changed'
+        : 'unchanged';
+    const impacted = impactIds.has(n.id);
     const data = {
       id: n.id,
       label: n.name ?? n.id,
       kind: n.kind ?? 'func',
       uri: n.uri ?? '',
       line: typeof n.line === 'number' ? n.line : 0,
-      diffState: addedNodeIds.has(n.id)
-        ? 'added'
-        : changedNodeIds.has(n.id)
-          ? 'changed'
-          : 'unchanged',
-      impacted: impactIds.has(n.id),
+      diffState: diffState,
+      impacted: impacted,
     };
     if (parentMap[n.id]) {
       data.parent = parentMap[n.id];
     }
-    return { data: data };
+    const classes = [];
+    if (!isClean && diffState === 'unchanged' && !impacted) {
+      classes.push('muted-bg');
+    }
+    return { data: data, classes: classes.join(' ') };
   });
 
   // Phantom nodes for removed nodes (existed in HEAD but not current tree)
@@ -183,18 +189,24 @@ function buildCyElements() {
     .filter(function (e) { return !containsIds.has(e.id); })
     .map(function (e) {
       const key = e.from + '::' + e.to + '::' + e.kind;
+      const diffState = addedEdgeKeys.has(key)
+        ? 'added'
+        : removedEdgeKeys.has(key)
+          ? 'removed'
+          : 'unchanged';
+      const classes = [];
+      if (!isClean && diffState === 'unchanged') {
+        classes.push('muted-bg');
+      }
       return {
         data: {
           id: e.id,
           source: e.from,
           target: e.to,
           kind: e.kind ?? '',
-          diffState: addedEdgeKeys.has(key)
-            ? 'added'
-            : removedEdgeKeys.has(key)
-              ? 'removed'
-              : 'unchanged',
+          diffState: diffState,
         },
+        classes: classes.join(' '),
       };
     });
 
