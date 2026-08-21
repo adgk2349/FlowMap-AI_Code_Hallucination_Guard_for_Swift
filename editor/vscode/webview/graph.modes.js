@@ -40,6 +40,16 @@ function buildOverviewElements() {
     var folderId = '__folder__' + folderKey;
     var displayName = folderKey === '__root__' ? '(root)' : folderKey;
 
+    var folderFiles = folderMap[folderKey];
+    var hasChanges = folderFiles.some(function (n) {
+      return addedNodeIds.has(n.id) || changedNodeIds.has(n.id) || removedNodeIds.has(n.id) || impactIds.has(n.id);
+    });
+
+    var fClasses = [];
+    if (!isClean && !hasChanges) {
+      fClasses.push('muted-bg');
+    }
+
     // Virtual folder node
     elements.push({
       data: {
@@ -48,10 +58,15 @@ function buildOverviewElements() {
         fullLabel: displayName,
         kind: 'folder',
         folderKey: folderKey,
-        fileCount: folderMap[folderKey].length,
+        fileCount: folderFiles.length,
       },
+      classes: fClasses.join(' '),
     });
     // Branch edge: root → folder
+    var fBrClasses = [];
+    if (!isClean && !hasChanges) {
+      fBrClasses.push('muted-bg');
+    }
     elements.push({
       data: {
         id: '__br__root_' + folderId,
@@ -59,11 +74,23 @@ function buildOverviewElements() {
         target: folderId,
         kind: 'branch',
       },
+      classes: fBrClasses.join(' '),
     });
 
     // File nodes + folder→file branch edges
-    folderMap[folderKey].forEach(function (n) {
+    folderFiles.forEach(function (n) {
       var full = n.name ?? n.id;
+      var diffState = addedNodeIds.has(n.id)
+        ? 'added'
+        : changedNodeIds.has(n.id)
+          ? 'changed'
+          : 'unchanged';
+      var impacted = impactIds.has(n.id);
+      var fileClasses = [];
+      if (!isClean && diffState === 'unchanged' && !impacted) {
+        fileClasses.push('muted-bg');
+      }
+
       elements.push({
         data: {
           id: n.id,
@@ -73,14 +100,16 @@ function buildOverviewElements() {
           rawFileNodeId: n.id, // stable raw-graph ID — passed into showFileDetail on click
           uri: n.uri ?? '',
           line: typeof n.line === 'number' ? n.line : 0,
-          diffState: addedNodeIds.has(n.id)
-            ? 'added'
-            : changedNodeIds.has(n.id)
-              ? 'changed'
-              : 'unchanged',
-          impacted: impactIds.has(n.id),
+          diffState: diffState,
+          impacted: impacted,
         },
+        classes: fileClasses.join(' '),
       });
+
+      var brClasses = [];
+      if (!isClean && diffState === 'unchanged' && !impacted) {
+        brClasses.push('muted-bg');
+      }
       elements.push({
         data: {
           id: '__br__' + folderId + '_' + n.id,
@@ -88,6 +117,7 @@ function buildOverviewElements() {
           target: n.id,
           kind: 'branch',
         },
+        classes: brClasses.join(' '),
       });
     });
   });
@@ -163,6 +193,13 @@ function buildDetailElements(fileNodeId) {
   const fileNode = (graph.nodes ?? []).find(function (n) { return n.id === fileNodeId; });
   if (fileNode) {
     const fFull = fileNode.name ?? fileNode.id;
+    const diffState = addedNodeIds.has(fileNode.id)
+      ? 'added' : changedNodeIds.has(fileNode.id) ? 'changed' : 'unchanged';
+    const impacted = impactIds.has(fileNode.id);
+    const classes = [];
+    if (!isClean && diffState === 'unchanged' && !impacted) {
+      classes.push('muted-bg');
+    }
     detailElements.push({
       data: {
         id: fileNode.id,
@@ -172,11 +209,10 @@ function buildDetailElements(fileNodeId) {
         rawFileNodeId: fileNode.id,
         uri: fileNode.uri ?? '',
         line: typeof fileNode.line === 'number' ? fileNode.line : 0,
-        diffState: addedNodeIds.has(fileNode.id)
-          ? 'added' : changedNodeIds.has(fileNode.id) ? 'changed' : 'unchanged',
-        impacted: impactIds.has(fileNode.id),
-        // no parent — file context is top-level, not a compound parent
+        diffState: diffState,
+        impacted: impacted,
       },
+      classes: classes.join(' '),
     });
   }
 
@@ -204,6 +240,13 @@ function buildDetailElements(fileNodeId) {
 
   freeNodes.forEach(function (f) {
     const fFull = f.name ?? f.id;
+    const diffState = addedNodeIds.has(f.id)
+      ? 'added' : changedNodeIds.has(f.id) ? 'changed' : 'unchanged';
+    const impacted = impactIds.has(f.id);
+    const classes = [];
+    if (!isClean && diffState === 'unchanged' && !impacted) {
+      classes.push('muted-bg');
+    }
     detailElements.push({
       data: {
         id: f.id,
@@ -212,11 +255,10 @@ function buildDetailElements(fileNodeId) {
         kind: 'func',
         uri: f.uri ?? '',
         line: typeof f.line === 'number' ? f.line : 0,
-        // free function is top-level
-        diffState: addedNodeIds.has(f.id)
-          ? 'added' : changedNodeIds.has(f.id) ? 'changed' : 'unchanged',
-        impacted: impactIds.has(f.id),
+        diffState: diffState,
+        impacted: impacted,
       },
+      classes: classes.join(' '),
     });
     detailFuncIds.add(f.id);
     
@@ -232,6 +274,13 @@ function buildDetailElements(fileNodeId) {
 
   typeNodes.forEach(function (t) {
     const tFull = t.name ?? t.id;
+    const diffState = addedNodeIds.has(t.id)
+      ? 'added' : changedNodeIds.has(t.id) ? 'changed' : 'unchanged';
+    const impacted = impactIds.has(t.id);
+    const classes = [];
+    if (!isClean && diffState === 'unchanged' && !impacted) {
+      classes.push('muted-bg');
+    }
     detailElements.push({
       data: {
         id: t.id,
@@ -240,11 +289,10 @@ function buildDetailElements(fileNodeId) {
         kind: 'type',
         uri: t.uri ?? '',
         line: typeof t.line === 'number' ? t.line : 0,
-        diffState: addedNodeIds.has(t.id)
-          ? 'added' : changedNodeIds.has(t.id) ? 'changed' : 'unchanged',
-        impacted: impactIds.has(t.id),
-        // no parent — type is top-level in the detail view
+        diffState: diffState,
+        impacted: impacted,
       },
+      classes: classes.join(' '),
     });
 
     // Func children of this type (compound children of the type node)
@@ -257,6 +305,13 @@ function buildDetailElements(fileNodeId) {
     });
     funcNodes.forEach(function (f) {
       const fFull = f.name ?? f.id;
+      const diffState = addedNodeIds.has(f.id)
+        ? 'added' : changedNodeIds.has(f.id) ? 'changed' : 'unchanged';
+      const impacted = impactIds.has(f.id);
+      const classes = [];
+      if (!isClean && diffState === 'unchanged' && !impacted) {
+        classes.push('muted-bg');
+      }
       detailElements.push({
         data: {
           id: f.id,
@@ -265,11 +320,10 @@ function buildDetailElements(fileNodeId) {
           kind: 'func',
           uri: f.uri ?? '',
           line: typeof f.line === 'number' ? f.line : 0,
-          // no compound parent in Cytoscape - using structural edges
-          diffState: addedNodeIds.has(f.id)
-            ? 'added' : changedNodeIds.has(f.id) ? 'changed' : 'unchanged',
-          impacted: impactIds.has(f.id),
+          diffState: diffState,
+          impacted: impacted,
         },
+        classes: classes.join(' '),
       });
       detailFuncIds.add(f.id);
       
@@ -302,15 +356,21 @@ function buildDetailElements(fileNodeId) {
   });
   callsEdges.forEach(function (e) {
     const key = e.from + '::' + e.to + '::' + e.kind;
+    const diffState = addedEdgeKeys.has(key)
+      ? 'added' : removedEdgeKeys.has(key) ? 'removed' : 'unchanged';
+    const classes = [];
+    if (!isClean && diffState === 'unchanged') {
+      classes.push('muted-bg');
+    }
     detailElements.push({
       data: {
         id: e.id,
         source: e.from,
         target: e.to,
         kind: 'calls',
-        diffState: addedEdgeKeys.has(key)
-          ? 'added' : removedEdgeKeys.has(key) ? 'removed' : 'unchanged',
+        diffState: diffState,
       },
+      classes: classes.join(' '),
     });
   });
 

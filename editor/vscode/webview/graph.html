@@ -168,7 +168,7 @@
       /* ── Status badge (top-left) ────────────────────────────────────────── */
       #status-badge {
         position: absolute;
-        top: 10px;
+        bottom: 12px;
         left: 12px;
         padding: 4px 9px;
         border-radius: 5px;
@@ -236,6 +236,7 @@
       <input type="text" id="search-input" placeholder="Search nodes…" />
       <button id="btn-overview">Overview</button>
       <button id="btn-calls">Calls</button>
+      <button id="btn-force">Force</button>
       <button id="btn-fit">Fit</button>
     </div>
     <!-- Detail mode context: file name shown below toolbar in file-detail mode -->
@@ -243,6 +244,10 @@
     <!-- Legend: top-right, positioned below toolbar so they don't overlap -->
     <div id="legend">
       <div id="legend-title">LEGEND</div>
+      <div id="legend-columns" style="display: flex; gap: 14px;">
+        <div id="legend-col-kinds" style="display: flex; flex-direction: column;"></div>
+        <div id="legend-col-diffs" style="display: flex; flex-direction: column; display: none;"></div>
+      </div>
     </div>
     <!-- Tooltip: full label on hover for truncated node labels -->
     <div id="cy-tooltip"></div>

@@ -110,13 +110,13 @@
   // Hard minimum gaps used by all detail and calls layout code.
   // No layout may place nodes closer than these values.
   const GROUP_GAP      = 180; // vertical gap between type-group blocks (file-detail)
-  const CARD_GAP_X     =  90; // horizontal gap between func/type cards in a row
-  const CARD_GAP_Y     =  48; // vertical gap between card rows
+  const CARD_GAP_X     =  50; // horizontal gap between func/type cards in a row
+  const CARD_GAP_Y     =  32; // vertical gap between card rows
   const COMPONENT_GAP  = 220; // gap between component bounding boxes (calls mode)
   const DETAIL_PADDING =  60; // outer viewport padding after detail/calls layout
   const PANEL_MIN_W    = 320; // minimum panel slot width  per component (calls mode)
   const PANEL_MIN_H    = 220; // minimum panel slot height per component (calls mode)
-  const TILE_GAP       =  90; // minimum gap between component tiles     (calls mode)
+  const TILE_GAP       =  50; // minimum gap between component tiles     (calls mode)
 
   // ── Parse embedded payload ───────────────────────────────────────────────
   const raw = document.getElementById('graph-data').textContent ?? '{}';
@@ -146,7 +146,7 @@
           color: '#e2e8f0',
           'text-valign': 'center',
           'text-halign': 'center',
-          'font-size': '10px',
+          'font-size': '12px',
           'font-family': 'Inter, system-ui, -apple-system, sans-serif',
           width: 'label',
           height: 'label',
@@ -173,7 +173,7 @@
         style: {
           'background-color': 'rgba(30, 58, 138, 0.35)',
           'background-opacity': 1,
-          'font-size': '11px',
+          'font-size': '15px',
           'font-weight': '600',
           color: '#cbd5e1',
           'text-valign': 'center',
@@ -182,9 +182,20 @@
           'border-color': 'rgba(96, 165, 250, 0.25)',
           'border-opacity': 1,
           'border-width': 1,
-          padding: '12px',
-          'min-width': 110,
-          'min-height': 32,
+          padding: '6px',
+        },
+      },
+      {
+        selector: 'node[kind = "file"]:parent',
+        style: {
+          'text-valign': 'top',
+          'text-margin-y': '15px',
+          'padding-top': '30px',
+          'padding-bottom': '10px',
+          'padding-left': '10px',
+          'padding-right': '10px',
+          'min-width': 90,
+          'min-height': 30,
         },
       },
       // Hover glow: added via mouseover event, removed on mouseout
@@ -274,11 +285,26 @@
         style: {
           'background-color': 'rgba(6, 78, 59, 0.4)',
           'background-opacity': 1,
-          'font-size': '10px',
+          'font-size': '14px',
           color: '#a7f3d0',
           'border-color': 'rgba(52, 211, 153, 0.25)',
           'border-opacity': 1,
           'border-width': 1,
+          padding: '4px',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'text-margin-y': '0px',
+        },
+      },
+      {
+        selector: 'node[kind = "type"]:parent',
+        style: {
+          'text-valign': 'top',
+          'text-margin-y': '12px',
+          'padding-top': '24px',
+          'padding-bottom': '6px',
+          'padding-left': '6px',
+          'padding-right': '6px',
         },
       },
       {
@@ -286,7 +312,7 @@
         style: {
           'background-color': 'rgba(120, 53, 4, 0.4)',
           'background-opacity': 1,
-          'font-size': '9px',
+          'font-size': '13px',
           color: '#fde68a',
           'border-color': 'rgba(251, 191, 36, 0.25)',
           'border-opacity': 1,
@@ -297,32 +323,27 @@
       {
         selector: 'node[diffState = "added"]',
         style: { 
-          'background-color': 'rgba(16, 185, 129, 0.25)', 
-          'border-color': 'rgba(52, 211, 153, 0.6)',
-          color: '#a7f3d0',
-          'background-opacity': 1 
+          'border-color': '#10b981',
+          'border-width': 2.5,
+          'border-opacity': 1
         },
       },
       {
         selector: 'node[diffState = "removed"]',
         style: {
-          'background-color': 'rgba(239, 68, 68, 0.25)',
-          'background-opacity': 1,
+          'border-color': '#ef4444',
+          'border-width': 2.5,
           'border-style': 'dashed',
-          'border-color': 'rgba(248, 113, 113, 0.6)',
-          color: '#fca5a5',
-          'border-width': 1.5,
           'border-opacity': 1,
-          opacity: 0.70,
+          opacity: 0.85
         },
       },
       {
         selector: 'node[diffState = "changed"]',
         style: { 
-          'background-color': 'rgba(245, 158, 11, 0.25)', 
-          'border-color': 'rgba(251, 191, 36, 0.6)',
-          color: '#fde68a',
-          'background-opacity': 1 
+          'border-color': '#fbbf24',
+          'border-width': 2.5,
+          'border-opacity': 1
         },
       },
       // ── Impacted node: warm orange outline ──────────────────────────────
@@ -330,7 +351,7 @@
         selector: 'node[?impacted]',
         style: {
           'border-color': '#f97316',
-          'border-width': 2.5,
+          'border-width': 3,
           'border-style': 'solid',
           'border-opacity': 1,
         },
@@ -357,7 +378,7 @@
           'line-color': 'rgba(255, 255, 255, 0.12)',
           'target-arrow-color': 'rgba(255, 255, 255, 0.12)',
           'target-arrow-shape': 'triangle',
-          'curve-style': 'bezier',
+          'curve-style': 'straight',
           'line-style': 'dashed',
         },
       },
@@ -369,10 +390,19 @@
           'line-color': '#f97316',
           'target-arrow-color': '#f97316',
           'target-arrow-shape': 'triangle-backcurve',
-          'curve-style': 'bezier',
-          opacity: 0.7,
+          'arrow-scale': 0.8,
+          'curve-style': 'straight',
+          opacity: 0.55,
           'transition-property': 'line-color, target-arrow-color, width, opacity',
           'transition-duration': '0.3s',
+        },
+      },
+      // ── Calls edge style override ───────────────────────────────────────
+      {
+        selector: 'edge[kind = "calls"]',
+        style: {
+          'curve-style': 'bezier',
+          'control-point-step-size': 16,
         },
       },
       // ── Diff-state edge overrides ───────────────────────────────────────
@@ -397,7 +427,11 @@
       // ── Muted unchanged ─────────────────────────────────────────────────
       {
         selector: 'node.muted-bg',
-        style: { opacity: 0.4, color: '#64748b' },
+        style: { opacity: 0.28, color: '#475569' },
+      },
+      {
+        selector: 'edge.muted-bg',
+        style: { opacity: 0.1 },
       },
       // ── Search highlight ────────────────────────────────────────────────
       {
@@ -480,86 +514,92 @@
   // Clears old legend entries then rebuilds from current data vars.
   // Safe to call multiple times (e.g., from renderGraphFromAnalysis).
   function buildLegend() {
-    const legend = document.getElementById('legend');
-    if (!legend) { return; }
+    const colKinds = document.getElementById('legend-col-kinds');
+    const colDiffs = document.getElementById('legend-col-diffs');
+    if (!colKinds || !colDiffs) { return; }
 
-    // Clear existing entries, preserving the #legend-title element.
-    const titleEl = document.getElementById('legend-title');
-    while (legend.firstChild) { legend.removeChild(legend.firstChild); }
-    if (titleEl) { legend.appendChild(titleEl); }
+    // Clear existing entries
+    while (colKinds.firstChild) { colKinds.removeChild(colKinds.firstChild); }
+    while (colDiffs.firstChild) { colDiffs.removeChild(colDiffs.firstChild); }
 
-    const hasDiff =
-      addedNodeIds.size > 0 ||
-      removedNodeIds.size > 0 ||
-      changedNodeIds.size > 0 ||
-      impactIds.size > 0;
-
-    let items = [
-      { color: 'rgb(70,90,110)', label: 'File node' },
-      { color: 'rgb(50,140,100)', label: 'Type node' },
-      { color: 'rgb(220,150,70)', label: 'Func node' },
+    // 1. Kind items (always shown)
+    const kindItems = [
+      { color: 'rgb(70,90,110)', label: 'File' },
+      { color: 'rgb(50,140,100)', label: 'Type' },
+      { color: 'rgb(220,150,70)', label: 'Func' },
     ];
 
-    if (hasDiff) {
-      items = items.concat([
-        { color: '#1a4a1a', label: 'Added' },
-        { color: '#4a1a1a', label: 'Removed' },
-        { color: '#4a4a1a', label: 'Changed' },
-        { color: 'transparent', label: 'Impacted (orange border)', border: '#e07b39' },
-      ]);
-    }
-
-    items.forEach(function (item) {
+    kindItems.forEach(function (item) {
       const div = document.createElement('div');
       div.style.display = 'flex';
       div.style.alignItems = 'center';
-      div.style.marginBottom = '4px';
+      div.style.marginBottom = '3px';
 
       const swatch = document.createElement('span');
       swatch.style.display = 'inline-block';
-      swatch.style.width = '12px';
-      swatch.style.height = '12px';
-      swatch.style.marginRight = '6px';
-      swatch.style.borderRadius = '3px';
+      swatch.style.width = '10px';
+      swatch.style.height = '10px';
+      swatch.style.marginRight = '5px';
+      swatch.style.borderRadius = '2px';
       swatch.style.background = item.color;
-      if (item.border) { swatch.style.border = '2px solid ' + item.border; }
 
       const text = document.createElement('span');
       text.textContent = item.label;
-      text.style.fontSize = '10px';
+      text.style.fontSize = '9px';
       text.style.color = '#ccc';
 
       div.appendChild(swatch);
       div.appendChild(text);
-      legend.appendChild(div);
+      colKinds.appendChild(div);
     });
 
-    if (addedEdgeKeys.size > 0 || removedEdgeKeys.size > 0) {
-      [
-        { color: '#33cc33', label: 'Added edge' },
-        { color: '#cc3333', label: 'Removed edge' },
-      ].forEach(function (item) {
+    // 2. Diff items (shown only if there are diffs)
+    const hasDiff =
+      addedNodeIds.size > 0 ||
+      removedNodeIds.size > 0 ||
+      changedNodeIds.size > 0 ||
+      impactIds.size > 0 ||
+      addedEdgeKeys.size > 0 ||
+      removedEdgeKeys.size > 0;
+
+    if (hasDiff) {
+      colDiffs.style.display = 'flex';
+      const diffItems = [
+        { color: 'transparent', label: 'Added', border: '#10b981' },
+        { color: 'transparent', label: 'Removed', border: '#ef4444', borderStyle: 'dashed' },
+        { color: 'transparent', label: 'Changed', border: '#fbbf24' },
+        { color: 'transparent', label: 'Impacted', border: '#e07b39' },
+      ];
+
+      diffItems.forEach(function (item) {
         const div = document.createElement('div');
         div.style.display = 'flex';
         div.style.alignItems = 'center';
-        div.style.marginBottom = '4px';
+        div.style.marginBottom = '3px';
 
-        const line = document.createElement('span');
-        line.style.display = 'inline-block';
-        line.style.width = '12px';
-        line.style.height = '2px';
-        line.style.marginRight = '6px';
-        line.style.borderTop = '2px dashed ' + item.color;
+        const swatch = document.createElement('span');
+        swatch.style.display = 'inline-block';
+        swatch.style.width = '10px';
+        swatch.style.height = '10px';
+        swatch.style.marginRight = '5px';
+        swatch.style.borderRadius = '2px';
+        swatch.style.background = item.color;
+        if (item.border) { 
+          const borderStyle = item.borderStyle || 'solid';
+          swatch.style.border = '1.5px ' + borderStyle + ' ' + item.border; 
+        }
 
         const text = document.createElement('span');
         text.textContent = item.label;
-        text.style.fontSize = '10px';
+        text.style.fontSize = '9px';
         text.style.color = '#ccc';
 
-        div.appendChild(line);
+        div.appendChild(swatch);
         div.appendChild(text);
-        legend.appendChild(div);
+        colDiffs.appendChild(div);
       });
+    } else {
+      colDiffs.style.display = 'none';
     }
   }
 

@@ -5,6 +5,7 @@
 > Swift code graph and impact analysis tool — understand and verify code structure, especially when reviewing AI-generated changes.
 
 [![CI](https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift/actions/workflows/ci.yml/badge.svg)](https://github.com/adgk2349/FlowMap-AI_Code_Hallucination_Guard_for_Swift/actions/workflows/ci.yml)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/SeungMinLee.flowmap-ai-swift-guard?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=SeungMinLee.flowmap-ai-swift-guard)
 
 [한국어](README.ko.md) · [日本語](README.ja.md)
 
@@ -67,15 +68,15 @@ This behavior is expected in current public beta and is being expanded increment
 
 ### Overview mode
 
-![Overview mode](docs/screenshots/overview.jpg)
+![Overview mode](editor/vscode/resources/screenshot_overview.png)
 
 ### File detail mode
 
-![File detail mode](docs/screenshots/file-detail.jpg)
+![File detail mode](editor/vscode/resources/screenshot_detail.png)
 
 ### Calls mode
 
-![Calls mode](docs/screenshots/calls.jpg)
+![Calls mode](editor/vscode/resources/screenshot_calls.png)
 
 ## Installation
 
